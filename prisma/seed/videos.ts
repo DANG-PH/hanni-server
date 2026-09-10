@@ -1,13 +1,19 @@
 import { PrismaClient, VideoKind } from '@prisma/client';
+import { pinyin } from 'pinyin-pro';
 import { parseTranscript } from '../../src/modules/videos/transcript.util';
+import { fetchTimedTranscript } from '../../src/modules/videos/youtube-transcript.util';
 
 /**
- * Video mẫu — dùng video công khai thật trên YouTube (kênh học tiếng Trung).
- * Bản chép là bản mẫu do Hanni soạn THEO CHỦ ĐỀ video (chưa phải phụ đề gốc từng câu);
- * thay bằng phụ đề thật khi có (qua /watch/new hoặc web admin sau này).
- * Video có `createdById = null` được coi là nội dung hệ thống → seed lại sẽ làm mới.
+ * Video mẫu = clip công khai thật trên YouTube.
+ * - Video CÓ phụ đề tiếng Trung → lấy bản chép + MỐC THỜI GIAN THẬT (đồng bộ karaoke),
+ *   dịch tiếng Việt do Hanni soạn.
+ * - Video KHÔNG có phụ đề → dùng bản chép mẫu (thời gian ước lượng theo nhịp đọc).
+ * Video `createdById = null` là nội dung hệ thống → seed lại sẽ làm mới.
  */
-const SAMPLES: {
+
+const hanOnly = (s: string) => s.replace(/[^\p{Script=Han}]/gu, '');
+
+interface Sample {
   youtubeId: string;
   title: string;
   titleZh: string;
@@ -15,17 +21,139 @@ const SAMPLES: {
   description: string;
   hskLevel: number;
   kind: VideoKind;
-  transcript: string;
-}[] = [
+  /** dịch theo thứ tự dòng (khớp phụ đề gốc đã lọc) */
+  viByIndex?: (string | null)[];
+  /** dịch tra theo chữ Hán của dòng (bỏ dấu câu / latin) */
+  viByHan?: Record<string, string>;
+  /** dùng khi video không có phụ đề tiếng Trung */
+  fallback?: string;
+}
+
+const SAMPLES: Sample[] = [
+  {
+    youtubeId: 'o51Dsn7YTjw',
+    title: 'Cuộc sống của Mary',
+    titleZh: '玛丽的生活',
+    author: 'Mandarin Click',
+    description:
+      'Truyện HSK 1–2, giọng đọc chậm. Phụ đề đồng bộ theo lời nói (mốc thời gian gốc từ YouTube).',
+    hskLevel: 2,
+    kind: VideoKind.STORY,
+    viByHan: {
+      玛丽今年十八岁: 'Mary năm nay mười tám tuổi.',
+      她是美国人: 'Cô ấy là người Mỹ.',
+      和爸爸妈妈住在北京: 'Sống cùng bố mẹ ở Bắc Kinh.',
+      她的爸爸是老师: 'Bố cô ấy là giáo viên,',
+      妈妈是医生: 'còn mẹ là bác sĩ.',
+      年他们来中国工作: 'Năm 2015 họ đến Trung Quốc làm việc.',
+      玛丽和他们一起来中国学习: 'Mary cùng họ đến Trung Quốc học.',
+      他们有一只狗: 'Họ có một con chó.',
+      小狗很可爱名字叫乐乐: 'Chú chó rất đáng yêu, tên là Lạc Lạc.',
+      玛丽很喜欢和它一起玩儿: 'Mary rất thích chơi với nó.',
+      他们来中国快六年了: 'Họ đến Trung Quốc gần sáu năm rồi,',
+      认识了很多好朋友: 'quen được rất nhiều bạn tốt.',
+      他们经常一起吃饭喝茶: 'Họ thường cùng nhau ăn cơm, uống trà.',
+      玛丽的爸爸喜欢看书: 'Bố Mary thích đọc sách.',
+      妈妈喜欢看电影买东西: 'Mẹ thích xem phim, mua sắm.',
+      玛丽喜欢听歌学中文: 'Mary thích nghe nhạc, học tiếng Trung.',
+      玛丽会说中文也会写字: 'Mary biết nói tiếng Trung, cũng biết viết chữ.',
+      她在大学学习很好: 'Cô ấy học ở đại học rất tốt.',
+      同学和老师都很喜欢她: 'Bạn học và thầy cô đều rất quý cô ấy.',
+      下个月是妈妈的生日: 'Tháng sau là sinh nhật mẹ.',
+      她想给妈妈买一件礼物: 'Cô ấy muốn mua cho mẹ một món quà.',
+      但是她没有很多钱: 'Nhưng cô ấy không có nhiều tiền.',
+      学校后面有一家饭店: 'Phía sau trường có một nhà hàng.',
+      她上午八点去学校学习: 'Buổi sáng tám giờ cô ấy đến trường học,',
+      下午四点去饭店工作: 'buổi chiều bốn giờ đi làm ở nhà hàng.',
+      一个月后她有钱了: 'Một tháng sau, cô ấy có tiền rồi.',
+      她给妈妈买了一件漂亮的衣服: 'Cô ấy mua cho mẹ một bộ quần áo đẹp.',
+      给自己买了一本汉语书: 'Mua cho mình một quyển sách tiếng Hán.',
+      生日的时候她给妈妈礼物: 'Hôm sinh nhật, cô ấy tặng quà cho mẹ.',
+      妈妈看见漂亮的衣服很高兴: 'Mẹ nhìn thấy bộ quần áo đẹp, rất vui.',
+      她和玛丽说: 'Mẹ nói với Mary:',
+      谢谢你我的女儿: '“Cảm ơn con, con gái của mẹ.',
+      妈妈爱你: 'Mẹ yêu con!”',
+    },
+  },
+  {
+    youtubeId: 'fbjSH487Hhc',
+    title: 'Amber và mèo Tiền Tiền',
+    titleZh: '你好，我是 Amber',
+    author: 'Comprehensible Chinese',
+    description:
+      'TPRS siêu cơ bản: câu ngắn, lặp lại nhiều. Phụ đề đồng bộ theo lời nói.',
+    hskLevel: 1,
+    kind: VideoKind.STORY,
+    viByIndex: [
+      'Xin chào.',
+      'Xin chào, tôi là Amber.',
+      'Nó không phải Amber, nó là Tiền Tiền.',
+      'Tôi ở nhà, nó không ở nhà.',
+      'Nó ở quán bar.',
+      'Tôi là Amber phải không?',
+      'Phải, tôi là Amber.',
+      'Nó là Amber phải không?',
+      'Không, nó không phải Amber.',
+      'Nó là Beyoncé phải không?',
+      'Không, nó cũng không phải Beyoncé.',
+      'Nó không phải Amber.',
+      'Nó cũng không phải Beyoncé.',
+      'Vậy nó là ai?',
+      'Tiền Tiền.',
+      'Nó là Tiền Tiền.',
+      'Tôi có ở nhà không?',
+      'Ở nhà, tôi ở nhà.',
+      'Tiền Tiền có ở nhà không?',
+      'Không, Tiền Tiền không ở nhà.',
+      'Tiền Tiền có ở công ty không?',
+      'Không, Tiền Tiền không ở công ty.',
+      'Tiền Tiền không ở nhà, cũng không ở công ty.',
+      'Vậy Tiền Tiền ở đâu?',
+      'Ở quán bar, Tiền Tiền ở quán bar.',
+      'Tôi thích uống cà phê.',
+      'Tiền Tiền không thích uống cà phê.',
+      'Nó thích uống rượu.',
+      'Tôi uống cà phê ở nhà.',
+      'Tiền Tiền uống rượu ở quán bar.',
+      'Tôi có thích uống cà phê không?',
+      'Thích, tôi thích uống cà phê.',
+      'Nó có thích uống cà phê không?',
+      'Không thích, nó không thích uống cà phê.',
+      'Nó có thích uống rượu không?',
+      'Thích, nó thích uống rượu.',
+      'Nó có uống rượu ở nhà không?',
+      'Không, nó không uống rượu ở nhà.',
+      'Nó uống rượu ở quán bar.',
+      'Xin chào, tôi là Amber.',
+      'Nó không phải Amber, nó là Tiền Tiền.',
+      'Tôi ở nhà, nó không ở nhà.',
+      'Nó ở quán bar.',
+      'Tôi thích uống cà phê.',
+      'Nó không thích uống cà phê.',
+      'Nó thích uống rượu.',
+      'Tôi uống cà phê ở nhà.',
+      'Nó uống rượu ở quán bar.',
+      'Nó là Lạc Lạc.',
+      'Lạc Lạc cũng ở quán bar.',
+      'Nó không thích uống cà phê.',
+      'cũng không thích uống rượu.',
+      'Nó thích uống nước.',
+      'Tiền Tiền thích Lạc Lạc.',
+      'Nhưng Lạc Lạc không thích Tiền Tiền.',
+      'Bạn có thích uống cà phê không?',
+      'Tạm biệt, tạm biệt.',
+    ],
+  },
   {
     youtubeId: 'rbLlUXT72C4',
     title: 'Nhà của tôi',
     titleZh: '我的家',
     author: 'Mandarin Click',
-    description: 'Truyện ngắn HSK 1, giọng đọc chậm rõ. Bản chép mẫu theo chủ đề.',
+    description:
+      'Truyện HSK 1. Video không có phụ đề tiếng Trung — bản chép mẫu, thời gian ước lượng.',
     hskLevel: 1,
     kind: VideoKind.STORY,
-    transcript: [
+    fallback: [
       '这是我的家。 | Đây là nhà của tôi.',
       '我的家不大，但是很干净。 | Nhà tôi không lớn, nhưng rất sạch sẽ.',
       '家里有三个房间。 | Trong nhà có ba phòng.',
@@ -36,32 +164,15 @@ const SAMPLES: {
     ].join('\n'),
   },
   {
-    youtubeId: 'o51Dsn7YTjw',
-    title: 'Cuộc sống của Mary',
-    titleZh: '玛丽的生活',
-    author: 'Mandarin Click',
-    description: 'Truyện ngắn HSK 1–2 về một ngày của Mary ở Bắc Kinh.',
-    hskLevel: 2,
-    kind: VideoKind.STORY,
-    transcript: [
-      '玛丽是一个美国人。 | Mary là người Mỹ.',
-      '她现在住在北京。 | Bây giờ cô ấy sống ở Bắc Kinh.',
-      '玛丽每天早上七点起床。 | Mỗi sáng Mary dậy lúc bảy giờ.',
-      '她喜欢喝咖啡，也喜欢吃面包。 | Cô ấy thích uống cà phê, cũng thích ăn bánh mì.',
-      '上午她去学校学习汉语。 | Buổi sáng cô ấy đến trường học tiếng Hán.',
-      '下午她常常和朋友一起打篮球。 | Buổi chiều cô ấy thường chơi bóng rổ với bạn.',
-      '晚上她在家看中文电影。 | Buổi tối cô ấy xem phim tiếng Trung ở nhà.',
-    ].join('\n'),
-  },
-  {
     youtubeId: 'PcergOJuC1M',
     title: 'Cuộc sống một tuần',
     titleZh: '一周的生活',
     author: 'Mandarin Click',
-    description: 'Nghe chậm HSK 1–2: kể lại các ngày trong tuần.',
+    description:
+      'Nghe chậm HSK 1–2. Video không có phụ đề tiếng Trung — bản chép mẫu, thời gian ước lượng.',
     hskLevel: 2,
     kind: VideoKind.STORY,
-    transcript: [
+    fallback: [
       '星期一到星期五，我要上班。 | Từ thứ Hai đến thứ Sáu, tôi phải đi làm.',
       '我每天八点半到公司。 | Mỗi ngày tôi đến công ty lúc tám giờ rưỡi.',
       '中午我在公司附近吃饭。 | Buổi trưa tôi ăn cơm gần công ty.',
@@ -71,68 +182,32 @@ const SAMPLES: {
       '这就是我一个星期的生活。 | Đó là cuộc sống một tuần của tôi.',
     ].join('\n'),
   },
-  {
-    youtubeId: 'TAvSslliSQw',
-    title: 'Buổi sáng',
-    titleZh: '早上',
-    author: 'Mandarin Click',
-    description: 'Truyện ngắn HSK 2–3: một buổi sáng vội vã.',
-    hskLevel: 3,
-    kind: VideoKind.STORY,
-    transcript: [
-      '今天早上，我起床起得很晚。 | Sáng nay tôi dậy rất muộn.',
-      '因为昨天晚上我睡得太晚了。 | Vì tối qua tôi ngủ quá muộn.',
-      '我很快地刷牙、洗脸。 | Tôi nhanh chóng đánh răng, rửa mặt.',
-      '早饭我只喝了一杯牛奶。 | Bữa sáng tôi chỉ uống một cốc sữa.',
-      '出门的时候，外面下雨了。 | Lúc ra khỏi nhà thì bên ngoài trời mưa.',
-      '我没带伞，只好跑到地铁站。 | Tôi không mang ô, đành chạy đến ga tàu điện ngầm.',
-      '到公司的时候，我已经迟到了十分钟。 | Lúc đến công ty, tôi đã muộn mười phút.',
-    ].join('\n'),
-  },
-  {
-    youtubeId: 'iamQclBCfoY',
-    title: 'Tôi bị cảm rồi',
-    titleZh: '我感冒了',
-    author: 'Mandarin Click',
-    description: 'Truyện ngắn HSK 2–3: đi khám khi bị cảm.',
-    hskLevel: 3,
-    kind: VideoKind.STORY,
-    transcript: [
-      '这几天天气变冷了。 | Mấy hôm nay trời trở lạnh.',
-      '昨天晚上我开始头疼、发烧。 | Tối qua tôi bắt đầu đau đầu, sốt.',
-      '今天早上，我觉得更不舒服了。 | Sáng nay tôi thấy càng khó chịu hơn.',
-      '我给公司打电话，请了一天假。 | Tôi gọi điện cho công ty, xin nghỉ một ngày.',
-      '然后我去医院看了医生。 | Sau đó tôi đến bệnh viện khám bác sĩ.',
-      '医生说我感冒了，要多喝水、多休息。 | Bác sĩ nói tôi bị cảm, phải uống nhiều nước và nghỉ ngơi nhiều.',
-      '吃了药以后，我睡了一个下午。 | Sau khi uống thuốc, tôi ngủ cả buổi chiều.',
-    ].join('\n'),
-  },
-  {
-    youtubeId: 'nGJ60LoxCXk',
-    title: 'Mỗi ngày tiến bộ 1%',
-    titleZh: '每天进步百分之一',
-    author: 'Everyday Chinese Chat',
-    description: 'Podcast luyện nghe HSK 3–4 về thói quen học.',
-    hskLevel: 3,
-    kind: VideoKind.PODCAST,
-    transcript: [
-      '大家好，欢迎收听今天的节目。 | Xin chào mọi người, chào mừng nghe chương trình hôm nay.',
-      '今天我想跟大家聊聊“每天进步百分之一”。 | Hôm nay tôi muốn trò chuyện về "mỗi ngày tiến bộ 1%".',
-      '很多人学中文的时候，希望进步得很快。 | Nhiều người khi học tiếng Trung mong tiến bộ thật nhanh.',
-      '但是我觉得，慢一点也没关系。 | Nhưng tôi nghĩ, chậm một chút cũng không sao.',
-      '如果你每天学习二十分钟，一年以后会有很大的变化。 | Nếu mỗi ngày bạn học hai mươi phút, một năm sau sẽ thay đổi rất lớn.',
-      '重要的不是速度，而是坚持。 | Điều quan trọng không phải tốc độ, mà là sự kiên trì.',
-      '好，我们下次再见。 | Được rồi, hẹn gặp lại lần sau.',
-    ].join('\n'),
-  },
 ];
 
 export async function seedVideos(prisma: PrismaClient): Promise<void> {
-  // Làm mới nội dung hệ thống (createdById = null), giữ video do người dùng thêm.
   await prisma.video.deleteMany({ where: { createdById: null } });
 
+  let synced = 0;
   for (const s of SAMPLES) {
-    const lines = parseTranscript(s.transcript);
+    const timed = await fetchTimedTranscript(s.youtubeId).catch(() => []);
+    const useReal = timed.length >= 3;
+
+    const lines = useReal
+      ? timed.map((tl, i) => ({
+          index: i + 1,
+          startMs: tl.startMs,
+          zh: tl.zh,
+          pinyin: pinyin(tl.zh, { toneType: 'symbol', nonZh: 'consecutive' }),
+          pinyinNum: pinyin(tl.zh, { toneType: 'num', nonZh: 'consecutive' }),
+          vi:
+            s.viByIndex?.[i] ??
+            s.viByHan?.[hanOnly(tl.zh)] ??
+            null,
+        }))
+      : parseTranscript(s.fallback ?? '');
+
+    if (useReal) synced += 1;
+
     await prisma.video.create({
       data: {
         youtubeId: s.youtubeId,
@@ -144,18 +219,11 @@ export async function seedVideos(prisma: PrismaClient): Promise<void> {
         author: s.author,
         sentenceCount: lines.length,
         thumbnailUrl: `https://i.ytimg.com/vi/${s.youtubeId}/hqdefault.jpg`,
-        lines: {
-          create: lines.map((l) => ({
-            index: l.index,
-            startMs: l.startMs,
-            zh: l.zh,
-            pinyin: l.pinyin,
-            pinyinNum: l.pinyinNum,
-            vi: l.vi,
-          })),
-        },
+        lines: { create: lines },
       },
     });
   }
-  console.log(`  ✓ ${SAMPLES.length} video mẫu`);
+  console.log(
+    `  ✓ ${SAMPLES.length} video mẫu (${synced} có phụ đề đồng bộ theo lời nói)`,
+  );
 }
