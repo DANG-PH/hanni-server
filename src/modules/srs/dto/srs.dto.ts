@@ -36,6 +36,10 @@ export class QueueQueryDto {
   level?: number;
 
   @IsOptional()
+  @IsUUID()
+  lessonId?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)

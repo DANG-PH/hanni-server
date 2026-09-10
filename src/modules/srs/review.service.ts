@@ -205,13 +205,18 @@ export class ReviewService {
     const limit = query.limit ?? 60;
     const newPerDay = user.settings?.newCardsPerDay ?? 10;
 
+    // Học theo BÀI: bỏ giới hạn từ mới/ngày, nạp cả bài (tối đa 25).
+    const byLesson = Boolean(query.lessonId);
     const levelFilter = query.level ? { hskLevel: query.level } : {};
+    const wordScope = query.lessonId
+      ? { word: { lessonId: query.lessonId } }
+      : levelFilter;
     const dueWhere: Prisma.UserWordProgressWhereInput = {
       userId,
       isSuspended: false,
       state: { in: ACTIVE_STATES },
       dueAt: { lte: now },
-      ...levelFilter,
+      ...wordScope,
     };
 
     const [newDoneToday, reviewsDoneToday, dueCount, dueRows] = await Promise.all([
@@ -230,12 +235,18 @@ export class ReviewService {
       }),
     ]);
 
-    const newRemaining = Math.max(0, newPerDay - newDoneToday);
+    const newRemaining = byLesson
+      ? 25
+      : Math.max(0, newPerDay - newDoneToday);
     const newRows =
       newRemaining > 0
         ? await this.prisma.word.findMany({
-            where: { ...levelFilter, progress: { none: { userId } } },
-            orderBy: [{ frequencyRank: 'asc' }, { simplified: 'asc' }],
+            where: query.lessonId
+              ? { lessonId: query.lessonId, progress: { none: { userId } } }
+              : { ...levelFilter, progress: { none: { userId } } },
+            orderBy: query.lessonId
+              ? [{ lessonOrder: 'asc' }]
+              : [{ frequencyRank: 'asc' }, { simplified: 'asc' }],
             take: newRemaining,
           })
         : [];

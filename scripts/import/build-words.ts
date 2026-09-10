@@ -181,8 +181,32 @@ function main(): void {
       source: `krmanik/HSK-3.0@2025-11; vi:${cur?.meaningVi ? 'curated' : viEntry ? 'cvdict' : 'none'}`,
       ...(examples ? { examples } : {}),
     };
+    record.origIndex = row.index;
     records.push(record);
     byKey.set(key, record);
+  }
+
+  // --- chia bài học: mỗi cấp gom ~LESSON_SIZE từ, sắp theo tần suất (thiếu -> cuối) ---
+  const LESSON_SIZE = 15;
+  const byLvl = new Map<number, Record<string, unknown>[]>();
+  for (const r of records) {
+    const lv = r.hskLevel as number;
+    if (!byLvl.has(lv)) byLvl.set(lv, []);
+    byLvl.get(lv)!.push(r);
+  }
+  let lessonTotal = 0;
+  for (const [, list] of byLvl) {
+    list.sort((a, b) => {
+      const fa = (a.frequencyRank as number | null) ?? Number.MAX_SAFE_INTEGER;
+      const fb = (b.frequencyRank as number | null) ?? Number.MAX_SAFE_INTEGER;
+      return fa - fb || (a.origIndex as number) - (b.origIndex as number);
+    });
+    list.forEach((r, i) => {
+      r.lessonIndex = Math.floor(i / LESSON_SIZE) + 1;
+      r.lessonOrder = (i % LESSON_SIZE) + 1;
+      delete r.origIndex;
+    });
+    lessonTotal += Math.ceil(list.length / LESSON_SIZE);
   }
 
   writeFileSync(join(OUT, 'words.seed.json'), JSON.stringify(records, null, 1));

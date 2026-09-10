@@ -1,21 +1,30 @@
 import { PrismaClient } from '@prisma/client';
 import { seedAchievements } from './seed/achievements';
 import { seedHskLevels } from './seed/hsk-levels';
-import { seedWords } from './seed/words';
+import { seedLessons } from './seed/lessons';
+import { loadWordSeed, seedWords } from './seed/words';
 
 const prisma = new PrismaClient();
 
 /**
  * Seed dữ liệu tĩnh của Hanni. KHÔNG đụng dữ liệu người dùng.
- * Idempotent: chạy lại nhiều lần vẫn an toàn (dùng upsert).
+ * Idempotent: chạy lại nhiều lần vẫn an toàn (dùng upsert / skipDuplicates).
  *
- * Thứ tự bắt buộc: HskLevel → Achievement → Word (Word tham chiếu HskLevel).
+ * Thứ tự: HskLevel → Achievement → Lesson → Word (Word tham chiếu HskLevel + Lesson).
  */
 async function main(): Promise<void> {
   console.log('Seeding Hanni…');
   await seedHskLevels(prisma);
   await seedAchievements(prisma);
-  await seedWords(prisma);
+
+  const words = loadWordSeed();
+  if (!words) {
+    console.log('  ⚠ Chưa có data/processed/words.seed.json — bỏ qua từ vựng + bài học.');
+    console.log('    Chạy: npm run data:fetch-sources && npm run data:build-words');
+  } else {
+    const lessonMap = await seedLessons(prisma, words);
+    await seedWords(prisma, words, lessonMap);
+  }
   console.log('Xong.');
 }
 

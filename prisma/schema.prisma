@@ -128,17 +128,18 @@ model User {
   updatedAt       DateTime  @updatedAt
   lastActiveAt    DateTime?
 
-  accounts      Account[]
-  refreshTokens RefreshToken[]
-  settings      UserSettings?
-  wordProgress  UserWordProgress[]
-  reviewLogs    ReviewLog[]
-  studySessions StudySession[]
-  dailyActivity UserDailyActivity[]
-  streak        UserStreak?
-  achievements  UserAchievement[]
-  levelProgress UserLevelProgress[]
-  quizAttempts  QuizAttempt[]
+  accounts       Account[]
+  refreshTokens  RefreshToken[]
+  settings       UserSettings?
+  wordProgress   UserWordProgress[]
+  reviewLogs     ReviewLog[]
+  studySessions  StudySession[]
+  dailyActivity  UserDailyActivity[]
+  streak         UserStreak?
+  achievements   UserAchievement[]
+  levelProgress  UserLevelProgress[]
+  lessonProgress UserLessonProgress[]
+  quizAttempts   QuizAttempt[]
 
   @@index([lastActiveAt])
 }
@@ -227,7 +228,25 @@ model HskLevel {
   skills         SkillType[]
 
   words         Word[]
+  lessons       Lesson[]
   levelProgress UserLevelProgress[]
+}
+
+/// Bài học — chia nhỏ từ vựng mỗi cấp HSK thành lộ trình tuyến tính (~15 từ/bài),
+/// sắp theo tần suất. Seed tĩnh từ words.seed.json.
+model Lesson {
+  id         String   @id @default(uuid()) @db.Uuid
+  hskLevel   Int
+  level      HskLevel @relation(fields: [hskLevel], references: [level])
+  orderIndex Int // 1..N trong cấp
+  title      String // vd "Bài 1"
+  wordCount  Int      @default(0)
+
+  words          Word[]
+  lessonProgress UserLessonProgress[]
+
+  @@unique([hskLevel, orderIndex])
+  @@index([hskLevel])
 }
 
 model Word {
@@ -250,9 +269,13 @@ model Word {
   meaningEn         String?
   translationStatus TranslationStatus @default(MISSING)
   needsReview       Boolean           @default(true)
-  audioUrl          String? // chưa dùng ở bản này
-  /// provenance: nguồn gốc dữ liệu, vd "drkameleon@<sha>; lvl:punpuf@<sha>; vi:cvdict@<sha>"
+  audioUrl          String? // /media/audio/cmn-<hán tự>.mp3 (phục vụ tĩnh)
+  /// provenance: nguồn gốc dữ liệu
   source            String?
+  /// bài học chứa từ này (lộ trình tuyến tính theo cấp)
+  lessonId          String?           @db.Uuid
+  lesson            Lesson?           @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  lessonOrder       Int? // thứ tự trong bài
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
@@ -261,6 +284,7 @@ model Word {
 
   @@unique([simplified, pinyinNumeric])
   @@index([hskLevel, frequencyRank]) // chọn thứ tự học từ mới
+  @@index([lessonId, lessonOrder])
   @@index([needsReview])
 }
 
@@ -395,6 +419,23 @@ model UserLevelProgress {
   updatedAt      DateTime  @updatedAt
 
   @@unique([userId, hskLevel])
+}
+
+/// Tiến độ theo từng Bài của user (dùng cho trang Lộ trình).
+model UserLessonProgress {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId     String    @db.Uuid
+  lesson       Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  learnedWords Int       @default(0)
+  totalWords   Int       @default(0)
+  startedAt    DateTime?
+  completedAt  DateTime?
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([userId, lessonId])
+  @@index([userId])
 }
 
 // ===================================================================

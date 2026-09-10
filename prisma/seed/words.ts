@@ -24,6 +24,8 @@ export interface WordSeedRecord {
   needsReview?: boolean;
   audioUrl?: string | null;
   source?: string;
+  lessonIndex?: number;
+  lessonOrder?: number;
   examples?: {
     zh: string;
     pinyin?: string | null;
@@ -34,8 +36,23 @@ export interface WordSeedRecord {
   }[];
 }
 
-const SEED_FILE = join(__dirname, '..', '..', 'data', 'processed', 'words.seed.json');
+export const SEED_FILE = join(
+  __dirname,
+  '..',
+  '..',
+  'data',
+  'processed',
+  'words.seed.json',
+);
 const CHUNK = 1000;
+
+export function loadWordSeed(): WordSeedRecord[] | null {
+  try {
+    return JSON.parse(readFileSync(SEED_FILE, 'utf8')) as WordSeedRecord[];
+  } catch {
+    return null;
+  }
+}
 
 function normPos(values: string[] | undefined): WordPos[] {
   if (!values) return [];
@@ -51,7 +68,10 @@ function normStatus(v: string | undefined): TranslationStatus {
     : TranslationStatus.MISSING;
 }
 
-function toRow(rec: WordSeedRecord): Prisma.WordCreateManyInput {
+function toRow(
+  rec: WordSeedRecord,
+  lessonId: string | null,
+): Prisma.WordCreateManyInput {
   return {
     simplified: rec.simplified,
     traditional: rec.traditional ?? null,
@@ -69,19 +89,16 @@ function toRow(rec: WordSeedRecord): Prisma.WordCreateManyInput {
     needsReview: rec.needsReview ?? !rec.meaningVi,
     audioUrl: rec.audioUrl ?? null,
     source: rec.source ?? null,
+    lessonId,
+    lessonOrder: rec.lessonOrder ?? null,
   };
 }
 
-export async function seedWords(prisma: PrismaClient): Promise<void> {
-  let raw: WordSeedRecord[];
-  try {
-    raw = JSON.parse(readFileSync(SEED_FILE, 'utf8')) as WordSeedRecord[];
-  } catch {
-    console.log('  ⚠ Chưa có data/processed/words.seed.json — bỏ qua seed từ vựng.');
-    console.log('    Chạy: npm run data:build-words  (xem scripts/import/README.md)');
-    return;
-  }
-
+export async function seedWords(
+  prisma: PrismaClient,
+  raw: WordSeedRecord[],
+  lessonMap: Map<string, string>,
+): Promise<void> {
   const reset = process.env.SEED_RESET === 'true';
   if (reset) {
     await prisma.word.deleteMany({});
@@ -92,7 +109,9 @@ export async function seedWords(prisma: PrismaClient): Promise<void> {
   }
 
   // Nạp hàng loạt (bỏ qua trùng @@unique). Muốn CẬP NHẬT thì dùng SEED_RESET=true.
-  const rows = raw.map(toRow);
+  const rows = raw.map((r) =>
+    toRow(r, lessonMap.get(`${r.hskLevel}:${r.lessonIndex ?? 0}`) ?? null),
+  );
   let inserted = 0;
   for (let i = 0; i < rows.length; i += CHUNK) {
     const res = await prisma.word.createMany({
