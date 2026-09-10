@@ -1,9 +1,8 @@
 import { PrismaClient } from '@prisma/client';
-import { AchievementsService } from '../../src/modules/gamification/achievements/achievements.service';
+import { ACHIEVEMENT_CATALOG } from '../../src/modules/gamification/achievements/achievement-catalog';
 
 export async function seedAchievements(prisma: PrismaClient): Promise<void> {
-  const catalog = AchievementsService.catalog();
-  for (const a of catalog) {
+  for (const a of ACHIEVEMENT_CATALOG) {
     await prisma.achievement.upsert({
       where: { code: a.code },
       create: a,
@@ -15,5 +14,5 @@ export async function seedAchievements(prisma: PrismaClient): Promise<void> {
       },
     });
   }
-  console.log(`  ✓ ${catalog.length} huy hiệu`);
+  console.log(`  ✓ ${ACHIEVEMENT_CATALOG.length} huy hiệu`);
 }
