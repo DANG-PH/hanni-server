@@ -108,6 +108,15 @@ enum StudySource {
   QUIZ
 }
 
+enum VideoKind {
+  PODCAST
+  STORY
+  SONG
+  DIALOGUE
+  CLIP
+  OTHER
+}
+
 // ===================================================================
 //  NHÓM AUTH / USER
 // ===================================================================
@@ -140,6 +149,8 @@ model User {
   levelProgress  UserLevelProgress[]
   lessonProgress UserLessonProgress[]
   quizAttempts   QuizAttempt[]
+  videos         Video[]
+  videoProgress  UserVideoProgress[]
 
   @@index([lastActiveAt])
 }
@@ -528,4 +539,65 @@ model QuizAnswer {
   responseMs    Int?
 
   @@index([quizAttemptId])
+}
+
+// ===================================================================
+//  NHÓM HỌC QUA VIDEO
+// ===================================================================
+
+/// Video YouTube kèm bản chép (transcript) + bản dịch tiếng Việt.
+model Video {
+  id            String    @id @default(uuid()) @db.Uuid
+  youtubeId     String
+  title         String // tiêu đề tiếng Việt
+  titleZh       String?
+  description   String?
+  hskLevel      Int?
+  kind          VideoKind @default(PODCAST)
+  sentenceCount Int       @default(0)
+  thumbnailUrl  String?
+  author        String? // tên kênh YouTube
+  isFree        Boolean   @default(true)
+  createdById   String?   @db.Uuid
+  createdBy     User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  lines    VideoLine[]
+  progress UserVideoProgress[]
+
+  @@index([hskLevel])
+  @@index([createdAt])
+}
+
+/// Một câu trong bản chép của video.
+model VideoLine {
+  id        String  @id @default(uuid()) @db.Uuid
+  videoId   String  @db.Uuid
+  video     Video   @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  index     Int // 1-based
+  startMs   Int? // mốc thời gian trong video (nếu có)
+  zh        String
+  pinyin    String // âm tiết cách nhau bằng khoảng trắng (dấu thanh)
+  pinyinNum String  @default("") // pinyin số — để tô màu theo thanh điệu
+  vi        String?
+
+  @@unique([videoId, index])
+  @@index([videoId])
+}
+
+/// Tiến độ xem video của từng user.
+model UserVideoProgress {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @db.Uuid
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId       String    @db.Uuid
+  video         Video     @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  lastLineIndex Int       @default(0)
+  linesRead     Int       @default(0)
+  completedAt   DateTime?
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([userId, videoId])
+  @@index([userId])
 }

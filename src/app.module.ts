@@ -15,6 +15,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { GamificationModule } from './modules/gamification/gamification.module';
 import { LearnModule } from './modules/learn/learn.module';
+import { VideosModule } from './modules/videos/videos.module';
 import { MailModule } from './modules/mail/mail.module';
 import { ProgressModule } from './modules/progress/progress.module';
 import { SrsModule } from './modules/srs/srs.module';
@@ -56,6 +57,7 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
     SrsModule,
     ProgressModule,
     LearnModule,
+    VideosModule,
     GamificationModule,
     HealthModule,
   ],
