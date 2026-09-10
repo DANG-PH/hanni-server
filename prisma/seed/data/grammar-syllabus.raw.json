@@ -1,0 +1,2445 @@
+[
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "动词",
+  "sub": "能愿动词",
+  "content": "敢"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "代词",
+  "sub": "指示代词",
+  "content": "各、各位、各种、任何、此"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "量词",
+  "sub": "名量词",
+  "content": "（1）专用名量词：打、袋、棵、台、幅"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "量词",
+  "sub": "名量词",
+  "content": "（2）借用名量词：脸、手、盒、屋子、桌子"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "量词",
+  "sub": "动量词",
+  "content": "场、顿、趟"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "程度副词",
+  "content": "十分、更加、稍、稍微、尤其、多么"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "范围副词",
+  "content": "共、全、光、仅、仅仅、至少"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "时间副词",
+  "content": "按时、从来、赶紧、赶快、已、忽然、将、将要、从、本来"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "频率副词",
+  "content": "重新、往往、偶尔、再次、老"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "方式副词",
+  "content": "故意、互相、相互"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "关联副词",
+  "content": "却"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "情态副词",
+  "content": "也许、恐怕"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "语气副词",
+  "content": "才4、就5、并1、还4、竟然、究竟、正好、到底、难道、千万、确实、只好、差（一）点儿"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "引出时间、处所",
+  "content": "自、当、由1、随着、等1"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "引出施事、受事",
+  "content": "将、由2、叫、让"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "引出原因",
+  "content": "由于1"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "引出对象",
+  "content": "对于、与1"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "引出凭借、依据",
+  "content": "作为、按、按照"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "连词",
+  "sub": "连接词或词组",
+  "content": "并2、而1、与2"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "连词",
+  "sub": "连接分句或句子",
+  "content": "此外、而2、既然、甚至、不过、并且"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "连词",
+  "sub": "连接分句或句子",
+  "content": "不光、不仅、另外、要是、因此、由于2、加"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "助词",
+  "sub": "其他助词",
+  "content": "等2、者、之、就是"
+ },
+ {
+  "level": 4,
+  "cat": "词类",
+  "catName": "叹词",
+  "sub": "",
+  "content": "啊、嗯"
+ },
+ {
+  "level": 4,
+  "cat": "短语",
+  "catName": "结构类型",
+  "sub": "",
+  "content": "数词+形容词+量词"
+ },
+ {
+  "level": 4,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "一A一B"
+ },
+ {
+  "level": 4,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "无A无B"
+ },
+ {
+  "level": 4,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "有A有B"
+ },
+ {
+  "level": 4,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他",
+  "content": "来得及/来不及"
+ },
+ {
+  "level": 4,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他",
+  "content": "有的是"
+ },
+ {
+  "level": 4,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他",
+  "content": "说不定"
+ },
+ {
+  "level": 4,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他",
+  "content": "不怎么"
+ },
+ {
+  "level": 4,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他",
+  "content": "就是说/这就是说"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "一+量词+比+一+量词"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "在……方面"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "够……的"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "拿……来说"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "再也不/没……"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "怎么都/也+不/没……"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "为了……而……"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "动词+一X是一X"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "（没）有什么（好）X的"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X是X，Y是Y"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X也得X，不X也得X"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X就是了"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "还X呢"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "你X你的吧"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "让/叫你X你就X"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "说什么/怎么（着）也得X"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X就X（点儿）吧"
+ },
+ {
+  "level": 4,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X是X"
+ },
+ {
+  "level": 4,
+  "cat": "句子成分",
+  "catName": "",
+  "sub": "程度补语2",
+  "content": "形容词/心理动词+死了/厉害"
+ },
+ {
+  "level": 4,
+  "cat": "句子成分",
+  "catName": "",
+  "sub": "可能补语2",
+  "content": "动词+得/不+了"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "句类",
+  "sub": "反问句2",
+  "content": "难道……吗？"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "句类",
+  "sub": "反问句2",
+  "content": "由疑问代词构成的反问句"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "“把”字句2",
+  "content": "（1）主语+把+宾语+动词（+一/了）+动词"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "“把”字句2",
+  "content": "（2）主语+把+宾语+动词+了"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "“把”字句2",
+  "content": "（3）主语+把+宾语+动词+动量补语/时量补语"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "“把”字句2",
+  "content": "（4）主语+把+宾语+状语+动词"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "被动句2",
+  "content": "主语+叫/让+宾语+动词+其他成分"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "兼语句2",
+  "content": "（1）表爱憎义：主语+表扬/批评+宾语1+动词+宾语2"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "兼语句2",
+  "content": "（2）表称谓或认定义：主语+收/选+宾语1+做/当/为+宾语2"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "兼语句2",
+  "content": "（3）表致使：主语+使/让+人称代词+动词短语"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "",
+  "sub": "比较句3",
+  "content": "（1）A不如B（+形容词）"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "",
+  "sub": "比较句3",
+  "content": "（2）跟……相比"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "",
+  "sub": "双重否定句",
+  "content": "用双重否定表示强调"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "并列复句",
+  "content": "不是……，而是……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "并列复句",
+  "content": "既……，又/也……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "并列复句",
+  "content": "一方面……，另一方面……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "承接复句",
+  "content": "首先……，其次……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "承接复句",
+  "content": "首先……，然后……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "承接复句",
+  "content": "……，于是……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "递进复句",
+  "content": "……,甚至……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "递进复句",
+  "content": "不仅/不光……，还/而且……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "递进复句",
+  "content": "……，并且……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "递进复句",
+  "content": "连……也/都……，……更……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "选择复句",
+  "content": "不是……，就是……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "转折复句",
+  "content": "尽管……，但是/可是……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "转折复句",
+  "content": "……，然而……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "转折复句",
+  "content": "……，不过……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "转折复句",
+  "content": "……X是X，就是/不过……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "假设复句",
+  "content": "……，否则……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "假设复句",
+  "content": "要是……，就……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "假设复句",
+  "content": "要是……，（就）……，否则……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "条件复句",
+  "content": "不管……，都/也……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "条件复句",
+  "content": "无论……，都/也……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "因果复句",
+  "content": "既然……，就……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "因果复句",
+  "content": "（由于）……，因此……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "目的复句",
+  "content": "……，好……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "让步复句",
+  "content": "即使……，也……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "让步复句",
+  "content": "就是……，也……"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "紧缩复句",
+  "content": "无标记"
+ },
+ {
+  "level": 4,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "紧缩复句",
+  "content": "不……也……"
+ },
+ {
+  "level": 4,
+  "cat": "特殊表达法",
+  "catName": "数的表示法",
+  "sub": "",
+  "content": "概数表示法3：数词+来+量词"
+ },
+ {
+  "level": 4,
+  "cat": "特殊表达法",
+  "catName": "数的表示法",
+  "sub": "",
+  "content": "用“大约、左右、前后”表示概数"
+ },
+ {
+  "level": 4,
+  "cat": "特殊表达法",
+  "catName": "数的表示法",
+  "sub": "",
+  "content": "小数、分数、百分数、倍数的表示法"
+ },
+ {
+  "level": 5,
+  "cat": "语素",
+  "catName": "后缀",
+  "sub": "",
+  "content": "—头"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "代词",
+  "sub": "指示代词",
+  "content": "彼此、如此、本"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "量词",
+  "sub": "名量词",
+  "content": "册、朵、届、颗、匹、行、架、群、支、根、批、束、副、集、周"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "量词",
+  "sub": "动量词",
+  "content": "眼"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "程度副词",
+  "content": "过于、相当、较1、可2、格外、极其"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "时间副词",
+  "content": "时刻、曾经、立刻、连忙、始终、早已、即将、急忙、渐渐、尽快、早晚"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "频率副词",
+  "content": "老是、通常、时常"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "方式副词",
+  "content": "尽量、亲自"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "关联副词",
+  "content": "便、一旦"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "情态副词",
+  "content": "似乎、仿佛"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "语气副词",
+  "content": "毕竟、居然、反正、根本、果然、简直、绝对、的确、反而、白、刚好、可3"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "引出时间、处所",
+  "content": "自从"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "引出方向、路径",
+  "content": "朝、沿（着）"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "引出对象",
+  "content": "替、同1、较2"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "引出凭借、依据",
+  "content": "凭"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "引出凭借、依据",
+  "content": "据"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "引出凭借、依据",
+  "content": "依据"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "连词",
+  "sub": "连接词或词组",
+  "content": "以及、同2"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "连词",
+  "sub": "连接分句或句子",
+  "content": "从而、可见、假如、总之"
+ },
+ {
+  "level": 5,
+  "cat": "词类",
+  "catName": "助词",
+  "sub": "其他助词",
+  "content": "似的"
+ },
+ {
+  "level": 5,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "A来A去"
+ },
+ {
+  "level": 5,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "A着A着"
+ },
+ {
+  "level": 5,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "没A没B"
+ },
+ {
+  "level": 5,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "说A就A"
+ },
+ {
+  "level": 5,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他",
+  "content": "不得了"
+ },
+ {
+  "level": 5,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他",
+  "content": "用不着"
+ },
+ {
+  "level": 5,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他",
+  "content": "从……来看"
+ },
+ {
+  "level": 5,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他",
+  "content": "A的A，B的B"
+ },
+ {
+  "level": 5,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他",
+  "content": "（自）……以来"
+ },
+ {
+  "level": 5,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他",
+  "content": "由……组成"
+ },
+ {
+  "level": 5,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他",
+  "content": "X也不是，Y也不是"
+ },
+ {
+  "level": 5,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他",
+  "content": "X也X不得，Y也Y不得"
+ },
+ {
+  "level": 5,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X是它，Y也是它"
+ },
+ {
+  "level": 5,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X着也是X着"
+ },
+ {
+  "level": 5,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "不管怎样说"
+ },
+ {
+  "level": 5,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "真有你/他/她的"
+ },
+ {
+  "level": 5,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X什么X"
+ },
+ {
+  "level": 5,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "什么X不X（的）"
+ },
+ {
+  "level": 5,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "不X白不X"
+ },
+ {
+  "level": 5,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X来X去，都是/就是……"
+ },
+ {
+  "level": 5,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "动词+什么（就）是什么"
+ },
+ {
+  "level": 5,
+  "cat": "句子成分",
+  "catName": "状语",
+  "sub": "",
+  "content": "多项状语"
+ },
+ {
+  "level": 5,
+  "cat": "句子成分",
+  "catName": "补语",
+  "sub": "可能补语2",
+  "content": "动词+得/不得"
+ },
+ {
+  "level": 5,
+  "cat": "句子成分",
+  "catName": "补语",
+  "sub": "程度补语2",
+  "content": "形容词/心理动词+得+不得了"
+ },
+ {
+  "level": 5,
+  "cat": "句子成分",
+  "catName": "补语",
+  "sub": "趋向补语3",
+  "content": "趋向补语的引申用法：表示状态意义：动词/形容词+下来/下去/起来/过来/过去"
+ },
+ {
+  "level": 5,
+  "cat": "句子成分",
+  "catName": "补语",
+  "sub": "状态补语2",
+  "content": "（1）动词/形容词+得+动词短语"
+ },
+ {
+  "level": 5,
+  "cat": "句子成分",
+  "catName": "补语",
+  "sub": "状态补语2",
+  "content": "（2）动词/形容词+得+主谓短语"
+ },
+ {
+  "level": 5,
+  "cat": "句子成分",
+  "catName": "补语",
+  "sub": "状态补语2",
+  "content": "（3）动词/形容词+得+固定短语"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "“有”字句3",
+  "content": "（1）表示存在、具有：主语+有+着+宾语"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "“有”字句3",
+  "content": "（2）表示附着：主语+动词+有+宾语"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "“把”字句3",
+  "content": "（1）主语+把+宾语+一+动词"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "“把”字句3",
+  "content": "（2）主语+把+宾语1+动词+宾语2"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "连动句3",
+  "content": "前后两个动词性词语具有因果、转折、条件关系"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "比较句4",
+  "content": "A+形容词+B+数量补语"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "被动句3",
+  "content": "主语+被/叫/让+宾语+给+动词+其他成分"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "承接复句",
+  "content": "……，便……"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "选择复句",
+  "content": "或是……，或是……"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "假设复句",
+  "content": "一旦……，就……"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "假设复句",
+  "content": "假如……，（就）……"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "假设复句",
+  "content": "万一……，（就）……"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "假设复句",
+  "content": "……，要不然/不然……"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "因果复句",
+  "content": "……，因而……"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "因果复句",
+  "content": "……，可见……"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "让步复句",
+  "content": "哪怕……，也……"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "递进复句",
+  "content": "不但不/不但没有……，反而……"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "递进复句",
+  "content": "不是……，还/还是……"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "目的复句",
+  "content": "……，为的是……"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "紧缩复句",
+  "content": "没有……就没有……"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "紧缩复句",
+  "content": "不……不……"
+ },
+ {
+  "level": 5,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "紧缩复句",
+  "content": "再……也……"
+ },
+ {
+  "level": 6,
+  "cat": "语素",
+  "catName": "类前缀",
+  "sub": "",
+  "content": "超—、多—、反—、无—、亚—、准—"
+ },
+ {
+  "level": 6,
+  "cat": "语素",
+  "catName": "类后缀",
+  "sub": "",
+  "content": "—化、—式、—型、—性"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "代词",
+  "sub": "人称代词",
+  "content": "人家"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "量词",
+  "sub": "名量词",
+  "content": "专用名量词：串、滴、枝、扇、卷1、卷2"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "量词",
+  "sub": "动量词",
+  "content": "番"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "程度副词",
+  "content": "特、异常、较为"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "范围副词",
+  "content": "净、一同、大都"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "时间副词",
+  "content": "一时、不时、仍旧、依旧、一向"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "频率副词",
+  "content": "一再、再三"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "方式副词",
+  "content": "不禁、赶忙、特地、特意、偷偷"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "否定副词",
+  "content": "未必"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "语气副词",
+  "content": "恰好、倒是、干脆、明明、总算"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "引出时间、处所",
+  "content": "于"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "引出对象",
+  "content": "至于"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "引出目的、原因",
+  "content": "因"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "表示排除",
+  "content": "除"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "连词",
+  "sub": "连接分句或句子",
+  "content": "不料"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "助词",
+  "sub": "结构助词",
+  "content": "所"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "助词",
+  "sub": "语气助词",
+  "content": "啦、嘛"
+ },
+ {
+  "level": 6,
+  "cat": "词类",
+  "catName": "助词",
+  "sub": "其他助词",
+  "content": "也好"
+ },
+ {
+  "level": 6,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "A这A那"
+ },
+ {
+  "level": 6,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "左A右B"
+ },
+ {
+  "level": 6,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他",
+  "content": "好（不）容易"
+ },
+ {
+  "level": 6,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他",
+  "content": "那倒（也）是"
+ },
+ {
+  "level": 6,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他",
+  "content": "算了"
+ },
+ {
+  "level": 6,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他",
+  "content": "得了"
+ },
+ {
+  "level": 6,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "A一+量词，B一+量词"
+ },
+ {
+  "level": 6,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "东一A，西一A"
+ },
+ {
+  "level": 6,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "到……为止"
+ },
+ {
+  "level": 6,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X到Y头上来了"
+ },
+ {
+  "level": 6,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "不X不……，一X……"
+ },
+ {
+  "level": 6,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "好你个X"
+ },
+ {
+  "level": 6,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "早（也）不X，晚（也）不X"
+ },
+ {
+  "level": 6,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "看/瞧+把+宾语（施事）+X得"
+ },
+ {
+  "level": 6,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "放着X不Y"
+ },
+ {
+  "level": 6,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X了就X了，（没）有……"
+ },
+ {
+  "level": 6,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "这/那也不X，那/这也不Y"
+ },
+ {
+  "level": 6,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X归X，Y归Y"
+ },
+ {
+  "level": 6,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "看你X的/瞧他X的"
+ },
+ {
+  "level": 6,
+  "cat": "句子成分",
+  "catName": "补语",
+  "sub": "程度补语3",
+  "content": "动词/形容词+透+了"
+ },
+ {
+  "level": 6,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "“把”字句4",
+  "content": "（1）主语（非生物体）+把+宾语+动词+其他成分"
+ },
+ {
+  "level": 6,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "“把”字句4",
+  "content": "（2）主语+把+宾语（施事）+动词+其他成分"
+ },
+ {
+  "level": 6,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "并列复句",
+  "content": "一时……一时……"
+ },
+ {
+  "level": 6,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "选择复句",
+  "content": "要么……，要么……"
+ },
+ {
+  "level": 6,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "转折复句",
+  "content": "虽……，但/可/却/也……"
+ },
+ {
+  "level": 6,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "条件复句",
+  "content": "凡是……，都……"
+ },
+ {
+  "level": 6,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "条件复句",
+  "content": "除非……，才……"
+ },
+ {
+  "level": 6,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "条件复句",
+  "content": "除非……，否则/不然……"
+ },
+ {
+  "level": 6,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "让步复句",
+  "content": "就算……，也……"
+ },
+ {
+  "level": 6,
+  "cat": "句子的类型",
+  "catName": "复句",
+  "sub": "目的复句",
+  "content": "……，以便……"
+ },
+ {
+  "level": 7,
+  "cat": "语素",
+  "catName": "类前缀",
+  "sub": "",
+  "content": "后—、亲—"
+ },
+ {
+  "level": 7,
+  "cat": "语素",
+  "catName": "类后缀",
+  "sub": "",
+  "content": "—观、—鬼、—界、—然、—坛、—为、—制"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "动词",
+  "sub": "",
+  "content": "巴不得、并非、除外、犯不着、犯得着、恨不得、可否、可谓、免不了、所谓、有所、予以"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "代词",
+  "sub": "人称代词",
+  "content": "我"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "代词",
+  "sub": "指示代词",
+  "content": "彼、这么着、兹"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "代词",
+  "sub": "疑问代词",
+  "content": "何、怎么着"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "代词",
+  "sub": "数量代词",
+  "content": "若干"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "量词",
+  "sub": "名量词",
+  "content": "重、截、缕、码、枚、摊、丸、则、幢、宗"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "量词",
+  "sub": "动量词",
+  "content": "通"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "量词",
+  "sub": "复合量词",
+  "content": "人次"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "程度副词",
+  "content": "大为、分外、何等、极度、极力、略、略微、颇、稍稍、万分、微、尤为、愈加、越发"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "范围副词",
+  "content": "大体、概、皆、尽、均、通通、统统、唯、唯独、唯有、无非、一概"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "时间副词",
+  "content": "姑且、即、即时、届时、尽早、就此、历来、尚、随即、向来、一经、暂且、早日"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "频率副词",
+  "content": "连连、屡次、屡屡、频、时而、时时、相继、一个劲（儿）、一连、再度"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "方式副词",
+  "content": "按理、按说、百般、不由得、趁机、趁早、大肆、断然、公然、火速、截然、竭力、尽情、就近、刻意、拼命、强行、任意、日趋、如期、擅自、私自、特此、瞎、一并、一举、一手、毅然、有意、照常、照例、照样、执意、骤然、逐一、专程"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "否定副词",
+  "content": "不见得、绝不、无从、无须、无可、勿"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "语气副词",
+  "content": "必定、必将、不妨、不免、反倒、非得、分明、怪不得、果真、好在、何必、竟、愣、莫非、难怪、宁可、宁愿、碰巧、偏偏、恰巧、切、情愿、势必、索性、万万、未免、务必、幸好、幸亏、终究、何不、何尝、何苦"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "副词",
+  "sub": "判断副词",
+  "content": "乃"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "引出时间、处所",
+  "content": "打"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "引出对象",
+  "content": "当着、就6"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "介词",
+  "sub": "引出凭借、依据",
+  "content": "本着、基于、鉴于1、经、依"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "连词",
+  "sub": "连接分句或句子",
+  "content": "鉴于2、况且、免得、若、倘若、以防"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "连词",
+  "sub": "连接词或词组以及分句或句子",
+  "content": "加之、乃至、且"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "助词",
+  "sub": "语气助词",
+  "content": "罢了、也罢、矣"
+ },
+ {
+  "level": 7,
+  "cat": "词类",
+  "catName": "助词",
+  "sub": "语气助词",
+  "content": "爱A不A"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "半A半B"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "不A不B"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "不A而B"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "东A西B"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "非A非B"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "忽A忽B"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "或A或B"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "可A可B"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "连A带B"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "七A八B"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "时A时B"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "无A不B"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "无A可B"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "四字格",
+  "content": "自A自B"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "不瞒你说"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "不是"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "不是我说你"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "反过来（说）"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "概括来说"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "归根到底"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "话是这么说"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "话（又）说回来"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "换句话说"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "简（而）言之"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "可不（是嘛）"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "老实说"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "（你）还别说"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "你看你"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "说到哪儿去了"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "说真的"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "退一步说"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "无论如何"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "要（让）我说"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "这不"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "这样一来"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "真是的"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "综上所述"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "总的来说"
+ },
+ {
+  "level": 7,
+  "cat": "短语",
+  "catName": "固定短语",
+  "sub": "其他（话语标记）",
+  "content": "总而言之"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X到这个地步/份上"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X得要命/要死"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X都不/没X"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X就X个Y"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X了Y，Y了X"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "X也好，Y也罢"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "别提（有）多+形容词+了"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "不亚于……"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "不知X是/才好"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "动不动就……"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "动词+得个……"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "动词+个X"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "该X（就）X，该Y（就）Y"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "何至于……"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "仅次于X"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "看在X的面子上"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "没什么+动词+头儿"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "没什么好+动词+的"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "莫过于……"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "你说你一个X，……"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "什么A的B的"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "视……而定"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "谈何……"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "无非/不过/只是……罢了/而已"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "想X之所想，急X之所急"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "向……致以……"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "要X有/没X，要Y有/没Y"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "因……而……"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "有何X"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "有什么+动词+头儿"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "（在）……之余"
+ },
+ {
+  "level": 7,
+  "cat": "固定格式",
+  "catName": "",
+  "sub": "",
+  "content": "值此……之际，……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "特殊句型",
+  "sub": "比较句5",
+  "content": "A+形容词+于/过+B"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "并列复句",
+  "content": "一来……，二来……，三来……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "并列复句",
+  "content": "一则……，二则……，三则……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "解说复句",
+  "content": "所谓……，就是……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "选择复句",
+  "content": "或……，或……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "选择复句",
+  "content": "宁可/宁愿……，也不……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "选择复句",
+  "content": "与其……，宁愿/宁可……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "转折复句",
+  "content": "X（倒）是X（了），……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "转折复句",
+  "content": "别看……，……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "转折复句",
+  "content": "虽说……，但/可……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "条件复句",
+  "content": "无论……与否，都……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "条件复句",
+  "content": "凡……（者），均（可）……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "假设复句",
+  "content": "假若/假使……，……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "假设复句",
+  "content": "幸亏/幸好……，不然/否则……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "假设复句",
+  "content": "纵然/纵使……，也……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "因果复句",
+  "content": "（因）……，故……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "因果复句",
+  "content": "……，以至（于）……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "递进复句",
+  "content": "别说……，都/也……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "递进复句",
+  "content": "……不说，还……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "递进复句",
+  "content": "连……都……，更不用说……了"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "递进复句",
+  "content": "……尚且……，（更）何况……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "递进复句",
+  "content": "……，更不用说……了"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "目的复句",
+  "content": "为（了）……起见，……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "目的复句",
+  "content": "……，以……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "紧缩复句",
+  "content": "非得……才……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "简单复句",
+  "sub": "紧缩复句",
+  "content": "任……也……"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "多重复句",
+  "sub": "",
+  "content": "多重并列复句"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "多重复句",
+  "sub": "",
+  "content": "多重转折复句"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "多重复句",
+  "sub": "",
+  "content": "多重假设复句"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "多重复句",
+  "sub": "",
+  "content": "多重因果复句"
+ },
+ {
+  "level": 7,
+  "cat": "句子的类型",
+  "catName": "多重复句",
+  "sub": "",
+  "content": "多重递进复句"
+ },
+ {
+  "level": 7,
+  "cat": "语段（句群）",
+  "catName": "",
+  "sub": "",
+  "content": "时间顺序"
+ },
+ {
+  "level": 7,
+  "cat": "语段（句群）",
+  "catName": "",
+  "sub": "",
+  "content": "空间顺序"
+ },
+ {
+  "level": 7,
+  "cat": "语段（句群）",
+  "catName": "",
+  "sub": "",
+  "content": "逻辑顺序"
+ },
+ {
+  "level": 7,
+  "cat": "语段（句群）",
+  "catName": "",
+  "sub": "",
+  "content": "话题延伸"
+ },
+ {
+  "level": 7,
+  "cat": "语段（句群）",
+  "catName": "",
+  "sub": "",
+  "content": "话题转换"
+ },
+ {
+  "level": 7,
+  "cat": "语段（句群）",
+  "catName": "",
+  "sub": "",
+  "content": "承前省略"
+ },
+ {
+  "level": 7,
+  "cat": "语段（句群）",
+  "catName": "",
+  "sub": "",
+  "content": "蒙后省略"
+ }
+]

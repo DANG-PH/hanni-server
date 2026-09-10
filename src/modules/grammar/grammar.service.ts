@@ -16,9 +16,14 @@ export class GrammarService {
         titleVi: true,
         titleZh: true,
         summaryVi: true,
+        explanationVi: true,
       },
     });
-    return points;
+    // `flat` = mục đại cương (không có giải thích) → FE hiển thị gọn, không mở rộng.
+    return points.map(({ explanationVi, ...p }) => ({
+      ...p,
+      flat: explanationVi.trim() === '',
+    }));
   }
 
   /** Các cấp HSK đang có điểm ngữ pháp + số lượng mỗi cấp. */
