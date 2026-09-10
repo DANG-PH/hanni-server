@@ -113,7 +113,8 @@ export class LearnService {
     let prevCompleted = true;
     const nodes: LessonNode[] = lessons.map((l) => {
       const agg = perLesson.get(l.id) ?? { learned: 0, started: 0, due: 0 };
-      const completed = l.wordCount > 0 && agg.learned >= l.wordCount;
+      // "xong bài" = đã học qua tất cả từ trong bài ít nhất 1 lần (SRS lo phần ôn lại).
+      const completed = l.wordCount > 0 && agg.started >= l.wordCount;
       let status: LessonStatus;
       if (completed) status = 'COMPLETED';
       else if (agg.started > 0) status = 'IN_PROGRESS';
