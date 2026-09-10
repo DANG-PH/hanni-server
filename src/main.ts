@@ -14,7 +14,12 @@ async function bootstrap(): Promise<void> {
   const apiPrefix = config.get('API_PREFIX', { infer: true });
   app.setGlobalPrefix(apiPrefix.replace(/^\//, ''));
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      // Cho phép frontend (origin khác) tải ảnh đại diện / audio phát âm ở /media/*.
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
   app.use(cookieParser());
   app.enableCors({
     origin: config.get('FRONTEND_URL', { infer: true }),

@@ -136,6 +136,7 @@ export class UsersService {
     const allowed: Record<string, string> = {
       'image/png': 'png',
       'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
       'image/webp': 'webp',
     };
     const ext = allowed[file.mimetype];

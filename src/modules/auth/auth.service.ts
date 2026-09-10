@@ -196,8 +196,23 @@ export class AuthService {
       providerAccountId: profile.sub,
     });
 
-    const user = await this.users.findById(userId);
+    let user = await this.users.findById(userId);
     if (!user) throw new UnauthorizedException();
+
+    // Đồng bộ ảnh đại diện từ Google — trừ khi user đã tự tải ảnh riêng.
+    const hasCustomAvatar =
+      !!user.avatarUrl && !/googleusercontent\.com/.test(user.avatarUrl);
+    if (
+      profile.picture &&
+      !hasCustomAvatar &&
+      user.avatarUrl !== profile.picture
+    ) {
+      user = await this.prisma.user.update({
+        where: { id: userId },
+        data: { avatarUrl: profile.picture },
+      });
+    }
+
     const tokens = await this.tokens.issueForUser(user, ctx);
     return { tokens, isNewUser };
   }
