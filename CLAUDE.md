@@ -46,10 +46,10 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 
 ## Trạng thái hiện tại
 Core đã dựng: auth (email + Google), vocabulary, SRS (SM-2 + FSRS), progress, gamification
-(streak/achievements/quiz), learn (731 bài), videos (học qua video), grammar (40 điểm HSK 1–3),
+(streak/achievements/quiz), learn (731 bài), videos (học qua video), grammar (40 điểm HSK 1–3 có giải thích + 349 mục HSK 4–9 theo đại cương),
 exams (lịch sử kiểm tra), leaderboard (xếp theo từ đã thuộc), health, Swagger.
 Seed đầy đủ để deploy: 9 cấp HSK · huy hiệu · 10.9k từ (`data/processed/words.seed.json`) ·
-731 bài · 40 điểm ngữ pháp · 8 video (`prisma/seed/vi-cache.json` cache bản dịch máy) ·
+731 bài · 40 điểm ngữ pháp HSK 1–3 + 349 mục HSK 4–9 (đại cương, prisma/seed/data/grammar-syllabus.raw.json) · 8 video (`prisma/seed/vi-cache.json` cache bản dịch máy) ·
 **`assets/audio/` ~58MB đã commit** (đừng gitignore lại — deploy VPS cần).
 
 **Học qua video**: `POST /videos` chỉ cần youtubeUrl (transcript tuỳ chọn) → tự lấy phụ đề CC
