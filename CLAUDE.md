@@ -16,6 +16,7 @@ src/
 ├── common/        decorators (CurrentUser, Public, Roles), filters, time.util
 ├── events/        events.ts — hằng tên + kiểu payload
 ├── modules/<domain>/   auth · users · mail · vocabulary · srs · progress · gamification
+│                        · learn · videos · grammar · exams
 └── health/
 prisma/  schema.prisma + seed/ (hsk-levels, achievements, words)
 scripts/import/  ETL nguồn mở → data/processed/words.seed.json
@@ -45,5 +46,15 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 
 ## Trạng thái hiện tại
 Core đã dựng: auth (email + Google), vocabulary, SRS (SM-2 + FSRS), progress, gamification
-(streak/achievements/quiz), health, Swagger. Seed: 9 cấp HSK + huy hiệu + ~45 từ HSK 1 mẫu.
-Chưa làm (roadmap, chừa chỗ): RAG chatbot, minigame, bảng xếp hạng / social.
+(streak/achievements/quiz), learn (731 bài), videos (học qua video), grammar (40 điểm HSK 1–3),
+exams (lưu lịch sử kiểm tra), health, Swagger.
+Seed đầy đủ để deploy: 9 cấp HSK · huy hiệu · 10.9k từ (`data/processed/words.seed.json`) ·
+731 bài · 40 điểm ngữ pháp · 8 video (`prisma/seed/vi-cache.json` cache bản dịch máy) ·
+**`assets/audio/` ~58MB đã commit** (đừng gitignore lại — deploy VPS cần).
+
+**Học qua video**: `POST /videos` chỉ cần youtubeUrl (transcript tuỳ chọn) → tự lấy phụ đề CC
+tiếng Trung từ YouTube + dịch máy NỀN (`translate.util.ts`: Google free → MyMemory, bảng
+thuật ngữ tu tiên, cache). Không cần API key. `MYMEMORY_EMAIL` nâng hạn mức ngày.
+
+Chưa làm (roadmap, chừa chỗ): câu ví dụ cho từ vựng, ngữ pháp HSK 4–9, cấu trúc đề thi HSK
+thật (nghe/đọc/tính giờ), RAG chatbot, minigame, bảng xếp hạng / social.
