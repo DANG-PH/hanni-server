@@ -144,69 +144,34 @@ const SAMPLES: Sample[] = [
       'Tạm biệt, tạm biệt.',
     ],
   },
-  {
-    youtubeId: 'rbLlUXT72C4',
-    title: 'Nhà của tôi',
-    titleZh: '我的家',
-    author: 'Mandarin Click',
-    description:
-      'Truyện HSK 1. Video không có phụ đề tiếng Trung — bản chép mẫu, thời gian ước lượng.',
-    hskLevel: 1,
-    kind: VideoKind.STORY,
-    fallback: [
-      '这是我的家。 | Đây là nhà của tôi.',
-      '我的家不大，但是很干净。 | Nhà tôi không lớn, nhưng rất sạch sẽ.',
-      '家里有三个房间。 | Trong nhà có ba phòng.',
-      '这是我和妈妈的房间。 | Đây là phòng của tôi và mẹ.',
-      '那是爸爸的房间。 | Kia là phòng của bố.',
-      '客厅里有一个大电视。 | Trong phòng khách có một cái tivi lớn.',
-      '我很喜欢我的家。 | Tôi rất thích nhà của mình.',
-    ].join('\n'),
-  },
-  {
-    youtubeId: 'PcergOJuC1M',
-    title: 'Cuộc sống một tuần',
-    titleZh: '一周的生活',
-    author: 'Mandarin Click',
-    description:
-      'Nghe chậm HSK 1–2. Video không có phụ đề tiếng Trung — bản chép mẫu, thời gian ước lượng.',
-    hskLevel: 2,
-    kind: VideoKind.STORY,
-    fallback: [
-      '星期一到星期五，我要上班。 | Từ thứ Hai đến thứ Sáu, tôi phải đi làm.',
-      '我每天八点半到公司。 | Mỗi ngày tôi đến công ty lúc tám giờ rưỡi.',
-      '中午我在公司附近吃饭。 | Buổi trưa tôi ăn cơm gần công ty.',
-      '星期三晚上我去学游泳。 | Tối thứ Tư tôi đi học bơi.',
-      '星期六我常常睡到中午。 | Thứ Bảy tôi thường ngủ đến trưa.',
-      '星期天我和家人一起去公园。 | Chủ nhật tôi cùng gia đình đi công viên.',
-      '这就是我一个星期的生活。 | Đó là cuộc sống một tuần của tôi.',
-    ].join('\n'),
-  },
 ];
 
 export async function seedVideos(prisma: PrismaClient): Promise<void> {
   await prisma.video.deleteMany({ where: { createdById: null } });
 
   let synced = 0;
+  let count = 0;
   for (const s of SAMPLES) {
     const timed = await fetchTimedTranscript(s.youtubeId).catch(() => []);
-    const useReal = timed.length >= 3;
 
-    const lines = useReal
-      ? timed.map((tl, i) => ({
-          index: i + 1,
-          startMs: tl.startMs,
-          zh: tl.zh,
-          pinyin: pinyin(tl.zh, { toneType: 'symbol', nonZh: 'consecutive' }),
-          pinyinNum: pinyin(tl.zh, { toneType: 'num', nonZh: 'consecutive' }),
-          vi:
-            s.viByIndex?.[i] ??
-            s.viByHan?.[hanOnly(tl.zh)] ??
-            null,
-        }))
-      : parseTranscript(s.fallback ?? '');
+    const lines =
+      timed.length >= 3
+        ? timed.map((tl, i) => ({
+            index: i + 1,
+            startMs: tl.startMs,
+            zh: tl.zh,
+            pinyin: pinyin(tl.zh, { toneType: 'symbol', nonZh: 'consecutive' }),
+            pinyinNum: pinyin(tl.zh, { toneType: 'num', nonZh: 'consecutive' }),
+            vi: s.viByIndex?.[i] ?? s.viByHan?.[hanOnly(tl.zh)] ?? null,
+          }))
+        : parseTranscript(s.fallback ?? '');
 
-    if (useReal) synced += 1;
+    if (lines.length < 3) {
+      console.log(`  ⚠ Bỏ qua ${s.youtubeId}: không lấy được bản chép`);
+      continue;
+    }
+    if (timed.length >= 3) synced += 1;
+    count += 1;
 
     await prisma.video.create({
       data: {
@@ -224,6 +189,6 @@ export async function seedVideos(prisma: PrismaClient): Promise<void> {
     });
   }
   console.log(
-    `  ✓ ${SAMPLES.length} video mẫu (${synced} có phụ đề đồng bộ theo lời nói)`,
+    `  ✓ ${count} video mẫu (${synced} có phụ đề đồng bộ theo lời nói)`,
   );
 }
