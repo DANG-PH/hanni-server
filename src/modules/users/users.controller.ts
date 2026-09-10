@@ -1,5 +1,16 @@
-import { Body, Controller, Get, Patch } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Patch,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { BadRequestException } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../../common/types';
 import { UpdateMeDto, UpdateSettingsDto } from './dto/users.dto';
@@ -23,6 +34,24 @@ export class UsersController {
   @Patch('me')
   updateMe(@CurrentUser() user: AuthUser, @Body() dto: UpdateMeDto) {
     return this.users.updateProfile(user.id, dto);
+  }
+
+  @Post('me/avatar')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
+  )
+  uploadAvatar(
+    @CurrentUser() user: AuthUser,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('Thiếu file ảnh');
+    return this.users.setAvatarFile(user.id, file);
+  }
+
+  @Delete('me/avatar')
+  removeAvatar(@CurrentUser() user: AuthUser) {
+    return this.users.clearAvatar(user.id);
   }
 
   @Get('me/settings')

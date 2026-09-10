@@ -36,6 +36,11 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
       serveRoot: '/media/audio',
       serveStaticOptions: { immutable: true, maxAge: '30d', fallthrough: true },
     }),
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'assets', 'avatars'),
+      serveRoot: '/media/avatars',
+      serveStaticOptions: { maxAge: '7d', fallthrough: true },
+    }),
     ThrottlerModule.forRootAsync({
       useFactory: () => ({
         throttlers: [

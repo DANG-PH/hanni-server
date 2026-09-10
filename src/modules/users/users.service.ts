@@ -1,6 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthProvider, Prisma, type User } from '@prisma/client';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import type { Env } from '../../config/env.validation';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
@@ -124,6 +130,39 @@ export class UsersService {
     const user = await this.prisma.user.update({ where: { id }, data });
     const { passwordHash, ...safe } = user;
     return safe;
+  }
+
+  async setAvatarFile(id: string, file: Express.Multer.File) {
+    const allowed: Record<string, string> = {
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/webp': 'webp',
+    };
+    const ext = allowed[file.mimetype];
+    if (!ext) throw new BadRequestException('Chỉ nhận ảnh PNG, JPG hoặc WEBP');
+    if (file.size > 2 * 1024 * 1024) {
+      throw new BadRequestException('Ảnh tối đa 2MB');
+    }
+
+    const dir = join(process.cwd(), 'assets', 'avatars');
+    await mkdir(dir, { recursive: true });
+    // xoá file định dạng khác của cùng user
+    for (const e of Object.values(allowed)) {
+      await rm(join(dir, `${id}.${e}`), { force: true });
+    }
+    await writeFile(join(dir, `${id}.${ext}`), file.buffer);
+
+    return this.updateProfile(id, {
+      avatarUrl: `/media/avatars/${id}.${ext}?v=${Date.now()}`,
+    });
+  }
+
+  async clearAvatar(id: string) {
+    const dir = join(process.cwd(), 'assets', 'avatars');
+    for (const e of ['png', 'jpg', 'webp']) {
+      await rm(join(dir, `${id}.${e}`), { force: true });
+    }
+    return this.updateProfile(id, { avatarUrl: null as unknown as undefined });
   }
 
   async setPassword(id: string, passwordHash: string): Promise<void> {
