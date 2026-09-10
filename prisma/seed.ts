@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { seedAchievements } from './seed/achievements';
+import { seedGrammar } from './seed/grammar';
 import { seedHskLevels } from './seed/hsk-levels';
 import { seedLessons } from './seed/lessons';
 import { seedVideos } from './seed/videos';
@@ -26,6 +27,7 @@ async function main(): Promise<void> {
     const lessonMap = await seedLessons(prisma, words);
     await seedWords(prisma, words, lessonMap);
   }
+  await seedGrammar(prisma);
   await seedVideos(prisma);
   console.log('Xong.');
 }

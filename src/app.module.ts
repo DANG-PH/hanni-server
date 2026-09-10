@@ -14,6 +14,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { GamificationModule } from './modules/gamification/gamification.module';
+import { GrammarModule } from './modules/grammar/grammar.module';
+import { ExamsModule } from './modules/exams/exams.module';
 import { LearnModule } from './modules/learn/learn.module';
 import { VideosModule } from './modules/videos/videos.module';
 import { MailModule } from './modules/mail/mail.module';
@@ -64,6 +66,8 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
     LearnModule,
     VideosModule,
     GamificationModule,
+    GrammarModule,
+    ExamsModule,
     HealthModule,
   ],
   providers: [

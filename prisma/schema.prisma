@@ -151,6 +151,7 @@ model User {
   quizAttempts   QuizAttempt[]
   videos         Video[]
   videoProgress  UserVideoProgress[]
+  examAttempts   ExamAttempt[]
 
   @@index([lastActiveAt])
 }
@@ -558,6 +559,7 @@ model Video {
   thumbnailUrl  String?
   author        String? // tên kênh YouTube
   isFree        Boolean   @default(true)
+  sortOrder     Int       @default(1000) // nhỏ hiện trước; video hệ thống được xếp tay
   createdById   String?   @db.Uuid
   createdBy     User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
   createdAt     DateTime  @default(now())
@@ -567,7 +569,7 @@ model Video {
   progress UserVideoProgress[]
 
   @@index([hskLevel])
-  @@index([createdAt])
+  @@index([sortOrder, createdAt])
 }
 
 /// Một câu trong bản chép của video.
@@ -600,4 +602,44 @@ model UserVideoProgress {
 
   @@unique([userId, videoId])
   @@index([userId])
+}
+
+// ===================================================================
+//  NGỮ PHÁP (nội dung tĩnh, seed sẵn)
+// ===================================================================
+
+/// Một điểm ngữ pháp HSK. Nội dung do Hanni soạn (dataset từ vựng không có).
+model GrammarPoint {
+  id            String   @id @default(uuid()) @db.Uuid
+  slug          String   @unique
+  hskLevel      Int
+  orderIndex    Int      @default(0)
+  titleVi       String // "Trợ từ 了 — hành động hoàn thành"
+  titleZh       String // "了"
+  summaryVi     String // 1–2 câu tóm tắt
+  explanationVi String // giải thích đầy đủ (xuống dòng bằng \n)
+  patterns      String[] // ["Chủ ngữ + Động từ + 了", ...]
+  examples      Json // [{ zh, pinyin, vi }]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([hskLevel, orderIndex])
+}
+
+// ===================================================================
+//  KIỂM TRA HSK
+// ===================================================================
+
+/// Kết quả một lần làm bài Kiểm tra HSK (quiz sinh từ từ vựng theo cấp).
+model ExamAttempt {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @db.Uuid
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hskLevel     Int
+  totalCount   Int
+  correctCount Int
+  durationSec  Int?
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
 }

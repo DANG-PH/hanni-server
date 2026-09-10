@@ -30,7 +30,7 @@ export class VideosService {
     const [videos, progress] = await Promise.all([
       this.prisma.video.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
         select: {
           id: true,
           youtubeId: true,
