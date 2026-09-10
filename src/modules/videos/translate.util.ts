@@ -1,13 +1,14 @@
 /**
  * Dịch bản chép sang tiếng Việt bằng dịch vụ MIỄN PHÍ, KHÔNG cần API key.
  *
- * Dùng MyMemory (api.mymemory.translated.net) — free, không key, có hạn mức
- * ngày. Chất lượng thô, nên có bảng thuật ngữ tu tiên: mỗi thuật ngữ được
- * thay bằng token `qqNzz` trước khi gửi (để máy dịch không đụng vào), rồi khôi
- * phục lại bằng chữ Hán–Việt chuẩn sau khi dịch.
+ * Chính: endpoint free của Google Translate (nhanh, chất lượng khá — nhưng
+ * hay bị chặn theo IP datacenter). Dự phòng: MyMemory (chậm hơn, có hạn mức
+ * ngày; `MYMEMORY_EMAIL` nâng hạn mức).
  *
- * Gộp nhiều câu ngắn vào 1 request (ngăn bằng xuống dòng) cho nhanh. Nếu số
- * dòng trả về không khớp thì hạ xuống dịch từng câu cho lô đó.
+ * Bảng thuật ngữ tu tiên: mỗi thuật ngữ đổi thành token `qqNzz` trước khi gửi
+ * (để máy dịch không đụng vào), khôi phục chữ Hán–Việt chuẩn sau khi dịch.
+ * Gộp nhiều câu ngắn vào 1 request (ngăn bằng xuống dòng); nếu số dòng trả về
+ * không khớp thì hạ xuống dịch từng câu cho lô đó.
  *
  * Kết quả nên được LƯU lại (DB hoặc file cache) — không gọi lại mỗi lần xem.
  */
@@ -90,8 +91,34 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * giả nội bộ (MyMemory không kiểm tra tính hợp lệ, chỉ dùng để tách hạn mức).
  */
 const MM_EMAIL = process.env.MYMEMORY_EMAIL || 'video-import@hanni.local';
+let googleDead = false; // endpoint free của Google hay bị chặn theo IP máy chủ
 
-/** Gọi MyMemory 1 lần. Ném lỗi khi hết hạn mức; trả null khi hỏng. */
+/**
+ * Bộ dịch CHÍNH: endpoint free của Google (không key). Nhanh + chất lượng hơn
+ * MyMemory. Thường chạy trên server thật, nhưng bị chặn ở nhiều IP datacenter —
+ * hỏng 1 lần thì tắt hẳn, chuyển sang MyMemory.
+ */
+async function callGoogle(text: string): Promise<string | null> {
+  if (googleDead) return null;
+  const url =
+    'https://translate.googleapis.com/translate_a/single?client=gtx' +
+    '&sl=zh-CN&tl=vi&dt=t&q=' +
+    encodeURIComponent(text);
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+    if (!res.ok) {
+      googleDead = true;
+      return null;
+    }
+    const data = (await res.json()) as [Array<[string]>, ...unknown[]];
+    return (data[0] ?? []).map((seg) => seg[0]).join('');
+  } catch {
+    googleDead = true;
+    return null;
+  }
+}
+
+/** Bộ dịch DỰ PHÒNG: MyMemory. Ném lỗi khi hết hạn mức ngày. */
 async function callMyMemory(text: string): Promise<string | null> {
   const url =
     'https://api.mymemory.translated.net/get?langpair=zh-CN|vi' +
@@ -114,10 +141,15 @@ async function callMyMemory(text: string): Promise<string | null> {
   return t;
 }
 
+/** Dịch 1 đoạn text: thử Google trước, rồi MyMemory. */
+async function callTranslate(text: string): Promise<string | null> {
+  return (await callGoogle(text)) ?? (await callMyMemory(text));
+}
+
 /** Dịch 1 câu (đã fallback từ lô hỏng). */
 async function translateOne(zh: string): Promise<string | null> {
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const raw = await callMyMemory(encodeTerms(zh));
+    const raw = await callTranslate(encodeTerms(zh));
     if (raw) return decodeTerms(raw);
     await sleep(500);
   }
@@ -146,7 +178,7 @@ export async function translateLinesToVi(
       const joined = chunk.map(encodeTerms).join('\n');
       let outs: (string | null)[] = [];
 
-      const raw = await callMyMemory(joined);
+      const raw = await callTranslate(joined);
       const parts = raw ? raw.split(/\r?\n/) : [];
       if (parts.length === chunk.length) {
         outs = parts.map((p) => decodeTerms(p) || null);

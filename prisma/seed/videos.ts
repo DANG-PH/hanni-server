@@ -62,6 +62,7 @@ const SAMPLES: Sample[] = [
       'Hoạt hình AI tu tiên: nam chính xuyên không thành tông chủ một "phế tông", mở ra hệ thống mỗi ngày được đệ tử chia tu vi. Phụ đề đồng bộ theo lời nói. ~184 câu đầu dịch tay; phần còn lại do máy dịch (có bảng thuật ngữ tu tiên) nên có thể thô/sai.',
     hskLevel: 5,
     kind: VideoKind.STORY,
+    maxLines: 600,
     viByIndex: [
       'Tông chủ ở trên,',
       'xin nhận đệ tử một lạy.',
@@ -258,7 +259,7 @@ const SAMPLES: Sample[] = [
       'Hoạt hình AI tu tiên. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do MÁY DỊCH (MyMemory) kèm bảng thuật ngữ tu tiên — đọc để nắm ý, có thể sai/thô. Trích phần đầu của video gốc.',
     hskLevel: 5,
     kind: VideoKind.STORY,
-    maxLines: 300,
+    maxLines: 600,
   },
   {
     youtubeId: 'y_ZX85ss8nk',
@@ -269,7 +270,7 @@ const SAMPLES: Sample[] = [
       'Hoạt hình AI tu tiên. Bản chép đồng bộ theo lời nói; bản dịch tiếng Việt do MÁY DỊCH (MyMemory) + bảng thuật ngữ tu tiên — có thể sai/thô. Trích phần đầu.',
     hskLevel: 5,
     kind: VideoKind.STORY,
-    maxLines: 300,
+    maxLines: 600,
   },
   {
     youtubeId: 'tH6FIjh1Z8g',
@@ -280,7 +281,7 @@ const SAMPLES: Sample[] = [
       'Hoạt hình AI tu tiên / trảm yêu. Bản chép đồng bộ theo lời nói; bản dịch tiếng Việt do MÁY DỊCH (MyMemory) + bảng thuật ngữ — có thể sai/thô. Trích phần đầu.',
     hskLevel: 5,
     kind: VideoKind.STORY,
-    maxLines: 300,
+    maxLines: 600,
   },
   {
     youtubeId: 'bFN7fgGIUX4',
@@ -291,7 +292,40 @@ const SAMPLES: Sample[] = [
       'Hoạt hình AI xuyên không (sinh tồn chạy nạn). Bản chép đồng bộ theo lời nói; bản dịch tiếng Việt do MÁY DỊCH (MyMemory) — có thể sai/thô. Trích phần đầu.',
     hskLevel: 4,
     kind: VideoKind.STORY,
-    maxLines: 300,
+    maxLines: 600,
+  },
+  {
+    youtubeId: 'r1X7c2RQOyo',
+    title: 'Điền Điền bận trồng trọt: vườn quê có thú cưng',
+    titleZh: '田田忙种田之田园有宠',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI dễ thương: xuyên không về làm ruộng, nuôi thú cưng ở vùng quê. Bản chép đồng bộ theo lời nói; bản dịch tiếng Việt do MÁY DỊCH — có thể thô/sai. Trích phần đầu.',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 600,
+  },
+  {
+    youtubeId: '8uEvs7pvEpY',
+    title: 'Điền Điền bận trồng trọt: kỳ duyên tiếng thú',
+    titleZh: '田田忙种田之兽语奇缘',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI dễ thương: xuyên không về làm ruộng, nghe hiểu được tiếng loài vật. Bản chép đồng bộ theo lời nói; bản dịch tiếng Việt do MÁY DỊCH — có thể thô/sai. Trích phần đầu.',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 600,
+  },
+  {
+    youtubeId: 'wvpGf5OR8KI',
+    title: 'Xuân Hòa thời cổ: trồng trọt, săn bắn, nuôi con',
+    titleZh: '春禾在古代，种田打猎养娃的日子',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI ấm áp: người mẹ xuyên không về thời cổ, vào rừng săn bắn, làm ruộng nuôi cả nhà. Bản chép đồng bộ theo lời nói; bản dịch tiếng Việt do MÁY DỊCH — có thể thô/sai. Trích phần đầu.',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 600,
   },
 ];
 
