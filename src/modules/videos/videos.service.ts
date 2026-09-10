@@ -17,6 +17,28 @@ import { translateLinesToVi } from './translate.util';
 import { fetchTimedTranscript } from './youtube-transcript.util';
 import { fetchOembed, parseYoutubeId } from './youtube.util';
 
+const KIND_VI: Record<VideoKind, string> = {
+  PODCAST: 'Podcast tiếng Trung',
+  STORY: 'Truyện kể tiếng Trung',
+  SONG: 'Bài hát tiếng Trung',
+  DIALOGUE: 'Hội thoại tiếng Trung',
+  CLIP: 'Clip tiếng Trung',
+  OTHER: 'Video tiếng Trung',
+};
+
+/** Mô tả mặc định khi admin không nhập — ghi đúng cách bản dịch được tạo. */
+function buildAutoDescription(
+  kind: VideoKind,
+  hskLevel: number | null,
+  hasTranslation: boolean,
+): string {
+  const lvl = hskLevel ? ` · HSK ${hskLevel}` : '';
+  const trans = hasTranslation
+    ? 'Bản dịch tiếng Việt do máy dịch miễn phí — đọc để nắm ý, có thể sai/thô.'
+    : 'Bản dịch tiếng Việt đang được máy dịch (miễn phí), cập nhật dần.';
+  return `${KIND_VI[kind]}${lvl}. Bản chép chạy đồng bộ theo lời nói. ${trans}`;
+}
+
 @Injectable()
 export class VideosService {
   constructor(private readonly prisma: PrismaService) {}
@@ -112,12 +134,18 @@ export class VideosService {
     }
 
     const oembed = await fetchOembed(youtubeId);
+    const someVi = parsed.some((l) => l.vi != null);
+    const autoDescription = buildAutoDescription(
+      dto.kind ?? VideoKind.PODCAST,
+      dto.hskLevel ?? null,
+      someVi,
+    );
     const video = await this.prisma.video.create({
       data: {
         youtubeId,
         title: dto.title?.trim() || oembed.title || 'Video chưa đặt tên',
         titleZh: dto.titleZh?.trim() || null,
-        description: dto.description?.trim() || null,
+        description: dto.description?.trim() || autoDescription,
         hskLevel: dto.hskLevel ?? null,
         kind: dto.kind ?? VideoKind.PODCAST,
         sentenceCount: parsed.length,

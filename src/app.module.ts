@@ -16,6 +16,7 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { GamificationModule } from './modules/gamification/gamification.module';
 import { GrammarModule } from './modules/grammar/grammar.module';
 import { ExamsModule } from './modules/exams/exams.module';
+import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
 import { LearnModule } from './modules/learn/learn.module';
 import { VideosModule } from './modules/videos/videos.module';
 import { MailModule } from './modules/mail/mail.module';
@@ -68,6 +69,7 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
     GamificationModule,
     GrammarModule,
     ExamsModule,
+    LeaderboardModule,
     HealthModule,
   ],
   providers: [
