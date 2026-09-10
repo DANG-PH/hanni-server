@@ -11,7 +11,10 @@ import type {
   VideoProgressDto,
   VideoQueryDto,
 } from './dto/videos.dto';
-import { parseTranscript } from './transcript.util';
+import { pinyin } from 'pinyin-pro';
+import { parseTranscript, type ParsedLine } from './transcript.util';
+import { translateLinesToVi } from './translate.util';
+import { fetchTimedTranscript } from './youtube-transcript.util';
 import { fetchOembed, parseYoutubeId } from './youtube.util';
 
 @Injectable()
@@ -86,9 +89,26 @@ export class VideosService {
 
   async create(userId: string, dto: CreateVideoDto) {
     const youtubeId = parseYoutubeId(dto.youtubeUrl);
-    const parsed = parseTranscript(dto.transcript);
+
+    // Có bản chép dán vào → dùng luôn. Không → tự lấy phụ đề tiếng Trung từ YouTube.
+    let parsed: ParsedLine[];
+    if (dto.transcript?.trim()) {
+      parsed = parseTranscript(dto.transcript);
+    } else {
+      const timed = await fetchTimedTranscript(youtubeId).catch(() => []);
+      parsed = timed.map((tl, i) => ({
+        index: i + 1,
+        startMs: tl.startMs,
+        zh: tl.zh,
+        pinyin: pinyin(tl.zh, { toneType: 'symbol', nonZh: 'consecutive' }),
+        pinyinNum: pinyin(tl.zh, { toneType: 'num', nonZh: 'consecutive' }),
+        vi: null,
+      }));
+    }
     if (parsed.length === 0) {
-      throw new BadRequestException('Bản chép trống hoặc không đọc được câu nào');
+      throw new BadRequestException(
+        'Không có bản chép: hãy dán bản chép, hoặc video này chưa có phụ đề tiếng Trung trên YouTube',
+      );
     }
 
     const oembed = await fetchOembed(youtubeId);
@@ -117,7 +137,39 @@ export class VideosService {
       },
       select: { id: true },
     });
+
+    // Câu chưa kèm bản dịch → dịch máy (miễn phí) CHẠY NỀN, không chặn phản hồi.
+    // Các dòng được cập nhật dần; client tải lại video sẽ thấy bản dịch.
+    if (parsed.some((l) => l.vi == null)) {
+      void this.backfillTranslations(video.id);
+    }
     return { id: video.id };
+  }
+
+  /** Nền: dịch các dòng còn thiếu `vi` của một video rồi ghi vào DB. */
+  private async backfillTranslations(videoId: string): Promise<void> {
+    try {
+      const rows = await this.prisma.videoLine.findMany({
+        where: { videoId, vi: null },
+        select: { id: true, zh: true },
+        orderBy: { index: 'asc' },
+      });
+      if (!rows.length) return;
+      const vis = await translateLinesToVi(rows.map((r) => r.zh));
+      for (let i = 0; i < rows.length; i += 1) {
+        if (vis[i] != null) {
+          await this.prisma.videoLine.update({
+            where: { id: rows[i].id },
+            data: { vi: vis[i] },
+          });
+        }
+      }
+    } catch (err) {
+      console.error(
+        `Dịch nền video ${videoId} lỗi:`,
+        (err as Error).message,
+      );
+    }
   }
 
   async updateProgress(userId: string, id: string, dto: VideoProgressDto) {

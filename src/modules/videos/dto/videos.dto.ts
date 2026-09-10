@@ -42,11 +42,14 @@ export class CreateVideoDto {
   @IsEnum(VideoKind)
   kind?: VideoKind;
 
-  /** Bản chép: mỗi câu 1 dòng — "[mm:ss] 中文 | dịch". */
+  /**
+   * Bản chép (tuỳ chọn): mỗi câu 1 dòng — "[mm:ss] 中文 | dịch".
+   * Bỏ trống → tự lấy phụ đề tiếng Trung + mốc thời gian từ YouTube.
+   */
+  @IsOptional()
   @IsString()
-  @MinLength(1)
   @MaxLength(60000)
-  transcript!: string;
+  transcript?: string;
 }
 
 export class VideoQueryDto {
