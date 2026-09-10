@@ -306,7 +306,6 @@ const SAMPLES: Sample[] = [
     hskLevel: 4,
     kind: VideoKind.STORY,
     maxLines: 1500,
-    sortOrder: 1,
   },
   {
     youtubeId: '8uEvs7pvEpY',
@@ -318,7 +317,6 @@ const SAMPLES: Sample[] = [
     hskLevel: 4,
     kind: VideoKind.STORY,
     maxLines: 1500,
-    sortOrder: 2,
   },
   {
     youtubeId: 'wvpGf5OR8KI',
@@ -330,7 +328,6 @@ const SAMPLES: Sample[] = [
     hskLevel: 4,
     kind: VideoKind.STORY,
     maxLines: 1500,
-    sortOrder: 3,
   },
 ];
 

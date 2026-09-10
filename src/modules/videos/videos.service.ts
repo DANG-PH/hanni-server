@@ -156,13 +156,22 @@ export class VideosService {
       });
       if (!rows.length) return;
       const vis = await translateLinesToVi(rows.map((r) => r.zh));
-      for (let i = 0; i < rows.length; i += 1) {
-        if (vis[i] != null) {
-          await this.prisma.videoLine.update({
-            where: { id: rows[i].id },
-            data: { vi: vis[i] },
-          });
-        }
+
+      // Gom các dòng cùng bản dịch → 1 updateMany mỗi bản dịch (video thoại lặp
+      // nhiều nên số câu KHÁC nhau ít hơn hẳn tổng số dòng).
+      const byVi = new Map<string, string[]>();
+      rows.forEach((r, i) => {
+        const vi = vis[i];
+        if (vi == null) return;
+        const ids = byVi.get(vi) ?? [];
+        ids.push(r.id);
+        byVi.set(vi, ids);
+      });
+      for (const [vi, ids] of byVi) {
+        await this.prisma.videoLine.updateMany({
+          where: { id: { in: ids } },
+          data: { vi },
+        });
       }
     } catch (err) {
       console.error(

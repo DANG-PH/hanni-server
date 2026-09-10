@@ -63,6 +63,27 @@ const GLOSSARY: [string, string][] = [
 const HAN = /\p{Script=Han}/u;
 const BATCH = 15;
 
+/** Thán từ / tiếng động lặp — máy dịch hay làm hỏng; map sẵn để khỏi gọi API. */
+const QUICK: Record<string, string> = {
+  啊: 'A.',
+  嗯: 'Ừm.',
+  哦: 'Ồ.',
+  噢: 'Ồ.',
+  唉: 'Haizz.',
+  哈哈: 'Ha ha.',
+  哈哈哈: 'Ha ha ha.',
+  呵呵: 'Hê hê.',
+  嘿嘿: 'Hề hề.',
+  哼: 'Hừ.',
+  喂: 'Alô.',
+  嗯嗯: 'Ừ ừ.',
+  啊啊啊: 'Á á á!',
+};
+function quickVi(zh: string): string | null {
+  const key = zh.replace(/[^\p{Script=Han}]/gu, '');
+  return QUICK[key] ?? null;
+}
+
 function encodeTerms(s: string): string {
   let out = s;
   GLOSSARY.forEach(([zh], i) => {
@@ -168,9 +189,17 @@ export async function translateLinesToVi(
   cache?: Map<string, string>,
 ): Promise<(string | null)[]> {
   const result = new Map<string, string | null>(cache ?? []);
-  const todo = [...new Set(zhLines.filter((s) => HAN.test(s)))].filter(
-    (s) => !result.has(s),
-  );
+  const todo: string[] = [];
+  for (const zh of new Set(zhLines.filter((s) => HAN.test(s)))) {
+    if (result.has(zh)) continue;
+    const q = quickVi(zh); // thán từ → khỏi gọi API
+    if (q) {
+      result.set(zh, q);
+      cache?.set(zh, q);
+    } else {
+      todo.push(zh);
+    }
+  }
 
   try {
     for (let i = 0; i < todo.length; i += BATCH) {
