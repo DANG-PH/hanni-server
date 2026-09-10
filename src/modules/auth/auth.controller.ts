@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  Post,
-  Query,
-  Req,
-  Res,
-} from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, Req, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags } from '@nestjs/swagger';
@@ -18,6 +9,7 @@ import { AuthService } from './auth.service';
 import { REFRESH_COOKIE, clearAuthCookies, setAuthCookies } from './cookies';
 import {
   ForgotPasswordDto,
+  GoogleLoginDto,
   LoginDto,
   RegisterDto,
   ResetPasswordDto,
@@ -107,40 +99,23 @@ export class AuthController {
     return { ok: true };
   }
 
-  // ---------- Google OAuth2 ----------
+  // ---------- Google: frontend gửi id_token, backend verify (không cần secret) ----------
 
   @Public()
-  @Get('google')
-  async google(@Res() res: Response) {
-    const url = await this.auth.startGoogle();
-    res.redirect(url);
-  }
-
-  @Public()
-  @Get('google/callback')
-  async googleCallback(
-    @Query('code') code: string | undefined,
-    @Query('state') state: string | undefined,
-    @Query('error') error: string | undefined,
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @HttpCode(200)
+  @Post('google')
+  async google(
+    @Body() dto: GoogleLoginDto,
     @Req() req: Request,
-    @Res() res: Response,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    const frontend = this.config.get('FRONTEND_URL', { infer: true });
-    if (error || !code || !state) {
-      res.redirect(`${frontend}/auth/callback?error=${error ?? 'oauth_failed'}`);
-      return;
-    }
-    try {
-      const { tokens, isNewUser } = await this.auth.finishGoogle(
-        code,
-        state,
-        this.ctx(req),
-      );
-      this.send(res, tokens);
-      res.redirect(`${frontend}/auth/callback?ok=1&new=${isNewUser ? 1 : 0}`);
-    } catch {
-      res.redirect(`${frontend}/auth/callback?error=oauth_failed`);
-    }
+    const { tokens, isNewUser } = await this.auth.loginWithGoogle(
+      dto.idToken,
+      this.ctx(req),
+    );
+    this.send(res, tokens);
+    return { ok: true, isNewUser };
   }
 
   // ---------- xác minh / reset ----------

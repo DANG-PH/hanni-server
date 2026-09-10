@@ -1,10 +1,7 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { OAuth2Client } from 'google-auth-library';
 import type { Env } from '../../config/env.validation';
-
-const AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
-const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
-const USERINFO_ENDPOINT = 'https://openidconnect.googleapis.com/v1/userinfo';
 
 export interface GoogleProfile {
   sub: string;
@@ -14,80 +11,41 @@ export interface GoogleProfile {
   picture?: string;
 }
 
-interface GoogleTokenResponse {
-  access_token: string;
-  expires_in: number;
-  refresh_token?: string;
-  scope: string;
-  token_type: string;
-  id_token: string;
-}
-
 /**
- * Google OAuth2 — Authorization Code flow, phía server (confidential client).
- * Không dùng passport-google-oauth20 để kiểm soát trọn vẹn state (lưu ở Redis).
- * id_token lấy trực tiếp qua kênh server-to-server TLS nên tin được mà không cần
- * verify chữ ký; ta vẫn gọi userinfo để lấy hồ sơ chuẩn hoá.
+ * Xác minh Google `id_token` do frontend lấy qua Google Identity Services.
+ * Chỉ cần GOOGLE_CLIENT_ID (client id là công khai) — KHÔNG cần client secret:
+ * việc kiểm chữ ký JWT dùng khóa công khai của Google, ai cũng verify được.
+ * Ta chỉ check thêm `aud` khớp client id của Hanni + `iss` + `exp` (lib tự lo).
  */
 @Injectable()
 export class GoogleOAuthService {
-  constructor(private readonly config: ConfigService<Env, true>) {}
+  private readonly client = new OAuth2Client();
+  private readonly clientId: string;
 
-  buildAuthUrl(state: string): string {
-    const params = new URLSearchParams({
-      client_id: this.config.get('GOOGLE_CLIENT_ID', { infer: true }),
-      redirect_uri: this.config.get('GOOGLE_CALLBACK_URL', { infer: true }),
-      response_type: 'code',
-      scope: 'openid email profile',
-      state,
-      access_type: 'offline',
-      prompt: 'consent',
-    });
-    return `${AUTH_ENDPOINT}?${params.toString()}`;
+  constructor(config: ConfigService<Env, true>) {
+    this.clientId = config.get('GOOGLE_CLIENT_ID', { infer: true });
   }
 
-  async exchangeCode(code: string): Promise<GoogleTokenResponse> {
-    const res = await fetch(TOKEN_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        code,
-        client_id: this.config.get('GOOGLE_CLIENT_ID', { infer: true }),
-        client_secret: this.config.get('GOOGLE_CLIENT_SECRET', { infer: true }),
-        redirect_uri: this.config.get('GOOGLE_CALLBACK_URL', { infer: true }),
-        grant_type: 'authorization_code',
-      }),
-    });
-    if (!res.ok) {
-      throw new InternalServerErrorException(
-        `Google từ chối đổi mã: ${res.status} ${await res.text()}`,
-      );
+  async verifyIdToken(idToken: string): Promise<GoogleProfile> {
+    let payload;
+    try {
+      const ticket = await this.client.verifyIdToken({
+        idToken,
+        audience: this.clientId,
+      });
+      payload = ticket.getPayload();
+    } catch {
+      throw new UnauthorizedException('Google token không hợp lệ hoặc đã hết hạn');
     }
-    return (await res.json()) as GoogleTokenResponse;
-  }
-
-  async fetchUserInfo(accessToken: string): Promise<GoogleProfile> {
-    const res = await fetch(USERINFO_ENDPOINT, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!res.ok) {
-      throw new InternalServerErrorException(
-        `Không lấy được userinfo từ Google: ${res.status}`,
-      );
+    if (!payload?.sub || !payload.email) {
+      throw new UnauthorizedException('Google token thiếu thông tin');
     }
-    const data = (await res.json()) as {
-      sub: string;
-      email: string;
-      email_verified?: boolean;
-      name?: string;
-      picture?: string;
-    };
     return {
-      sub: data.sub,
-      email: data.email,
-      emailVerified: data.email_verified ?? false,
-      name: data.name,
-      picture: data.picture,
+      sub: payload.sub,
+      email: payload.email,
+      emailVerified: payload.email_verified ?? false,
+      name: payload.name,
+      picture: payload.picture,
     };
   }
 }

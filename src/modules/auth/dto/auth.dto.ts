@@ -53,3 +53,10 @@ export class VerifyEmailDto {
   @IsString()
   token!: string;
 }
+
+export class GoogleLoginDto {
+  /** id_token do frontend lấy qua Google Identity Services */
+  @IsString()
+  @MinLength(20)
+  idToken!: string;
+}

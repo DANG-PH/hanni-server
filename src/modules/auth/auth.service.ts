@@ -4,12 +4,9 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { AuthProvider, VerificationTokenType } from '@prisma/client';
-import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import type { Env } from '../../config/env.validation';
+import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../infra/prisma/prisma.service';
-import { RedisService } from '../../infra/redis/redis.service';
 import { MailService } from '../mail/mail.service';
 import { UsersService } from '../users/users.service';
 import type { RegisterDto } from './dto/auth.dto';
@@ -24,7 +21,6 @@ interface RequestCtx {
 
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const RESET_TTL_MS = 60 * 60 * 1000;
-const OAUTH_STATE_PREFIX = 'oauth:state:';
 
 function sha256(v: string): string {
   return createHash('sha256').update(v).digest('hex');
@@ -41,8 +37,6 @@ export class AuthService {
     private readonly tokens: TokenService,
     private readonly mail: MailService,
     private readonly google: GoogleOAuthService,
-    private readonly redis: RedisService,
-    private readonly config: ConfigService<Env, true>,
   ) {}
 
   // ---------- email + mật khẩu ----------
@@ -157,32 +151,14 @@ export class AuthService {
     return row;
   }
 
-  // ---------- Google OAuth2 ----------
+  // ---------- Google (verify id_token, không cần client secret) ----------
 
-  async startGoogle(): Promise<string> {
-    const state = randomUUID();
-    const ttl = this.config.get('OAUTH_STATE_TTL', { infer: true });
-    await this.redis.setJson(`${OAUTH_STATE_PREFIX}${state}`, { at: Date.now() }, ttl);
-    return this.google.buildAuthUrl(state);
-  }
-
-  async finishGoogle(
-    code: string,
-    state: string,
+  async loginWithGoogle(
+    idToken: string,
     ctx: RequestCtx,
   ): Promise<{ tokens: IssuedTokens; isNewUser: boolean }> {
-    const saved = await this.redis.takeJson<{ at: number }>(
-      `${OAUTH_STATE_PREFIX}${state}`,
-    );
-    if (!saved) throw new UnauthorizedException('State OAuth không hợp lệ hoặc đã hết hạn');
+    const profile = await this.google.verifyIdToken(idToken);
 
-    const tokenRes = await this.google.exchangeCode(code);
-    const profile = await this.google.fetchUserInfo(tokenRes.access_token);
-    if (!profile.email) {
-      throw new BadRequestException('Tài khoản Google không có email');
-    }
-
-    const expiresAt = new Date(Date.now() + tokenRes.expires_in * 1000);
     let isNewUser = false;
 
     // 1) đã từng đăng nhập Google → dùng luôn
@@ -194,7 +170,7 @@ export class AuthService {
     if (account) {
       userId = account.userId;
     } else {
-      // 2) có user cùng email (đã verify) → link tài khoản Google vào
+      // 2) có user cùng email → link tài khoản Google vào (chỉ khi email đã xác minh)
       const byEmail = await this.users.findByEmail(profile.email);
       if (byEmail) {
         if (!byEmail.emailVerifiedAt && !profile.emailVerified) {
@@ -218,12 +194,6 @@ export class AuthService {
 
     await this.users.linkOAuthAccount(userId, AuthProvider.GOOGLE, {
       providerAccountId: profile.sub,
-      accessToken: tokenRes.access_token,
-      refreshToken: tokenRes.refresh_token,
-      expiresAt,
-      scope: tokenRes.scope,
-      idToken: tokenRes.id_token,
-      tokenType: tokenRes.token_type,
     });
 
     const user = await this.users.findById(userId);
