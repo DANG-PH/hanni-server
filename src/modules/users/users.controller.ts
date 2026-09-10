@@ -13,7 +13,11 @@ import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { BadRequestException } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../../common/types';
-import { UpdateMeDto, UpdateSettingsDto } from './dto/users.dto';
+import {
+  ChangePasswordDto,
+  UpdateMeDto,
+  UpdateSettingsDto,
+} from './dto/users.dto';
 import { UserSettingsService } from './user-settings.service';
 import { UsersService } from './users.service';
 
@@ -52,6 +56,18 @@ export class UsersController {
   @Delete('me/avatar')
   removeAvatar(@CurrentUser() user: AuthUser) {
     return this.users.clearAvatar(user.id);
+  }
+
+  @Post('me/password')
+  changePassword(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.users.changePassword(
+      user.id,
+      dto.currentPassword,
+      dto.newPassword,
+    );
   }
 
   @Get('me/settings')

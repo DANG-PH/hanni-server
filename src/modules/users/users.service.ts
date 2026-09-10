@@ -8,6 +8,7 @@ import { AuthProvider, Prisma, type User } from '@prisma/client';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Env } from '../../config/env.validation';
+import { PasswordService } from '../auth/password.service';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
 interface CreateUserInput {
@@ -24,7 +25,31 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
+    private readonly password: PasswordService,
   ) {}
+
+  /** Đổi mật khẩu khi đang đăng nhập. Nếu đã có mật khẩu thì phải nhập đúng mật khẩu cũ. */
+  async changePassword(
+    id: string,
+    currentPassword: string | undefined,
+    newPassword: string,
+  ): Promise<{ ok: true }> {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+    if (user.passwordHash) {
+      const ok = await this.password.verify(
+        currentPassword ?? '',
+        user.passwordHash,
+      );
+      if (!ok) throw new BadRequestException('Mật khẩu hiện tại không đúng');
+    }
+    const hash = await this.password.hash(newPassword);
+    await this.prisma.user.update({
+      where: { id },
+      data: { passwordHash: hash },
+    });
+    return { ok: true };
+  }
 
   findByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({ where: { email: email.toLowerCase() } });

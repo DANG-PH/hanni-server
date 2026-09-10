@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { SrsState } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
@@ -12,12 +12,21 @@ const LEARNED_WHERE = {
   ],
 };
 
-export interface Row {
+export type LeaderboardMetric = 'learned' | 'streak' | 'longest' | 'lessons';
+
+const METRICS: Record<LeaderboardMetric, { label: string; unit: string }> = {
+  learned: { label: 'Từ đã thuộc', unit: 'từ' },
+  streak: { label: 'Chuỗi hiện tại', unit: 'ngày' },
+  longest: { label: 'Chuỗi dài nhất', unit: 'ngày' },
+  lessons: { label: 'Bài đã xong', unit: 'bài' },
+};
+
+export interface LeaderboardRow {
   rank: number;
   userId: string;
   displayName: string;
   avatarUrl: string | null;
-  learnedWords: number;
+  value: number;
   currentStreak: number;
   isMe: boolean;
 }
@@ -26,24 +35,27 @@ export interface Row {
 export class LeaderboardService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Bảng xếp hạng theo số từ đã thuộc. Kèm hạng của chính user. */
-  async top(userId: string, limit = 50) {
-    const grouped = await this.prisma.userWordProgress.groupBy({
-      by: ['userId'],
-      where: LEARNED_WHERE,
-      _count: true,
-      orderBy: { _count: { userId: 'desc' } },
-    });
+  metrics() {
+    return (Object.keys(METRICS) as LeaderboardMetric[]).map((key) => ({
+      key,
+      ...METRICS[key],
+    }));
+  }
 
-    const myIndex = grouped.findIndex((g) => g.userId === userId);
+  /** Bảng xếp hạng theo `metric`. Kèm hạng của user hiện tại. */
+  async top(userId: string, metric: LeaderboardMetric, limit = 50) {
+    if (!METRICS[metric]) throw new BadRequestException('Tiêu chí không hợp lệ');
+
+    const ranked = await this.rankedPairs(metric);
+    const myIndex = ranked.findIndex((r) => r.userId === userId);
     const me = {
       rank: myIndex >= 0 ? myIndex + 1 : null,
-      learnedWords: myIndex >= 0 ? grouped[myIndex]._count : 0,
-      totalRanked: grouped.length,
+      value: myIndex >= 0 ? ranked[myIndex].value : 0,
+      totalRanked: ranked.length,
     };
 
-    const top = grouped.slice(0, limit);
-    const ids = top.map((g) => g.userId);
+    const top = ranked.slice(0, limit);
+    const ids = top.map((r) => r.userId);
     const [users, streaks] = await Promise.all([
       this.prisma.user.findMany({
         where: { id: { in: ids } },
@@ -57,16 +69,53 @@ export class LeaderboardService {
     const uMap = new Map(users.map((u) => [u.id, u]));
     const sMap = new Map(streaks.map((s) => [s.userId, s.currentStreak]));
 
-    const rows: Row[] = top.map((g, i) => ({
+    const rows: LeaderboardRow[] = top.map((r, i) => ({
       rank: i + 1,
-      userId: g.userId,
-      displayName: uMap.get(g.userId)?.displayName ?? 'Người học ẩn danh',
-      avatarUrl: uMap.get(g.userId)?.avatarUrl ?? null,
-      learnedWords: g._count,
-      currentStreak: sMap.get(g.userId) ?? 0,
-      isMe: g.userId === userId,
+      userId: r.userId,
+      displayName: uMap.get(r.userId)?.displayName ?? 'Người học ẩn danh',
+      avatarUrl: uMap.get(r.userId)?.avatarUrl ?? null,
+      value: r.value,
+      currentStreak: sMap.get(r.userId) ?? 0,
+      isMe: r.userId === userId,
     }));
 
-    return { rows, me };
+    return { metric, ...METRICS[metric], rows, me };
+  }
+
+  /** Danh sách (userId, value) đã sắp giảm dần, lọc value > 0. */
+  private async rankedPairs(
+    metric: LeaderboardMetric,
+  ): Promise<{ userId: string; value: number }[]> {
+    if (metric === 'learned') {
+      const grouped = await this.prisma.userWordProgress.groupBy({
+        by: ['userId'],
+        where: LEARNED_WHERE,
+        _count: true,
+        orderBy: { _count: { userId: 'desc' } },
+      });
+      return grouped.map((g) => ({ userId: g.userId, value: g._count }));
+    }
+
+    if (metric === 'lessons') {
+      const grouped = await this.prisma.userLessonProgress.groupBy({
+        by: ['userId'],
+        where: { completedAt: { not: null } },
+        _count: true,
+        orderBy: { _count: { userId: 'desc' } },
+      });
+      return grouped.map((g) => ({ userId: g.userId, value: g._count }));
+    }
+
+    // streak / longest
+    const field = metric === 'streak' ? 'currentStreak' : 'longestStreak';
+    const streaks = await this.prisma.userStreak.findMany({
+      where: { [field]: { gt: 0 } },
+      select: { userId: true, currentStreak: true, longestStreak: true },
+      orderBy: { [field]: 'desc' },
+    });
+    return streaks.map((s) => ({
+      userId: s.userId,
+      value: metric === 'streak' ? s.currentStreak : s.longestStreak,
+    }));
   }
 }

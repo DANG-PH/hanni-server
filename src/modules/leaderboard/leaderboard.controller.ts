@@ -1,8 +1,18 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
+import { IsIn, IsOptional } from 'class-validator';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../../common/types';
-import { LeaderboardService } from './leaderboard.service';
+import {
+  LeaderboardService,
+  type LeaderboardMetric,
+} from './leaderboard.service';
+
+class LeaderboardQuery {
+  @IsOptional()
+  @IsIn(['learned', 'streak', 'longest', 'lessons'])
+  metric?: LeaderboardMetric;
+}
 
 @ApiTags('leaderboard')
 @ApiBearerAuth()
@@ -10,8 +20,13 @@ import { LeaderboardService } from './leaderboard.service';
 export class LeaderboardController {
   constructor(private readonly leaderboard: LeaderboardService) {}
 
+  @Get('metrics')
+  metrics() {
+    return this.leaderboard.metrics();
+  }
+
   @Get()
-  top(@CurrentUser() user: AuthUser) {
-    return this.leaderboard.top(user.id);
+  top(@CurrentUser() user: AuthUser, @Query() q: LeaderboardQuery) {
+    return this.leaderboard.top(user.id, q.metric ?? 'learned');
   }
 }
