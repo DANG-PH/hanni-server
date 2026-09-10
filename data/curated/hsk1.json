@@ -1,0 +1,464 @@
+[
+  {
+    "simplified": "我",
+    "pinyinNumeric": "wo3",
+    "meaningVi": "tôi; tớ; mình",
+    "examples": [
+      {
+        "zh": "我是学生。",
+        "pinyin": "wǒ shì xuéshēng.",
+        "vi": "Tôi là học sinh.",
+        "orderIndex": 0
+      }
+    ]
+  },
+  {
+    "simplified": "你",
+    "pinyinNumeric": "ni3",
+    "meaningVi": "bạn; anh; chị; mày",
+    "examples": []
+  },
+  {
+    "simplified": "他",
+    "pinyinNumeric": "ta1",
+    "meaningVi": "anh ấy; ông ấy; hắn",
+    "examples": []
+  },
+  {
+    "simplified": "她",
+    "pinyinNumeric": "ta1",
+    "meaningVi": "cô ấy; bà ấy; chị ấy",
+    "examples": []
+  },
+  {
+    "simplified": "好",
+    "pinyinNumeric": "hao3",
+    "meaningVi": "tốt; ổn; hay",
+    "examples": []
+  },
+  {
+    "simplified": "你好",
+    "pinyinNumeric": "ni3 hao3",
+    "meaningVi": "xin chào",
+    "examples": [
+      {
+        "zh": "你好，我叫小明。",
+        "pinyin": "nǐ hǎo, wǒ jiào Xiǎomíng.",
+        "vi": "Xin chào, mình tên là Tiểu Minh.",
+        "orderIndex": 0
+      }
+    ]
+  },
+  {
+    "simplified": "是",
+    "pinyinNumeric": "shi4",
+    "meaningVi": "là; đúng; phải",
+    "examples": []
+  },
+  {
+    "simplified": "不",
+    "pinyinNumeric": "bu4",
+    "meaningVi": "không (phủ định)",
+    "examples": []
+  },
+  {
+    "simplified": "的",
+    "pinyinNumeric": "de5",
+    "meaningVi": "trợ từ sở hữu / định ngữ (của)",
+    "examples": []
+  },
+  {
+    "simplified": "了",
+    "pinyinNumeric": "le5",
+    "meaningVi": "trợ từ chỉ hoàn thành / thay đổi",
+    "examples": []
+  },
+  {
+    "simplified": "吗",
+    "pinyinNumeric": "ma5",
+    "meaningVi": "trợ từ nghi vấn (…không?)",
+    "examples": []
+  },
+  {
+    "simplified": "呢",
+    "pinyinNumeric": "ne5",
+    "meaningVi": "trợ từ nghi vấn (… thì sao?)",
+    "examples": []
+  },
+  {
+    "simplified": "很",
+    "pinyinNumeric": "hen3",
+    "meaningVi": "rất",
+    "examples": []
+  },
+  {
+    "simplified": "谢谢",
+    "pinyinNumeric": "xie4 xie5",
+    "meaningVi": "cảm ơn",
+    "examples": [
+      {
+        "zh": "谢谢你的帮助。",
+        "pinyin": "xièxie nǐ de bāngzhù.",
+        "vi": "Cảm ơn sự giúp đỡ của bạn.",
+        "orderIndex": 0
+      }
+    ]
+  },
+  {
+    "simplified": "再见",
+    "pinyinNumeric": "zai4 jian4",
+    "meaningVi": "tạm biệt",
+    "examples": []
+  },
+  {
+    "simplified": "请",
+    "pinyinNumeric": "qing3",
+    "meaningVi": "mời; xin (làm gì)",
+    "examples": []
+  },
+  {
+    "simplified": "对不起",
+    "pinyinNumeric": "dui4 bu5 qi3",
+    "meaningVi": "xin lỗi",
+    "examples": []
+  },
+  {
+    "simplified": "没关系",
+    "pinyinNumeric": "mei2 guan1 xi5",
+    "meaningVi": "không sao đâu",
+    "examples": []
+  },
+  {
+    "simplified": "名字",
+    "pinyinNumeric": "ming2 zi5",
+    "meaningVi": "tên",
+    "examples": []
+  },
+  {
+    "simplified": "叫",
+    "pinyinNumeric": "jiao4",
+    "meaningVi": "gọi; tên là",
+    "examples": []
+  },
+  {
+    "simplified": "什么",
+    "pinyinNumeric": "shen2 me5",
+    "meaningVi": "cái gì; gì",
+    "examples": []
+  },
+  {
+    "simplified": "谁",
+    "pinyinNumeric": "shei2",
+    "meaningVi": "ai",
+    "examples": []
+  },
+  {
+    "simplified": "哪儿",
+    "pinyinNumeric": "nar3",
+    "meaningVi": "ở đâu",
+    "examples": []
+  },
+  {
+    "simplified": "这",
+    "pinyinNumeric": "zhe4",
+    "meaningVi": "này; đây",
+    "examples": []
+  },
+  {
+    "simplified": "那",
+    "pinyinNumeric": "na4",
+    "meaningVi": "kia; đó",
+    "examples": []
+  },
+  {
+    "simplified": "几",
+    "pinyinNumeric": "ji3",
+    "meaningVi": "mấy; bao nhiêu (số nhỏ)",
+    "examples": []
+  },
+  {
+    "simplified": "多少",
+    "pinyinNumeric": "duo1 shao5",
+    "meaningVi": "bao nhiêu",
+    "examples": []
+  },
+  {
+    "simplified": "一",
+    "pinyinNumeric": "yi1",
+    "meaningVi": "một",
+    "examples": []
+  },
+  {
+    "simplified": "二",
+    "pinyinNumeric": "er4",
+    "meaningVi": "hai",
+    "examples": []
+  },
+  {
+    "simplified": "三",
+    "pinyinNumeric": "san1",
+    "meaningVi": "ba",
+    "examples": []
+  },
+  {
+    "simplified": "十",
+    "pinyinNumeric": "shi2",
+    "meaningVi": "mười",
+    "examples": []
+  },
+  {
+    "simplified": "个",
+    "pinyinNumeric": "ge4",
+    "meaningVi": "cái; chiếc (lượng từ phổ biến)",
+    "examples": []
+  },
+  {
+    "simplified": "人",
+    "pinyinNumeric": "ren2",
+    "meaningVi": "người",
+    "examples": []
+  },
+  {
+    "simplified": "家",
+    "pinyinNumeric": "jia1",
+    "meaningVi": "nhà; gia đình",
+    "examples": []
+  },
+  {
+    "simplified": "老师",
+    "pinyinNumeric": "lao3 shi1",
+    "meaningVi": "giáo viên; thầy cô",
+    "examples": []
+  },
+  {
+    "simplified": "学生",
+    "pinyinNumeric": "xue2 sheng5",
+    "meaningVi": "học sinh; sinh viên",
+    "examples": []
+  },
+  {
+    "simplified": "朋友",
+    "pinyinNumeric": "peng2 you5",
+    "meaningVi": "bạn bè",
+    "examples": []
+  },
+  {
+    "simplified": "中国",
+    "pinyinNumeric": "zhong1 guo2",
+    "meaningVi": "Trung Quốc",
+    "examples": []
+  },
+  {
+    "simplified": "今天",
+    "pinyinNumeric": "jin1 tian1",
+    "meaningVi": "hôm nay",
+    "examples": []
+  },
+  {
+    "simplified": "明天",
+    "pinyinNumeric": "ming2 tian1",
+    "meaningVi": "ngày mai",
+    "examples": []
+  },
+  {
+    "simplified": "吃",
+    "pinyinNumeric": "chi1",
+    "meaningVi": "ăn",
+    "examples": [
+      {
+        "zh": "我想吃米饭。",
+        "pinyin": "wǒ xiǎng chī mǐfàn.",
+        "vi": "Tôi muốn ăn cơm.",
+        "orderIndex": 0
+      }
+    ]
+  },
+  {
+    "simplified": "喝",
+    "pinyinNumeric": "he1",
+    "meaningVi": "uống",
+    "examples": []
+  },
+  {
+    "simplified": "看",
+    "pinyinNumeric": "kan4",
+    "meaningVi": "xem; nhìn; đọc",
+    "examples": []
+  },
+  {
+    "simplified": "听",
+    "pinyinNumeric": "ting1",
+    "meaningVi": "nghe",
+    "examples": []
+  },
+  {
+    "simplified": "说",
+    "pinyinNumeric": "shuo1",
+    "meaningVi": "nói",
+    "examples": []
+  },
+  {
+    "simplified": "写",
+    "pinyinNumeric": "xie3",
+    "meaningVi": "viết",
+    "examples": []
+  },
+  {
+    "simplified": "读",
+    "pinyinNumeric": "du2",
+    "meaningVi": "đọc",
+    "examples": []
+  },
+  {
+    "simplified": "去",
+    "pinyinNumeric": "qu4",
+    "meaningVi": "đi (đến đâu đó)",
+    "examples": []
+  },
+  {
+    "simplified": "来",
+    "pinyinNumeric": "lai2",
+    "meaningVi": "đến; tới",
+    "examples": []
+  },
+  {
+    "simplified": "有",
+    "pinyinNumeric": "you3",
+    "meaningVi": "có",
+    "examples": []
+  },
+  {
+    "simplified": "在",
+    "pinyinNumeric": "zai4",
+    "meaningVi": "ở; đang",
+    "examples": []
+  },
+  {
+    "simplified": "爱",
+    "pinyinNumeric": "ai4",
+    "meaningVi": "yêu; thích",
+    "examples": []
+  },
+  {
+    "simplified": "喜欢",
+    "pinyinNumeric": "xi3 huan5",
+    "meaningVi": "thích",
+    "examples": [
+      {
+        "zh": "我喜欢学中文。",
+        "pinyin": "wǒ xǐhuan xué Zhōngwén.",
+        "vi": "Tôi thích học tiếng Trung.",
+        "orderIndex": 0
+      }
+    ]
+  },
+  {
+    "simplified": "想",
+    "pinyinNumeric": "xiang3",
+    "meaningVi": "muốn; nghĩ; nhớ",
+    "examples": []
+  },
+  {
+    "simplified": "会",
+    "pinyinNumeric": "hui4",
+    "meaningVi": "biết (làm gì); sẽ",
+    "examples": []
+  },
+  {
+    "simplified": "大",
+    "pinyinNumeric": "da4",
+    "meaningVi": "to; lớn",
+    "examples": []
+  },
+  {
+    "simplified": "小",
+    "pinyinNumeric": "xiao3",
+    "meaningVi": "nhỏ; bé",
+    "examples": []
+  },
+  {
+    "simplified": "多",
+    "pinyinNumeric": "duo1",
+    "meaningVi": "nhiều",
+    "examples": []
+  },
+  {
+    "simplified": "少",
+    "pinyinNumeric": "shao3",
+    "meaningVi": "ít",
+    "examples": []
+  },
+  {
+    "simplified": "热",
+    "pinyinNumeric": "re4",
+    "meaningVi": "nóng",
+    "examples": []
+  },
+  {
+    "simplified": "冷",
+    "pinyinNumeric": "leng3",
+    "meaningVi": "lạnh",
+    "examples": []
+  },
+  {
+    "simplified": "高兴",
+    "pinyinNumeric": "gao1 xing4",
+    "meaningVi": "vui; vui mừng",
+    "examples": []
+  },
+  {
+    "simplified": "水",
+    "pinyinNumeric": "shui3",
+    "meaningVi": "nước",
+    "examples": []
+  },
+  {
+    "simplified": "茶",
+    "pinyinNumeric": "cha2",
+    "meaningVi": "trà; chè",
+    "examples": []
+  },
+  {
+    "simplified": "米饭",
+    "pinyinNumeric": "mi3 fan4",
+    "meaningVi": "cơm",
+    "examples": []
+  },
+  {
+    "simplified": "书",
+    "pinyinNumeric": "shu1",
+    "meaningVi": "sách",
+    "examples": []
+  },
+  {
+    "simplified": "钱",
+    "pinyinNumeric": "qian2",
+    "meaningVi": "tiền",
+    "examples": []
+  },
+  {
+    "simplified": "水果",
+    "pinyinNumeric": "shui3 guo3",
+    "meaningVi": "hoa quả; trái cây",
+    "examples": []
+  },
+  {
+    "simplified": "天气",
+    "pinyinNumeric": "tian1 qi4",
+    "meaningVi": "thời tiết",
+    "examples": []
+  },
+  {
+    "simplified": "学习",
+    "pinyinNumeric": "xue2 xi2",
+    "meaningVi": "học tập; học",
+    "examples": [
+      {
+        "zh": "他每天学习汉语。",
+        "pinyin": "tā měitiān xuéxí Hànyǔ.",
+        "vi": "Anh ấy học tiếng Hán mỗi ngày.",
+        "orderIndex": 0
+      }
+    ]
+  }
+]

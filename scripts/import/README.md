@@ -1,48 +1,46 @@
 # Pipeline import từ vựng HSK 3.0
 
-Mục tiêu: từ các nguồn mở → `data/processed/words.seed.json` → `prisma db seed` → Postgres.
+Từ nguồn mở → `data/processed/words.seed.json` → `prisma db seed` → Postgres.
 
-> **Không cần chạy để dev.** Repo đã có sẵn `data/processed/words.seed.json` mẫu
-> (~45 từ HSK 1, nghĩa tiếng Việt đã rà). Pipeline dưới đây để dựng bộ đầy đủ 9 cấp.
+> `data/processed/words.seed.json` (~11k từ, 9 cấp) **đã commit sẵn** trong repo.
+> Chỉ chạy pipeline khi muốn dựng lại / cập nhật dataset hoặc lấy audio.
 
-## Kiến trúc 2 lớp
+## Nguồn (đều CC BY-SA 4.0 — xem `../../data/NOTICES.md`)
 
-| Lớp | Nguồn | License | Vai trò |
-|---|---|---|---|
-| Xương sống | [drkameleon/complete-hsk-vocabulary](https://github.com/drkameleon/complete-hsk-vocabulary) `complete.json` | MIT | từ, pinyin, POS, tần suất, traditional, phủ 9 cấp |
-| Trọng tài phân cấp | [Punpuf/hsk-syllabus-vocabulary-parser](https://github.com/Punpuf/hsk-syllabus-vocabulary-parser) (TSV tự sinh) | MIT + CC BY-SA 4.0 | cấp HSK theo **đại cương thi chính thức 2026** |
-| Nghĩa tiếng Việt | [ph0ngp/CVDICT](https://github.com/ph0ngp/CVDICT) `CVDICT.u8` | CC BY-SA 4.0 | nghĩa tiếng Việt (dịch máy GPT-4o + rà một phần) |
-| Nghĩa Anh (fallback) | [CC-CEDICT](https://www.mdbg.net/chinese/dictionary?page=cc-cedict) `cedict_ts.u8` | CC BY-SA 3.0 | nghĩa tiếng Anh, bù `traditional` |
+| Nguồn | Dùng cho |
+|---|---|
+| [krmanik/HSK-3.0](https://github.com/krmanik/HSK-3.0) (bản 2025-11) | đại cương chính thức (cấp + pinyin + từ loại), nghĩa Anh theo cấp, phồn thể, tần suất, **audio** |
+| [ph0ngp/CVDICT](https://github.com/ph0ngp/CVDICT) | nghĩa tiếng Việt (dịch máy có rà soát một phần) |
+| `../../data/curated/hsk1.json` | 70 từ HSK 1 nghĩa tiếng Việt đã rà tay + câu ví dụ |
 
-## Các bước
+## Chạy
 
 ```bash
-# 1) Tải nguồn tự động được
-npx tsx scripts/import/fetch-sources.ts
+# 1) Clone 2 repo về data/raw/ + copy audio vào assets/audio/
+npm run data:fetch-sources
 
-# 2) Thủ công:
-#    - data/raw/hsk-2025-official.tsv : clone Punpuf, chạy parser trên PDF đại cương 2026
-#    - data/raw/cedict_ts.u8          : tải bản .gz từ mdbg.net rồi giải nén
-
-# 3) Gộp & chuẩn hoá → data/processed/words.seed.json + build-report.md + level-mismatches.csv
+# 2) Gộp & chuẩn hoá → data/processed/words.seed.json + build-report.md
 npm run data:build-words
 
-# 4) Nạp vào DB
-npm run db:seed
+# 3) Nạp DB (SEED_RESET=true để ghi đè dữ liệu Word cũ)
+SEED_RESET=true npm run db:seed
 ```
 
 ## ETL làm gì (`build-words.ts`)
 
-1. Parse `complete.json`, chỉ giữ mục `new-*` (HSK 3.0); `new-7` → cấp 7, `hskBandOnly = true`.
-2. Đối chiếu cấp với TSV Punpuf theo khoá `(giản thể, pinyin-key)`. Lệch → ghi `level-mismatches.csv`, **lấy cấp của Punpuf**.
-3. Gắn `meaningVi` từ CVDICT (join `(giản thể|phồn thể, pinyin-key)`), `translationStatus = MACHINE`, `needsReview = true`.
-4. Không khớp CVDICT → `meaningVi = null`, `translationStatus = MISSING` (ưu tiên dịch tay: HSK 1–3 trước, theo tần suất).
-5. Bù `meaningEn` + `traditional` từ CC-CEDICT.
-6. Chuyển pinyin số → pinyin dấu thanh; chuẩn hoá `pinyinNumeric` làm khoá `@@unique`.
+1. Đọc `syllabus.tsv` (`新版HSK考试大纲-词汇_cleaned.txt`): `idx \t cấp \t 简体 \t pinyin \t 词性`.
+   - Cấp `"3（7-9）"` → lấy phần dẫn đầu (`3`). `"7-9"` → `hskLevel = 7`, `hskBandOnly = true`.
+   - `"本1" / "本2"` (ký hiệu phân biệt nghĩa) → bỏ số cuối; các nghĩa trùng khoá được **gộp từ loại**.
+2. Khớp cách đọc (dấu thanh, `"bàba"`) với CC-CEDICT (`ba4 ba5`) bằng cách bỏ dấu để so →
+   lấy `pinyinNumeric` chuẩn + `pinyin` hiển thị có tách âm tiết.
+3. Nghĩa Anh: `tsv/HSK N.tsv` → fallback `all_cedict.json` (rút gọn còn ~6 cụm).
+4. Nghĩa Việt: `CVDICT.u8` join theo `(简体, pinyin-key)` → `translationStatus = MACHINE`, `needsReview = true`.
+   Từ nào có trong `data/curated/hsk1.json` → dùng nghĩa đã rà, `translationStatus = REVIEWED`.
+5. Tần suất: gộp `with frequency/Final-Merged-*.txt` → xếp hạng toàn cục → `frequencyRank`.
+6. `audioUrl = /media/audio/cmn-<简体>.mp3` nếu file mp3 tồn tại (backend phục vụ tĩnh qua ServeStaticModule).
 7. Dedupe theo `(simplified, pinyinNumeric)`; xuất JSON + báo cáo.
 
-## Giấy phép của bộ dữ liệu build ra
+## Giấy phép dataset build ra
 
-`data/processed/words.seed.json` **phát hành lại theo CC BY-SA 4.0** vì có dữ liệu phái
-sinh từ CC-CEDICT / CVDICT (điều khoản share-alike). Ghi nguồn bắt buộc — xem
-`data/NOTICES.md`, hiển thị ở trang `/nguon-du-lieu` của app.
+`words.seed.json` **phát hành lại theo CC BY-SA 4.0** (phái sinh krmanik/HSK-3.0 + CVDICT —
+điều khoản share-alike). Bắt buộc ghi công ở trang `/nguon-du-lieu` của app.

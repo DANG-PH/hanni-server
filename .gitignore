@@ -57,9 +57,11 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Nguồn dữ liệu tải về (không commit — xem scripts/import/README.md)
 /data/raw/
-# Kết quả build của ETL (giữ file mẫu words.seed.json, bỏ báo cáo tạm)
+# Kết quả build của ETL (giữ words.seed.json + data/curated, bỏ báo cáo tạm)
 /data/processed/build-report.md
 /data/processed/level-mismatches.csv
+# Audio phát âm (58MB / 10.9k file) — sinh bằng `npm run data:fetch-sources`
+/assets/audio/
 
 # Prisma
 /prisma/migrations/dev.db*

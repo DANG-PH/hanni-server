@@ -25,6 +25,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "db:seed": "prisma db seed",
+    "data:fetch-sources": "tsx scripts/import/fetch-sources.ts",
     "data:build-words": "tsx scripts/import/build-words.ts"
   },
   "dependencies": {
@@ -35,6 +36,7 @@
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/serve-static": "^5.0.5",
     "@nestjs/swagger": "^11.2.0",
     "@nestjs/throttler": "^6.4.0",
     "@prisma/client": "^6.16.2",

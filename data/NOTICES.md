@@ -1,35 +1,36 @@
 # Nguồn dữ liệu & ghi công (attribution)
 
 App Hanni phải hiển thị nội dung dưới đây ở trang **"Nguồn dữ liệu" (`/nguon-du-lieu`)**
-và một liên kết nhỏ ở footer.
+và một liên kết ở footer.
 
-## Từ vựng HSK 3.0
+## Từ vựng, âm đọc, audio HSK 3.0
 
-- **Danh sách từ + phân cấp**: dựa trên đại cương HSK 3.0 do CLEC/CTI (Trung tâm
-  Hợp tác Giáo dục Ngôn ngữ, Bộ Giáo dục Trung Quốc) phát hành. Con số/danh sách từ
-  là dữ liệu dữ kiện.
-- **[complete-hsk-vocabulary](https://github.com/drkameleon/complete-hsk-vocabulary)** —
-  Yanis Zafirópulos. Giấy phép **MIT**. (từ, pinyin, POS, tần suất, phồn thể)
-- **[hsk-syllabus-vocabulary-parser](https://github.com/Punpuf/hsk-syllabus-vocabulary-parser)** —
-  Giấy phép **MIT**; phần dữ liệu từ điển đi kèm theo **CC BY-SA 4.0**. (cấp HSK theo đại cương thi 2026)
+- **[krmanik/HSK-3.0](https://github.com/krmanik/HSK-3.0)** — Mani. Bản **2025-11**.
+  Giấy phép **CC BY-SA 4.0** (danh sách từ HSK 3.0). Cung cấp: đại cương thi chính thức
+  (cấp + pinyin + từ loại), bản dịch tiếng Anh theo từng cấp, chữ phồn thể, và **10.900
+  file audio phát âm** (`cmn-*.mp3`).
+  - Danh sách từ + phân cấp gốc: đại cương HSK 3.0 do CLEC/CTI (Bộ Giáo dục Trung Quốc)
+    phát hành — dữ liệu dữ kiện.
+  - Nghĩa tiếng Anh trong đó dựa trên **CC-CEDICT** (CC BY-SA 4.0) và **danh sách Pleco HSK 3.0**
+    (MIT). Tần suất từ: **SUBTLEX-CH** / **BCC corpus** (CC BY-SA 4.0).
 
-## Từ điển
-
-- **CC-CEDICT** — https://www.mdbg.net/chinese/dictionary?page=cc-cedict —
-  giấy phép **Creative Commons Attribution-ShareAlike 3.0**. (nghĩa tiếng Anh, phồn thể, âm đọc)
-- **[CVDICT — Từ điển Hán Việt](https://github.com/ph0ngp/CVDICT)** — ph0ngp —
-  giấy phép **Creative Commons Attribution-ShareAlike 4.0 International**. (nghĩa tiếng Việt)
+- **[ph0ngp/CVDICT — Từ điển Hán Việt](https://github.com/ph0ngp/CVDICT)** — Phong Phan.
+  Giấy phép **CC BY-SA 4.0**. Nghĩa tiếng Việt (dịch từ CC-CEDICT bằng ChatGPT-4o fine-tune,
+  rà soát một phần bằng tay — vẫn có thể còn sai sót).
 
 ## Bộ dữ liệu phái sinh của Hanni
 
-`data/processed/words.seed.json` do Hanni tổng hợp, **phát hành lại theo
-CC BY-SA 4.0** (do có dữ liệu phái sinh từ CC-CEDICT/CVDICT — điều khoản share-alike).
-Mã nguồn app không bị ràng buộc bởi giấy phép này.
+`data/processed/words.seed.json` (10.9k từ, 9 cấp) do Hanni tổng hợp từ các nguồn trên,
+**phát hành lại theo CC BY-SA 4.0** (điều khoản share-alike). Mã nguồn app không bị ràng
+buộc bởi giấy phép này.
+
+`data/curated/hsk1.json` — 70 từ HSK 1 có nghĩa tiếng Việt do người rà soát + câu ví dụ
+tự soạn (CC BY-SA 4.0).
 
 ## Nội dung mẫu trang /nguon-du-lieu (tiếng Việt)
 
-> Dữ liệu từ vựng của Hanni được xây dựng từ các nguồn mở:
-> **CC-CEDICT** (CC BY-SA 3.0), **CVDICT** (CC BY-SA 4.0),
-> **complete-hsk-vocabulary** (MIT) và **hsk-syllabus-vocabulary-parser** (MIT).
-> Danh sách từ và phân cấp bám theo đại cương HSK 3.0 chính thức (CLEC/CTI, 2025).
-> Phần dữ liệu từ vựng tổng hợp lại được chia sẻ theo giấy phép CC BY-SA 4.0.
+> Từ vựng, âm đọc và audio phát âm của Hanni lấy từ **krmanik/HSK-3.0** (CC BY-SA 4.0),
+> nghĩa tiếng Việt từ **CVDICT** (CC BY-SA 4.0). Danh sách từ và phân cấp bám theo đại cương
+> HSK 3.0 chính thức (CLEC/CTI, bản 2025-11). Nghĩa tiếng Anh và tần suất từ dựa trên
+> CC-CEDICT, Pleco và SUBTLEX-CH / BCC corpus. Bộ dữ liệu tổng hợp lại được chia sẻ theo
+> giấy phép CC BY-SA 4.0.

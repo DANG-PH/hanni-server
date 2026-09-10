@@ -1,141 +1,214 @@
 /**
- * ETL: gộp các nguồn mở → data/processed/words.seed.json (dùng cho prisma db seed).
- *
+ * ETL: gộp nguồn mở → data/processed/words.seed.json (dùng cho `prisma db seed`).
  * KHÔNG chạm database. Chạy: npm run data:build-words
  *
- * Kiến trúc 2 lớp (xem plan mục 1.3):
- *   - Xương sống (từ + pinyin + POS + tần suất + traditional): drkameleon/complete-hsk-vocabulary (MIT)
- *   - Trọng tài phân cấp: Punpuf parser (đại cương thi chính thức 2026)  → chỗ lệch ghi ra level-mismatches.csv
- *   - Nghĩa tiếng Việt: CVDICT (CC BY-SA 4.0) → fallback nghĩa Anh CC-CEDICT (CC BY-SA 3.0)
+ * Nguồn (đều CC BY-SA 4.0 — xem data/NOTICES.md):
+ *   - krmanik/HSK-3.0 (2025-11): đại cương chính thức (cấp + pinyin + từ loại),
+ *     bản dịch Anh theo từng cấp, all_cedict.json, tần suất BCC, audio phát âm.
+ *   - ph0ngp/CVDICT: nghĩa tiếng Việt (dịch máy GPT-4o có rà soát một phần).
+ *   - data/curated/hsk1.json: 70 từ HSK 1 nghĩa tiếng Việt đã rà tay + câu ví dụ.
  *
- * File dataset build ra (words.seed.json) phát hành lại theo CC BY-SA 4.0 vì có
- * chứa dữ liệu phái sinh từ CC-CEDICT/CVDICT. Xem data/NOTICES.md.
+ * File build ra phát hành lại theo CC BY-SA 4.0 (điều khoản share-alike).
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { indexCedict, parseCedict } from './lib/cedict';
-import { parseDrkameleon } from './lib/drkameleon';
-import { numericToDiacritic, normalizePinyinKey } from './lib/pinyin';
-import { indexPunpuf, parsePunpufTsv } from './lib/punpuf';
+import {
+  parseAllCedict,
+  parseFrequency,
+  parseSyllabus,
+  parseWordTsvs,
+} from './lib/krmanik';
+import { normalizePinyinKey, numericToDiacritic, stripTones } from './lib/pinyin';
+import { mapPos } from './lib/pos-map';
 
 const RAW = join(__dirname, '..', '..', 'data', 'raw');
 const OUT = join(__dirname, '..', '..', 'data', 'processed');
+const CURATED = join(__dirname, '..', '..', 'data', 'curated', 'hsk1.json');
+const KRM = join(RAW, 'krmanik-hsk3');
+const CVDICT_FILE = join(RAW, 'cvdict', 'CVDICT.u8');
 
-const SRC = {
-  drkameleon: join(RAW, 'complete-hsk-vocabulary.json'),
-  punpuf: join(RAW, 'hsk-2025-official.tsv'),
-  cvdict: join(RAW, 'cvdict.u8'),
-  cedict: join(RAW, 'cedict_ts.u8'),
-};
-
-function requireFile(path: string, hint: string): string {
+function need(path: string, hint: string): void {
   if (!existsSync(path)) {
-    console.error(`\n✗ Thiếu file nguồn: ${path}\n  ${hint}\n`);
-    console.error('  Xem scripts/import/README.md để biết cách tải, rồi chạy lại.');
+    console.error(`\n✗ Thiếu: ${path}\n  ${hint}`);
+    console.error('  Chạy: npx tsx scripts/import/fetch-sources.ts');
     process.exit(1);
   }
-  return readFileSync(path, 'utf8');
 }
 
-function firstDef(defs: string[]): string | null {
-  const d = defs.find((x) => !/^(variant of|see |CL:|old variant)/i.test(x));
-  return (d ?? defs[0] ?? '').replace(/\s+/g, ' ').trim() || null;
+function cleanDef(def: string): string {
+  return def
+    .replace(/\s*;\s*$/, '')
+    .replace(/\s+/g, ' ')
+    .replace(/;\s*/g, '; ')
+    .trim();
+}
+
+/** Gọn nghĩa tiếng Anh Pleco (đôi khi liệt kê 15 từ đồng nghĩa). */
+function trimMeaning(def: string | null): string | null {
+  if (!def) return null;
+  const parts = def.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
+  let out = parts.slice(0, 6).join(', ');
+  if (out.length > 140) out = out.slice(0, 137).replace(/[,\s]+\S*$/, '') + '…';
+  return out || null;
+}
+
+interface CuratedEntry {
+  simplified: string;
+  pinyinNumeric: string;
+  meaningVi?: string | null;
+  examples?: unknown[];
 }
 
 function main(): void {
-  const drkRaw = requireFile(
-    SRC.drkameleon,
-    'Tải complete.json từ github.com/drkameleon/complete-hsk-vocabulary (MIT).',
-  );
-  const punpufRaw = requireFile(
-    SRC.punpuf,
-    'Chạy Punpuf/hsk-syllabus-vocabulary-parser trên đại cương HSK 3.0 2026 → TSV.',
-  );
-  const cvdictRaw = requireFile(SRC.cvdict, 'Tải CVDICT.u8 từ github.com/ph0ngp/CVDICT (CC BY-SA 4.0).');
-  const cedictRaw = requireFile(SRC.cedict, 'Tải cedict_ts.u8 từ mdbg.net (CC BY-SA 3.0).');
+  need(join(KRM, 'syllabus.tsv'), 'Clone krmanik/HSK-3.0.');
+  need(CVDICT_FILE, 'Clone ph0ngp/CVDICT.');
 
-  const base = parseDrkameleon(JSON.parse(drkRaw));
-  const officialLevels = indexPunpuf(parsePunpufTsv(punpufRaw));
-  const cvdict = indexCedict(parseCedict(cvdictRaw));
-  const cedict = indexCedict(parseCedict(cedictRaw));
+  const syllabus = parseSyllabus(KRM);
+  const tsvByWord = parseWordTsvs(KRM);
+  const freq = parseFrequency(KRM);
+  const cedict = parseAllCedict(KRM); // simplified -> {traditional, pinyin[], definitions}
+  const cvdict = indexCedict(parseCedict(readFileSync(CVDICT_FILE, 'utf8')));
 
-  const mismatches: string[] = ['simplified,pinyinKey,drkameleon_level,official_level'];
+  const audioWords = existsSync(join(KRM, 'audio-words.txt'))
+    ? new Set(
+        readFileSync(join(KRM, 'audio-words.txt'), 'utf8')
+          .split(/\r?\n/)
+          .map((s) => s.trim())
+          .filter(Boolean),
+      )
+    : null;
+
+  const curated = new Map<string, CuratedEntry>();
+  if (existsSync(CURATED)) {
+    for (const c of JSON.parse(readFileSync(CURATED, 'utf8')) as CuratedEntry[]) {
+      curated.set(`${c.simplified}|${c.pinyinNumeric}`, c);
+    }
+  }
+
+  // xếp hạng tần suất toàn cục
+  const rankOf = new Map<string, number>();
+  [...freq.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([w], i) => rankOf.set(w, i + 1));
+
   let withVi = 0;
   let missingVi = 0;
+  let withAudio = 0;
+  const byKey = new Map<string, Record<string, unknown>>();
+  const records: Record<string, unknown>[] = [];
 
-  const records = base.map((e) => {
-    const key = `${e.simplified}|${e.pinyinKey}`;
+  for (const row of syllabus) {
+    const simp = row.simplified;
+    const toneless = stripTones(row.pinyinDiacritic);
 
-    // --- cấp: ưu tiên đại cương chính thức ---
-    const official = officialLevels.get(key) ?? officialLevels.get(e.simplified);
-    let hskLevel = e.hskLevel ?? 7;
-    let bandOnly = hskLevel >= 7;
-    let levelSource = 'drkameleon';
-    if (official) {
-      if (official.level !== e.hskLevel) {
-        mismatches.push(`${e.simplified},${e.pinyinKey},${e.hskLevel ?? ''},${official.level}`);
-      }
-      hskLevel = official.level;
-      bandOnly = official.bandOnly;
-      levelSource = 'punpuf';
+    // --- pinyin số: khớp cách đọc trong đại cương với CC-CEDICT ---
+    const ced = cedict.get(simp);
+    let pinyinNumeric: string;
+    let pinyinDisplay: string;
+    let traditional: string | null = null;
+    if (ced) {
+      traditional = ced.traditional || null;
+      const match =
+        (toneless &&
+          ced.pinyin.find(
+            (p) => stripTones(numericToDiacritic(p)) === toneless,
+          )) ||
+        ced.pinyin[0];
+      pinyinNumeric = normalizePinyinKey(match);
+      pinyinDisplay = numericToDiacritic(match); // spacing chuẩn "nǐ hǎo"
+    } else {
+      pinyinNumeric = toneless || simp;
+      pinyinDisplay = row.pinyinDiacritic || simp;
     }
 
-    // --- nghĩa tiếng Việt: CVDICT → fallback EN CC-CEDICT ---
-    const viEntry = cvdict.get(key) ?? cvdict.get(e.simplified);
-    const enEntry = cedict.get(key) ?? cedict.get(e.simplified);
-    const meaningVi = viEntry ? firstDef(viEntry.defs) : null;
-    const meaningEn = firstDef(e.meaningsEn) ?? (enEntry ? firstDef(enEntry.defs) : null);
+    const key = `${simp}|${pinyinNumeric}`;
+    const existing = byKey.get(key);
+    if (existing) {
+      // gộp từ loại của các nghĩa khác nhau (本1 量 + 本2 名 → [MEASURE, NOUN])
+      const merged = new Set([
+        ...(existing.pos as string[]),
+        ...mapPos(row.posRaw),
+      ]);
+      existing.pos = [...merged];
+      continue;
+    }
+
+    // --- nghĩa ---
+    const tsv = tsvByWord.get(simp);
+    if (!traditional) traditional = tsv?.traditional || null;
+    const meaningEn = trimMeaning(
+      (tsv?.meaningEn && cleanDef(tsv.meaningEn)) ||
+        (ced && cleanDef(Object.values(ced.definitions)[0] ?? '')) ||
+        null,
+    );
+
+    const viEntry = cvdict.get(key) ?? cvdict.get(simp);
+    let meaningVi = viEntry ? cleanDef(viEntry.defs[0] ?? '') || null : null;
+    let translationStatus = meaningVi ? 'MACHINE' : 'MISSING';
+
+    const cur = curated.get(key) ?? curated.get(`${simp}|${normalizePinyinKey(pinyinNumeric)}`);
+    let examples: unknown[] | undefined;
+    if (cur) {
+      if (cur.meaningVi) {
+        meaningVi = cur.meaningVi;
+        translationStatus = 'REVIEWED';
+      }
+      if (cur.examples?.length) examples = cur.examples;
+    }
+
     if (meaningVi) withVi += 1;
     else missingVi += 1;
 
-    return {
-      simplified: e.simplified,
-      traditional: e.traditional ?? enEntry?.traditional ?? null,
-      pinyin: e.pinyinNumeric ? numericToDiacritic(e.pinyinNumeric) : '',
-      pinyinNumeric: normalizePinyinKey(e.pinyinNumeric),
-      hskLevel,
-      hskBandOnly: bandOnly,
-      pos: e.pos,
-      frequencyRank: e.frequencyRank,
-      radical: e.radical,
+    // --- audio ---
+    const hasAudio = audioWords ? audioWords.has(simp) : true;
+    if (hasAudio) withAudio += 1;
+
+    const record: Record<string, unknown> = {
+      simplified: simp,
+      traditional,
+      pinyin: pinyinDisplay,
+      pinyinNumeric,
+      hskLevel: row.hskLevel,
+      hskBandOnly: row.hskBandOnly,
+      pos: mapPos(row.posRaw),
+      frequencyRank: rankOf.get(simp) ?? null,
       meaningVi,
       meaningEn,
-      translationStatus: meaningVi ? 'MACHINE' : 'MISSING',
-      needsReview: true,
-      source: `drkameleon; lvl:${levelSource}; vi:${viEntry ? 'cvdict' : 'none'}`,
+      translationStatus,
+      needsReview: translationStatus !== 'REVIEWED',
+      audioUrl: hasAudio ? `/media/audio/cmn-${simp}.mp3` : null,
+      source: `krmanik/HSK-3.0@2025-11; vi:${cur?.meaningVi ? 'curated' : viEntry ? 'cvdict' : 'none'}`,
+      ...(examples ? { examples } : {}),
     };
-  });
+    records.push(record);
+    byKey.set(key, record);
+  }
 
-  // dedupe theo (simplified, pinyinNumeric)
-  const seen = new Set<string>();
-  const deduped = records.filter((r) => {
-    const k = `${r.simplified}|${r.pinyinNumeric}`;
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
-
-  writeFileSync(join(OUT, 'words.seed.json'), JSON.stringify(deduped, null, 2));
-  writeFileSync(join(OUT, 'level-mismatches.csv'), mismatches.join('\n'));
+  writeFileSync(join(OUT, 'words.seed.json'), JSON.stringify(records, null, 1));
 
   const byLevel = new Map<number, number>();
-  for (const r of deduped) byLevel.set(r.hskLevel, (byLevel.get(r.hskLevel) ?? 0) + 1);
+  for (const r of records) {
+    const lv = r.hskLevel as number;
+    byLevel.set(lv, (byLevel.get(lv) ?? 0) + 1);
+  }
   const report = [
     '# Báo cáo build words.seed.json',
     '',
-    `- Tổng số từ: ${deduped.length}`,
-    `- Có nghĩa tiếng Việt (CVDICT): ${withVi} (${((withVi / deduped.length) * 100).toFixed(1)}%)`,
-    `- Thiếu nghĩa tiếng Việt (cần dịch): ${missingVi}`,
-    `- Chỗ lệch cấp giữa nguồn: ${mismatches.length - 1} (xem level-mismatches.csv)`,
+    `- Tổng số từ: ${records.length}`,
+    `- Có nghĩa tiếng Việt: ${withVi} (${((withVi / records.length) * 100).toFixed(1)}%)`,
+    `- Thiếu nghĩa tiếng Việt: ${missingVi}`,
+    `- Có audio phát âm: ${withAudio}`,
     '',
-    '## Số từ theo cấp',
-    ...[...byLevel.entries()].sort((a, b) => a[0] - b[0]).map(([lv, n]) => `- HSK ${lv}: ${n}`),
+    '## Số từ theo cấp (7 = gộp 7-9)',
+    ...[...byLevel.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([lv, n]) => `- HSK ${lv}: ${n}`),
     '',
     '## Giấy phép',
-    '- words.seed.json: CC BY-SA 4.0 (phái sinh từ CC-CEDICT / CVDICT). Xem data/NOTICES.md.',
+    '- words.seed.json: CC BY-SA 4.0 (phái sinh krmanik/HSK-3.0 + CVDICT). Xem data/NOTICES.md.',
   ].join('\n');
   writeFileSync(join(OUT, 'build-report.md'), report);
-
   console.log(report);
 }
 

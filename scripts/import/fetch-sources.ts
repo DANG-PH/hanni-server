@@ -1,56 +1,62 @@
 /**
- * Tải các file nguồn về data/raw/. Chạy: npx tsx scripts/import/fetch-sources.ts
+ * Tải nguồn dữ liệu về data/raw/. Chạy: npx tsx scripts/import/fetch-sources.ts
  *
- * Lưu ý:
- *  - Punpuf KHÔNG cung cấp file dữ liệu sẵn — nó là parser. Clone repo đó, chạy theo
- *    hướng dẫn của họ trên PDF đại cương HSK 3.0 (2026), rồi copy TSV vào
- *    data/raw/hsk-2025-official.tsv.
- *  - CC-CEDICT tải bản .gz từ MDBG rồi giải nén thủ công (giữ script này gọn).
+ * Clone 2 repo (shallow), copy đúng file cần dùng, rồi có thể xoá repo tạm.
+ * data/raw/ đã nằm trong .gitignore.
  */
-import { createWriteStream, existsSync, mkdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
-import { pipeline } from 'node:stream/promises';
-import { Readable } from 'node:stream';
 
 const RAW = join(__dirname, '..', '..', 'data', 'raw');
+const TMP = join(RAW, '_tmp');
+const KRM = join(RAW, 'krmanik-hsk3');
+const CVD = join(RAW, 'cvdict');
 
-const DOWNLOADS: { file: string; url: string; note?: string }[] = [
-  {
-    file: 'complete-hsk-vocabulary.json',
-    url: 'https://raw.githubusercontent.com/drkameleon/complete-hsk-vocabulary/main/complete.json',
-    note: 'MIT',
-  },
-  {
-    file: 'cvdict.u8',
-    url: 'https://raw.githubusercontent.com/ph0ngp/CVDICT/main/CVDICT.u8',
-    note: 'CC BY-SA 4.0 — nhớ ghi nguồn trong app',
-  },
-];
-
-async function download(url: string, dest: string): Promise<void> {
-  const res = await fetch(url);
-  if (!res.ok || !res.body) throw new Error(`${res.status} ${url}`);
-  await pipeline(
-    Readable.fromWeb(res.body as Parameters<typeof Readable.fromWeb>[0]),
-    createWriteStream(dest),
-  );
+function git(...args: string[]): void {
+  execFileSync('git', args, { stdio: 'inherit' });
 }
 
-async function main(): Promise<void> {
-  if (!existsSync(RAW)) mkdirSync(RAW, { recursive: true });
-  for (const d of DOWNLOADS) {
-    const dest = join(RAW, d.file);
-    process.stdout.write(`↓ ${d.file} … `);
-    try {
-      await download(d.url, dest);
-      console.log(`ok${d.note ? ` (${d.note})` : ''}`);
-    } catch (err) {
-      console.log(`LỖI: ${(err as Error).message}`);
-    }
+function main(): void {
+  mkdirSync(join(KRM, 'words'), { recursive: true });
+  mkdirSync(join(KRM, 'freq'), { recursive: true });
+  mkdirSync(CVD, { recursive: true });
+  if (existsSync(TMP)) rmSync(TMP, { recursive: true, force: true });
+  mkdirSync(TMP, { recursive: true });
+
+  console.log('↓ clone krmanik/HSK-3.0 …');
+  git('clone', '--depth', '1', 'https://github.com/krmanik/HSK-3.0.git', join(TMP, 'k'));
+  const kroot = join(TMP, 'k');
+  cpSync(join(kroot, 'Scripts and data', '新版HSK考试大纲-词汇_cleaned.txt'), join(KRM, 'syllabus.tsv'));
+  cpSync(join(kroot, 'Scripts and data', 'all_cedict.json'), join(KRM, 'all_cedict.json'));
+  for (const lvl of ['1', '2', '3', '4', '5', '6', '7-9']) {
+    cpSync(join(kroot, 'Scripts and data', 'tsv', `HSK ${lvl}.tsv`), join(KRM, 'words', `HSK_${lvl}.tsv`));
+    cpSync(join(kroot, 'Scripts and data', 'with frequency', `Final-Merged-${lvl}.txt`), join(KRM, 'freq', `Final-Merged-${lvl}.txt`));
   }
-  console.log('\nCòn cần thủ công:');
-  console.log('  - data/raw/hsk-2025-official.tsv  (chạy Punpuf parser)');
-  console.log('  - data/raw/cedict_ts.u8          (tải + giải nén từ mdbg.net)');
+  // audio: copy vào assets/audio + ghi manifest
+  const audioSrc = join(kroot, 'New HSK (2025)', 'Audio');
+  const audioDst = join(__dirname, '..', '..', 'assets', 'audio');
+  mkdirSync(audioDst, { recursive: true });
+  cpSync(audioSrc, audioDst, { recursive: true });
+  const words = readdirSync(audioSrc)
+    .filter((f) => f.endsWith('.mp3'))
+    .map((f) => f.replace(/^cmn-/, '').replace(/\.mp3$/, ''));
+  writeFileSync(join(KRM, 'audio-words.txt'), words.join('\n'));
+  console.log(`  ✓ ${words.length} file audio → assets/audio/`);
+
+  console.log('↓ clone ph0ngp/CVDICT …');
+  git('clone', '--depth', '1', 'https://github.com/ph0ngp/CVDICT.git', join(TMP, 'c'));
+  cpSync(join(TMP, 'c', 'CVDICT.u8'), join(CVD, 'CVDICT.u8'));
+
+  rmSync(TMP, { recursive: true, force: true });
+  console.log('\nXong. Chạy tiếp: npm run data:build-words');
 }
 
 main();

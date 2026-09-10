@@ -57,3 +57,17 @@ export function normalizePinyinKey(numeric: string): string {
     .map((s) => (/[1-5]$/.test(s) ? s : `${s}5`))
     .join(' ');
 }
+
+/**
+ * Bỏ dấu thanh + khoảng trắng + dấu câu → chuỗi chỉ gồm chữ cái thường.
+ * Dùng để so khớp cách đọc trong đại cương (dấu thanh, "bàba") với CC-CEDICT
+ * ("ba4 ba5") mà không phụ thuộc tách âm tiết. ü/v → "u".
+ */
+export function stripTones(pinyin: string): string {
+  return pinyin
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // dấu thanh + diaeresis
+    .replace(/ü/g, 'u')
+    .replace(/[^a-zA-Z]/g, '')
+    .toLowerCase();
+}

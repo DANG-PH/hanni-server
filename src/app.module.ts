@@ -2,7 +2,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { join } from 'node:path';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { validateEnv } from './config/env.validation';
 import { HealthModule } from './health/health.module';
@@ -26,6 +28,12 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
       validate: validateEnv,
     }),
     EventEmitterModule.forRoot(),
+    // Phục vụ file audio phát âm: /media/audio/cmn-<hán tự>.mp3
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'assets', 'audio'),
+      serveRoot: '/media/audio',
+      serveStaticOptions: { immutable: true, maxAge: '30d', fallthrough: true },
+    }),
     ThrottlerModule.forRootAsync({
       useFactory: () => ({
         throttlers: [
