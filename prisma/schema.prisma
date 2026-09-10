@@ -1,0 +1,490 @@
+// Hanni — lược đồ dữ liệu (PostgreSQL).
+// Xem hanni-server/CLAUDE.md và tài liệu plan để biết lý do thiết kế.
+// Nhóm bảng: Auth/User · Từ vựng · Spaced Repetition · Tiến độ · Động lực (gamification).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===================================================================
+//  ENUM
+// ===================================================================
+
+enum AuthProvider {
+  GOOGLE
+  // chừa: FACEBOOK, APPLE
+}
+
+enum VerificationTokenType {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+/// 5 kỹ năng HSK 3.0: 听 说 读 写 译
+enum SkillType {
+  LISTENING
+  SPEAKING
+  READING
+  WRITING
+  TRANSLATION
+}
+
+enum HskBand {
+  ELEMENTARY // HSK 1-3
+  INTERMEDIATE // HSK 4-6
+  ADVANCED // HSK 7-9 (thi chung)
+}
+
+enum WordPos {
+  NOUN
+  VERB
+  ADJECTIVE
+  ADVERB
+  PRONOUN
+  NUMERAL
+  MEASURE
+  CONJUNCTION
+  PREPOSITION
+  PARTICLE
+  INTERJECTION
+  IDIOM
+  PHRASE
+  OTHER
+}
+
+/// Trạng thái bản dịch tiếng Việt của 1 từ.
+enum TranslationStatus {
+  MISSING // chưa có nghĩa tiếng Việt
+  MACHINE // dịch máy (CVDICT), chưa review
+  REVIEWED // người đã rà soát
+  HUMAN // người biên dịch từ đầu
+}
+
+/// Trạng thái ghi nhớ của 1 thẻ theo từng user (SM-2 / FSRS dùng chung).
+enum SrsState {
+  NEW
+  LEARNING
+  REVIEW
+  RELEARNING
+}
+
+/// 4 nút đánh giá khi ôn (map sang chất lượng nhớ tùy thuật toán).
+enum ReviewRating {
+  AGAIN
+  HARD
+  GOOD
+  EASY
+}
+
+enum ReviewType {
+  LEARN
+  REVIEW
+  RELEARN
+  CRAM
+  QUIZ
+}
+
+enum GoalType {
+  WORDS
+  MINUTES
+}
+
+enum AchievementCategory {
+  STREAK
+  LEVEL
+  VOLUME
+  ACCURACY
+  MILESTONE
+}
+
+enum StudySource {
+  REVIEW
+  LEARN
+  QUIZ
+}
+
+// ===================================================================
+//  NHÓM AUTH / USER
+// ===================================================================
+
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String    @unique
+  emailVerifiedAt DateTime?
+  /// null nếu user chỉ đăng nhập bằng Google
+  passwordHash    String?
+  displayName     String
+  avatarUrl       String?
+  /// Tên timezone IANA (vd "Asia/Ho_Chi_Minh") — KHÔNG lưu offset, để xử lý đúng DST.
+  timezone        String    @default("Asia/Ho_Chi_Minh")
+  locale          String    @default("vi")
+  role            String    @default("user") // user | admin | translator
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastActiveAt    DateTime?
+
+  accounts      Account[]
+  refreshTokens RefreshToken[]
+  settings      UserSettings?
+  wordProgress  UserWordProgress[]
+  reviewLogs    ReviewLog[]
+  studySessions StudySession[]
+  dailyActivity UserDailyActivity[]
+  streak        UserStreak?
+  achievements  UserAchievement[]
+  levelProgress UserLevelProgress[]
+  quizAttempts  QuizAttempt[]
+
+  @@index([lastActiveAt])
+}
+
+/// Danh tính OAuth (kiểu Auth.js). Mỗi provider + tài khoản ngoài = 1 dòng.
+model Account {
+  id                String       @id @default(uuid()) @db.Uuid
+  userId            String       @db.Uuid
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          AuthProvider
+  providerAccountId String // vd Google `sub`
+  accessToken       String?
+  refreshToken      String?
+  expiresAt         DateTime?
+  scope             String?
+  idToken           String?
+  tokenType         String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+/// Refresh token của Hanni — xoay vòng, chỉ lưu HASH. Phát hiện reuse theo familyId.
+model RefreshToken {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash    String    @unique
+  familyId     String    @db.Uuid
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  replacedById String?   @db.Uuid
+  userAgent    String?
+  ip           String?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+/// Token xác minh email + reset mật khẩu. Chỉ lưu HASH.
+model VerificationToken {
+  id         String                @id @default(uuid()) @db.Uuid
+  identifier String // email
+  tokenHash  String                @unique
+  type       VerificationTokenType
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime              @default(now())
+
+  @@index([identifier])
+}
+
+/// Cài đặt học của user (1-1 User).
+model UserSettings {
+  userId           String   @id @db.Uuid
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dailyGoalType    GoalType @default(WORDS)
+  dailyGoalValue   Int      @default(20)
+  newCardsPerDay   Int      @default(10)
+  maxReviewsPerDay Int?
+  srsScheduler     String   @default("sm2") // sm2 | fsrs
+  targetRetention  Float    @default(0.9) // chỉ dùng cho FSRS
+  reminderHour     Int? // 0-23, giờ địa phương (cho push sau)
+  updatedAt        DateTime @updatedAt
+}
+
+// ===================================================================
+//  NHÓM TỪ VỰNG
+// ===================================================================
+
+/// Bảng tra tĩnh 9 cấp HSK. Lưu CẢ chỉ tiêu bản 2021 và bản 2025 để app đối chiếu.
+model HskLevel {
+  level          Int         @id // 1..9
+  band           HskBand
+  isSharedBand   Boolean     @default(false) // true cho 7,8,9 (thi chung)
+  nameVi         String
+  newWords2021   Int
+  cumulative2021 Int
+  newWords2025   Int
+  cumulative2025 Int
+  readingChars   Int?
+  writingChars   Int?
+  skills         SkillType[]
+
+  words         Word[]
+  levelProgress UserLevelProgress[]
+}
+
+model Word {
+  id                String            @id @default(uuid()) @db.Uuid
+  simplified        String
+  traditional       String?
+  /// pinyin có dấu thanh (vd "nǐ hǎo")
+  pinyin            String
+  /// pinyin dạng số (vd "ni3 hao3") — khóa join dataset + tìm kiếm không dấu
+  pinyinNumeric     String
+  hskLevel          Int
+  level             HskLevel          @relation(fields: [hskLevel], references: [level])
+  /// true khi nguồn chỉ phân loại "7-9" chứ không tách 7/8/9
+  hskBandOnly       Boolean           @default(false)
+  pos               WordPos[]
+  frequencyRank     Int?
+  radical           String?
+  strokeCount       Int?
+  meaningVi         String?
+  meaningEn         String?
+  translationStatus TranslationStatus @default(MISSING)
+  needsReview       Boolean           @default(true)
+  audioUrl          String? // chưa dùng ở bản này
+  /// provenance: nguồn gốc dữ liệu, vd "drkameleon@<sha>; lvl:punpuf@<sha>; vi:cvdict@<sha>"
+  source            String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  examples WordExample[]
+  progress UserWordProgress[]
+
+  @@unique([simplified, pinyinNumeric])
+  @@index([hskLevel, frequencyRank]) // chọn thứ tự học từ mới
+  @@index([needsReview])
+}
+
+model WordExample {
+  id         String  @id @default(uuid()) @db.Uuid
+  wordId     String  @db.Uuid
+  word       Word    @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  zh         String
+  pinyin     String?
+  vi         String?
+  en         String?
+  audioUrl   String?
+  orderIndex Int     @default(0)
+  source     String?
+
+  @@index([wordId])
+}
+
+// ===================================================================
+//  NHÓM SPACED REPETITION
+// ===================================================================
+
+/// Trạng thái SRS: 1 dòng / (user, word). Chứa superset trường của SM-2 và FSRS
+/// để đổi thuật toán không cần migration.
+model UserWordProgress {
+  id       String   @id @default(uuid()) @db.Uuid
+  userId   String   @db.Uuid
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wordId   String   @db.Uuid
+  word     Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  /// denormalize từ Word.hskLevel — để lọc "chỉ ôn HSK 2" không cần join.
+  hskLevel Int
+  state    SrsState @default(NEW)
+
+  // --- dùng chung ---
+  dueAt          DateTime?
+  lastReviewedAt DateTime?
+  reps           Int           @default(0)
+  lapses         Int           @default(0)
+  lastRating     ReviewRating?
+  learnedAt      DateTime? // mốc "đã thuộc" lần đầu
+  isSuspended    Boolean       @default(false)
+  isLeech        Boolean       @default(false)
+
+  // --- SM-2 ---
+  easeFactor   Float @default(2.5)
+  intervalDays Float @default(0)
+
+  // --- FSRS ---
+  stability  Float?
+  difficulty Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reviewLogs ReviewLog[]
+
+  @@unique([userId, wordId])
+  @@index([userId, dueAt]) // truy vấn "đến hạn" — quan trọng nhất
+  @@index([userId, hskLevel, dueAt]) // queue theo cấp
+  @@index([userId, state]) // đếm dashboard, chọn thẻ mới
+}
+
+/// Lịch sử review — append-only. Cần cho FSRS optimize + phân tích + streak.
+model ReviewLog {
+  id             String           @id @default(uuid()) @db.Uuid
+  userId         String           @db.Uuid
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wordId         String           @db.Uuid
+  progressId     String           @db.Uuid
+  progress       UserWordProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
+  studySessionId String?          @db.Uuid
+  studySession   StudySession?    @relation(fields: [studySessionId], references: [id], onDelete: SetNull)
+
+  rating     ReviewRating
+  reviewType ReviewType
+  reviewedAt DateTime     @default(now())
+
+  stateBefore      SrsState
+  stateAfter       SrsState
+  intervalBefore   Float
+  intervalAfter    Float
+  easeBefore       Float?
+  easeAfter        Float?
+  stabilityBefore  Float?
+  stabilityAfter   Float?
+  difficultyBefore Float?
+  difficultyAfter  Float?
+  elapsedDays      Float    @default(0)
+  scheduledDays    Float    @default(0)
+  durationMs       Int?
+
+  @@index([userId, reviewedAt])
+  @@index([wordId])
+  @@index([progressId])
+}
+
+model StudySession {
+  id            String      @id @default(uuid()) @db.Uuid
+  userId        String      @db.Uuid
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source        StudySource
+  startedAt     DateTime    @default(now())
+  endedAt       DateTime?
+  cardsReviewed Int         @default(0)
+  cardsCorrect  Int         @default(0)
+  newCards      Int         @default(0)
+
+  reviewLogs   ReviewLog[]
+  quizAttempts QuizAttempt[]
+
+  @@index([userId, startedAt])
+}
+
+// ===================================================================
+//  NHÓM TIẾN ĐỘ
+// ===================================================================
+
+/// Cache đọc O(1) cho dashboard — cập nhật tăng dần sau mỗi review.
+model UserLevelProgress {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @db.Uuid
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hskLevel       Int
+  level          HskLevel  @relation(fields: [hskLevel], references: [level])
+  totalWords     Int       @default(0)
+  learnedWords   Int       @default(0)
+  reviewingWords Int       @default(0)
+  dueWords       Int       @default(0)
+  atRiskWords    Int       @default(0)
+  completedAt    DateTime?
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([userId, hskLevel])
+}
+
+// ===================================================================
+//  NHÓM ĐỘNG LỰC (GAMIFICATION)
+// ===================================================================
+
+/// 1 dòng / (user, ngày-địa-phương). Nền cho streak, mục tiêu ngày, biểu đồ.
+model UserDailyActivity {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// ngày theo timezone của user (chỉ phần date)
+  localDate      DateTime @db.Date
+  wordsReviewed  Int      @default(0)
+  wordsLearned   Int      @default(0)
+  minutesStudied Float    @default(0)
+  goalMet        Boolean  @default(false)
+  xp             Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, localDate])
+  @@index([userId, localDate(sort: Desc)])
+}
+
+/// Denormalize chuỗi streak để đọc nhanh (1-1 User).
+model UserStreak {
+  userId              String    @id @db.Uuid
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStreak       Int       @default(0)
+  longestStreak       Int       @default(0)
+  lastActiveLocalDate DateTime? @db.Date
+  streakFreezeCount   Int       @default(0)
+  updatedAt           DateTime  @updatedAt
+}
+
+/// Danh mục huy hiệu (seed tĩnh).
+model Achievement {
+  id            String              @id @default(uuid()) @db.Uuid
+  code          String              @unique // HSK1_COMPLETE, STREAK_7, ...
+  nameVi        String
+  descriptionVi String
+  iconUrl       String?
+  category      AchievementCategory
+  threshold     Int                 @default(0)
+  meta          Json?
+
+  users UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid()) @db.Uuid
+  userId        String      @db.Uuid
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String      @db.Uuid
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  unlockedAt    DateTime    @default(now())
+  progressValue Int         @default(0)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+}
+
+model QuizAttempt {
+  id             String        @id @default(uuid()) @db.Uuid
+  userId         String        @db.Uuid
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studySessionId String?       @db.Uuid
+  studySession   StudySession? @relation(fields: [studySessionId], references: [id], onDelete: SetNull)
+  startedAt      DateTime      @default(now())
+  completedAt    DateTime?
+  totalQuestions Int           @default(0)
+  correctCount   Int           @default(0)
+  scorePct       Float         @default(0)
+  format         Json?
+
+  answers QuizAnswer[]
+
+  @@index([userId, completedAt])
+}
+
+model QuizAnswer {
+  id            String      @id @default(uuid()) @db.Uuid
+  quizAttemptId String      @db.Uuid
+  quizAttempt   QuizAttempt @relation(fields: [quizAttemptId], references: [id], onDelete: Cascade)
+  wordId        String      @db.Uuid
+  isCorrect     Boolean
+  chosen        String?
+  correct       String?
+  responseMs    Int?
+
+  @@index([quizAttemptId])
+}

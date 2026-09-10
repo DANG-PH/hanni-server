@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hanni-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hanni
+      POSTGRES_PASSWORD: hanni
+      POSTGRES_DB: hanni
+    ports:
+      - "2222:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: hanni-redis
+    restart: unless-stopped
+    ports:
+      - "2223:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,49 @@
+# hanni-server — NestJS
+
+API học tiếng Trung theo chuẩn **HSK 3.0** (9 cấp). Xem `README.md` cho tổng quan.
+
+## Stack
+- NestJS 11 + TypeScript (CommonJS, `module: nodenext`)
+- PostgreSQL qua **Prisma 6** (`prisma/schema.prisma`)
+- Redis (ioredis) — state OAuth, cache
+- `@nestjs/event-emitter` (in-process) cho luồng sự kiện; handler phải **idempotent**
+
+## Cấu trúc thư mục
+```
+src/
+├── config/        env.validation.ts — zod, chạy lúc khởi động
+├── infra/         prisma/  redis/   (đều @Global)
+├── common/        decorators (CurrentUser, Public, Roles), filters, time.util
+├── events/        events.ts — hằng tên + kiểu payload
+├── modules/<domain>/   auth · users · mail · vocabulary · srs · progress · gamification
+└── health/
+prisma/  schema.prisma + seed/ (hsk-levels, achievements, words)
+scripts/import/  ETL nguồn mở → data/processed/words.seed.json
+```
+
+## Convention
+- Mỗi domain = 1 module NestJS (controller / service / module / dto). Business logic ở service.
+- Validate input bằng `class-validator` trên DTO. `ValidationPipe` bật `whitelist` + `transform` toàn cục.
+- Guard mặc định toàn app là `JwtAuthGuard`; route công khai gắn `@Public()`.
+- Đọc token từ cookie `hanni_access` (fallback `Authorization: Bearer`).
+- Không hardcode connection string — đọc qua `ConfigService` (đã validate bằng zod).
+- Tên biến/hàm/log: tiếng Việt cho comment và message hướng người dùng; code identifier tiếng Anh.
+- Prisma: bắt `PrismaClientKnownRequestError` (P2002/P2025) — đã có `AllExceptionsFilter` map sẵn.
+
+## Điểm quan trọng
+- **Phân cấp HSK dùng số bản 11/2025** (không phải bản nháp 2021). `HskLevel` giữ cả 2 bộ số.
+- **SRS**: `SchedulerRegistry.get(name)` chọn `Sm2Scheduler` | `FsrsScheduler` theo
+  `UserSettings.srsScheduler`. `UserWordProgress` có cả trường SM-2 (easeFactor/intervalDays)
+  lẫn FSRS (stability/difficulty) → đổi thuật toán không cần migration.
+- **Streak** tính theo **timezone IANA của user** + giờ cắt ngày `STREAK_DAY_CUTOFF_HOUR`,
+  cập nhật **lười** (xem `StreakService`). Không dùng cron reset.
+- **Index quan trọng cho queue SRS**: `UserWordProgress (userId, dueAt)` và `(userId, hskLevel, dueAt)`.
+
+## Lệnh
+`npm run start:dev` · `npm run build` · `npm run prisma:migrate` · `npm run db:seed` ·
+`npm run data:build-words` · `npm test` · `npm run test:e2e`
+
+## Trạng thái hiện tại
+Core đã dựng: auth (email + Google), vocabulary, SRS (SM-2 + FSRS), progress, gamification
+(streak/achievements/quiz), health, Swagger. Seed: 9 cấp HSK + huy hiệu + ~45 từ HSK 1 mẫu.
+Chưa làm (roadmap, chừa chỗ): RAG chatbot, minigame, bảng xếp hạng / social.
