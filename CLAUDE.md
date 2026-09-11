@@ -39,6 +39,10 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 - **Streak** tính theo **timezone IANA của user** + giờ cắt ngày `STREAK_DAY_CUTOFF_HOUR`,
   cập nhật **lười** (xem `StreakService`). Không dùng cron reset.
 - **Index quan trọng cho queue SRS**: `UserWordProgress (userId, dueAt)` và `(userId, hskLevel, dueAt)`.
+- **Push (`src/modules/push`)**: dùng `web-push` + khóa VAPID (`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`
+  trong env, sinh bằng `npx web-push generate-vapid-keys`). Để trống 2 khóa thì API trả 503 rõ ràng,
+  không chặn app khởi động. `PushSubscription` xoá tự động khi gửi gặp lỗi 404/410 (thiết bị đã gỡ
+  đăng ký). Chỉ có gửi thủ công (`POST /push/test`) — CHƯA có scheduler nhắc học tự động.
 
 ## Lệnh
 `npm run start:dev` · `npm run build` · `npm run prisma:migrate` · `npm run db:seed` ·
@@ -47,7 +51,7 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 ## Trạng thái hiện tại
 Core đã dựng: auth (email + Google), vocabulary, SRS (SM-2 + FSRS), progress, gamification
 (streak/achievements/quiz), learn (731 bài), videos (học qua video), grammar (40 điểm HSK 1–3 có giải thích + 349 mục HSK 4–9 theo đại cương),
-exams (lịch sử kiểm tra), leaderboard (xếp theo từ đã thuộc), health, Swagger.
+exams (lịch sử kiểm tra), leaderboard (xếp theo từ đã thuộc), push (thông báo đẩy Web Push, VAPID), health, Swagger.
 Seed đầy đủ để deploy: 9 cấp HSK · huy hiệu · 10.9k từ (`data/processed/words.seed.json`) ·
 731 bài · 40 điểm ngữ pháp HSK 1–3 + 349 mục HSK 4–9 (đại cương, prisma/seed/data/grammar-syllabus.raw.json) · 8 video (`prisma/seed/vi-cache.json` cache bản dịch máy) ·
 **`assets/audio/` ~58MB đã commit** (đừng gitignore lại — deploy VPS cần).
