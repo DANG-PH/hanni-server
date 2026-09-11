@@ -29,12 +29,36 @@ function cleanZh(raw: string): string {
  * Lấy bản chép tiếng Trung có mốc thời gian thật từ phụ đề YouTube.
  * Trả [] nếu video không có phụ đề tiếng Trung.
  */
+/** Thư viện youtube-transcript không có timeout riêng — có thể treo vô thời hạn
+ *  nếu mạng chặn/nghẽn. Ép timeout ở đây để 1 video lỗi không làm treo cả seed. */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`timeout sau ${ms}ms`)),
+      ms,
+    );
+    promise.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e: unknown) => {
+        clearTimeout(timer);
+        reject(e instanceof Error ? e : new Error(String(e)));
+      },
+    );
+  });
+}
+
 export async function fetchTimedTranscript(
   youtubeId: string,
 ): Promise<TimedLine[]> {
   for (const lang of ZH_LANGS) {
     try {
-      const segs = await YoutubeTranscript.fetchTranscript(youtubeId, { lang });
+      const segs = await withTimeout(
+        YoutubeTranscript.fetchTranscript(youtubeId, { lang }),
+        20_000,
+      );
       const out: TimedLine[] = [];
       for (const s of segs) {
         if (!HAN.test(s.text)) continue;

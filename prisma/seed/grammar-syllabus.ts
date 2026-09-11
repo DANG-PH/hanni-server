@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PrismaClient } from '@prisma/client';
+import { pinyin } from 'pinyin-pro';
+import { HSK4_EXPLAINED } from './grammar-explained-hsk4';
 
 /**
  * Mục ngữ pháp HSK 4–9 lấy TỪ ĐẠI CƯƠNG CHÍNH THỨC (krmanik/HSK-3.0,
@@ -119,11 +121,22 @@ export async function seedGrammarSyllabus(prisma: PrismaClient): Promise<void> {
       ),
     ) as RawItem[];
   } catch {
-    console.log('  ⚠ Chưa có grammar-syllabus.raw.json — bỏ qua ngữ pháp HSK 4–9.');
+    console.log(
+      '  ⚠ Chưa có grammar-syllabus.raw.json — bỏ qua ngữ pháp HSK 4–9.',
+    );
     return;
   }
 
+  /** Level → map tra "content" (nguyên văn Hán) → giải thích Hanni đã soạn thật. */
+  const EXPLAINED: Record<
+    number,
+    Record<string, import('./grammar-explained-hsk4').ExplainedEntry>
+  > = {
+    4: HSK4_EXPLAINED,
+  };
+
   let n = 0;
+  let explained = 0;
   const perLevel = new Map<number, number>();
   for (const it of raw) {
     const idx = (perLevel.get(it.level) ?? 0) + 1;
@@ -132,28 +145,31 @@ export async function seedGrammarSyllabus(prisma: PrismaClient): Promise<void> {
     const label = [vt(it.catName), it.sub && vt(it.sub)]
       .filter(Boolean)
       .join(' · ');
+    const entry = EXPLAINED[it.level]?.[it.content];
+    if (entry) explained += 1;
+    const examples = (entry?.examples ?? []).map((e) => ({
+      zh: e.zh,
+      pinyin: pinyin(e.zh, { toneType: 'symbol', nonZh: 'consecutive' }),
+      vi: e.vi,
+    }));
+    const common = {
+      hskLevel: it.level,
+      orderIndex: 1000 + idx, // luôn xếp sau các điểm có giải thích HSK 1–3
+      titleZh: it.content,
+      titleVi: label || 'Mục ngữ pháp',
+      summaryVi: `${vt(it.cat)} — theo đại cương HSK ${it.level === 7 ? '7–9' : it.level}.`,
+      explanationVi: entry?.explanationVi ?? '',
+      patterns: entry?.patterns ?? [],
+      examples,
+    };
     await prisma.grammarPoint.upsert({
       where: { slug },
-      create: {
-        slug,
-        hskLevel: it.level,
-        orderIndex: 1000 + idx, // luôn xếp sau các điểm có giải thích
-        titleZh: it.content,
-        titleVi: label || 'Mục ngữ pháp',
-        summaryVi: `${vt(it.cat)} — theo đại cương HSK ${it.level === 7 ? '7–9' : it.level}.`,
-        explanationVi: '',
-        patterns: [],
-        examples: [],
-      },
-      update: {
-        hskLevel: it.level,
-        orderIndex: 1000 + idx,
-        titleZh: it.content,
-        titleVi: label || 'Mục ngữ pháp',
-        summaryVi: `${vt(it.cat)} — theo đại cương HSK ${it.level === 7 ? '7–9' : it.level}.`,
-      },
+      create: { slug, ...common },
+      update: common,
     });
     n += 1;
   }
-  console.log(`  ✓ ${n} mục ngữ pháp HSK 4–9 (đại cương chính thức)`);
+  console.log(
+    `  ✓ ${n} mục ngữ pháp HSK 4–9 (đại cương chính thức, ${explained} mục có giải thích)`,
+  );
 }
