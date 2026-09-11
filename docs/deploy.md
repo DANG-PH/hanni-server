@@ -57,29 +57,14 @@ y hệt → không phải do nginx/deploy). Cách sửa miễn phí duy nhất l
 `hanni-api.dangpham.id.vn`, khớp đúng kiểu `book-api`, `profile-api` các service khác đang dùng.
 (Cách còn lại là mua Advanced Certificate Manager của Cloudflare, $10/tháng/zone — không chọn.)
 
-Trạng thái chuyển đổi:
+Trạng thái chuyển đổi — **đã xong, đã verify end-to-end**:
 - [x] DNS record `hanni-api` → `103.116.52.198`, Proxied — đã thêm trên Cloudflare.
-- [x] `nginx.conf` (repo `nginx-service`) đã sửa `server_name` sang `hanni-api.dangpham.id.vn` —
-      **chưa push**, đang chờ cert xong (bước dưới) để tránh nginx phục vụ domain mới bằng cert
-      chưa kịp phủ.
-- [ ] **Cần bạn tự chạy trên VPS1** (lệnh `docker stop nginx` bị chặn bởi lớp an toàn tự động,
-      Claude không tự chạy được) — SSH vào rồi chạy:
-      ```bash
-      docker stop nginx
-      certbot certonly --standalone --non-interactive --expand --cert-name api.ngocrongdark.com \
-        -d api.ngocrongdark.com -d api.dangpham.id.vn -d hanni-api.dangpham.id.vn \
-        -d book-api.dangpham.id.vn -d data.dangpham.id.vn -d data.ngocrongdark.com \
-        -d download.ngocrongdark.com -d grafana.ngocrongdark.com -d pay.dangpham.id.vn \
-        -d pay.ngocrongdark.com -d postgres.dangpham.id.vn -d postgres.ngocrongdark.com \
-        -d profile-api.dangpham.id.vn -d redis.dangpham.id.vn -d redis.ngocrongdark.com \
-        -d ws-go.dangpham.id.vn -d ws.dangpham.id.vn
-      chmod -R 755 /etc/letsencrypt/live /etc/letsencrypt/archive
-      docker start nginx
-      ```
-      Gián đoạn ngắn (vài giây) cho MỌI domain qua nginx này, không chỉ Hanni — vì cert/nginx dùng
-      chung. Danh sách domain này bỏ `api.hanni.dangpham.id.vn` ra khỏi cert (đang thay thế).
-- [ ] Sau khi cert xong: push `nginx.conf` đã sửa sẵn ở repo `nginx-service` (kích hoạt CI/CD →
-      `dragonboy-devops-service` → `docker compose up -d --force-recreate nginx` trên VPS1).
+- [x] Cert Let's Encrypt (`api.ngocrongdark.com`, dùng chung) đã `--expand` thêm
+      `hanni-api.dangpham.id.vn`, bỏ `api.hanni.dangpham.id.vn` ra.
+- [x] `nginx.conf` (repo `nginx-service`, commit `3f71f0e`) đã sửa `server_name` sang
+      `hanni-api.dangpham.id.vn`, đã push và deploy thành công qua CI/CD.
+- [x] Verify: `curl https://hanni-api.dangpham.id.vn/api/health` → `{"status":"ok","db":"up","redis":"up"}`,
+      TLS hợp lệ (`openssl s_client` → `Verify return code: 0 (ok)`).
 - [ ] Đổi `hanni-server/.env` trên VPS: `APP_URL=https://hanni-api.dangpham.id.vn` (đã sửa sẵn
       trong `.env.production.local` local — copy lại dòng đó lên VPS; không bắt buộc, `APP_URL`
       hiện chỉ dùng để validate, không ảnh hưởng runtime, nhưng nên khớp cho đúng).
