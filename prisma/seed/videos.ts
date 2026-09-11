@@ -57,7 +57,7 @@ interface Sample {
 const SAMPLES: Sample[] = [
   {
     youtubeId: 'wKM1rSEvMbo',
-    sortOrder: 17,
+    sortOrder: 1,
     title: 'Trói buộc phế tông: mỗi ngày được chia tu vi',
     titleZh: '绑定废宗，每人每天分我一点修为',
     author: '破晓动漫社 Dawn Anime Club',
@@ -255,7 +255,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'MSyCeuF3eyo',
-    sortOrder: 18,
+    sortOrder: 2,
     title: 'Tu tiên: từ điều của ta có thể mở hack',
     titleZh: '修仙：我的词条能开挂',
     author: '破晓动漫社 Dawn Anime Club',
@@ -267,7 +267,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'y_ZX85ss8nk',
-    sortOrder: 19,
+    sortOrder: 3,
     title: 'Ra ngõ gặp may: thiếu chủ ăn chơi thống lĩnh tông môn',
     titleZh: '出门撞大运，纨绔少主统领宗门',
     author: '破晓动漫社 Dawn Anime Club',
@@ -340,7 +340,7 @@ const SAMPLES: Sample[] = [
   // --- Tu tiên ---
   {
     youtubeId: '1pi8kNxjTKU',
-    sortOrder: 9,
+    sortOrder: 12,
     title: 'Tiểu công chúa Đại Đường là cục cưng của tiên môn',
     titleZh: '大唐小兕子是仙门团宠',
     author: '破晓动漫社 Dawn Anime Club',
@@ -352,7 +352,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: '1NMwCMkw2lM',
-    sortOrder: 10,
+    sortOrder: 13,
     title: 'Mở đầu nhặt được đỉnh vỡ, ta từ phàm nhân tu thành tiên',
     titleZh: '开局捡残鼎，我从凡夫修成仙',
     author: '破晓动漫社 Dawn Anime Club',
@@ -364,7 +364,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: '2PtyL6Fa7JQ',
-    sortOrder: 11,
+    sortOrder: 14,
     title: 'Ta thu mua phế phẩm trong giới tu tiên, âm thầm vô địch (Phần 2)',
     titleZh: '在修仙界收废品的我，悄悄无敌了（第二季）',
     author: '破晓动漫社 Dawn Anime Club',
@@ -376,7 +376,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: '9BUh3NwimmI',
-    sortOrder: 12,
+    sortOrder: 15,
     title: 'Cả lớp tu tiên trở về, người người Nguyên Anh còn ta đã Đại Thừa',
     titleZh: '全班修仙归来，你们元婴我大乘',
     author: '破晓动漫社 Dawn Anime Club',
@@ -388,7 +388,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'mpPAcCy2SdM',
-    sortOrder: 13,
+    sortOrder: 16,
     title: 'Ta thu mua phế phẩm trong giới tu tiên, âm thầm vô địch (Phần 1)',
     titleZh: '在修仙界收废品的我，悄悄无敌了（第一季）',
     author: '破晓动漫社 Dawn Anime Club',
@@ -400,7 +400,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'e6glSZuI400',
-    sortOrder: 14,
+    sortOrder: 17,
     title: 'Con gái phi phàm, dũng cảm xông pha giới tu tiên',
     titleZh: '女儿不凡，勇闯修仙界',
     author: '破晓动漫社 Dawn Anime Club',
@@ -412,7 +412,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'oLrkimF62mg',
-    sortOrder: 15,
+    sortOrder: 18,
     title: 'Tu tiên: mọi người nhìn ta cày cuốc điên cuồng',
     titleZh: '修仙：众人看我舔疯癫',
     author: '破晓动漫社 Dawn Anime Club',
@@ -424,7 +424,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'yC0NEyZavuM',
-    sortOrder: 16,
+    sortOrder: 19,
     title: 'Phàm nhân tu tiên: đốt thọ nguyên nghịch chuyển đường tiên',
     titleZh: '凡人修仙：寿元燃烧逆仙途',
     author: '破晓动漫社 Dawn Anime Club',
@@ -582,7 +582,7 @@ const SAMPLES: Sample[] = [
   // --- Tu tiên (đợt 2) ---
   {
     youtubeId: '0Zn2hHOnhA8',
-    sortOrder: 1,
+    sortOrder: 4,
     title: 'Bồn tiên tụ bảo: chương linh giới',
     titleZh: '聚宝仙盆灵界篇',
     author: '破晓动漫社 Dawn Anime Club',
@@ -594,7 +594,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'lfdRFjLVx40',
-    sortOrder: 2,
+    sortOrder: 5,
     title: 'Ai bảo không linh căn thì không tu tiên được',
     titleZh: '谁说没灵根不能修仙的',
     author: '破晓动漫社 Dawn Anime Club',
@@ -606,7 +606,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'Ut1_N1kcNjU',
-    sortOrder: 3,
+    sortOrder: 6,
     title: 'Phàm nhân tu tiên: bắt đầu từ khi có được ký ức Đại Đế',
     titleZh: '凡人修仙从获得大帝记忆开始',
     author: '破晓动漫社 Dawn Anime Club',
@@ -618,7 +618,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'QFLusV6HWXk',
-    sortOrder: 4,
+    sortOrder: 7,
     title: 'Phàm nhân tu tiên: ta dựa vào cây non nghịch chuyển đường tiên',
     titleZh: '凡人修仙：我靠小树苗逆仙途',
     author: '破晓动漫社 Dawn Anime Club',
@@ -630,7 +630,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'VX2YQTL1luk',
-    sortOrder: 5,
+    sortOrder: 8,
     title: 'Bị đày đến ruộng hoang, linh căn phế lại trồng ra con đường tu tiên',
     titleZh: '发配荒田，废灵根种出修仙路',
     author: '破晓动漫社 Dawn Anime Club',
@@ -642,7 +642,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: '4ObdsSjJBFA',
-    sortOrder: 6,
+    sortOrder: 9,
     title: 'Kiếm Triều: phong lôi chiếu cốt',
     titleZh: '剑朝：风雷照骨',
     author: '破晓动漫社 Dawn Anime Club',
@@ -654,7 +654,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'NS98kS93YH8',
-    sortOrder: 7,
+    sortOrder: 10,
     title: 'Trùng sinh rồi, ta không làm sư tôn ngốc nghếch nữa',
     titleZh: '重生后，我不当大冤种师尊了',
     author: '破晓动漫社 Dawn Anime Club',
@@ -666,7 +666,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'NQFJddPqAYc',
-    sortOrder: 8,
+    sortOrder: 11,
     title: 'Tỉnh thức hệ thống trảm yêu, từ bổ khoái đến võ thần',
     titleZh: '觉醒斩妖系统，从捕快到武神',
     author: '破晓动漫社 Dawn Anime Club',
