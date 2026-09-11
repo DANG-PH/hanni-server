@@ -43,6 +43,11 @@ curl http://localhost:8000/api/health
 `hanni-server` chạy chung PM2 với `bookshelf-server`, `profile-backend`. `curl localhost:8000/api/health`
 trả `{"status":"ok","db":"up","redis":"up"}`.
 
+**CI/CD đã verify chạy thật lần đầu tiên** (trước đó 3/3 lần chạy đều fail ở bước lint — xem lịch
+sử commit `e63c860`, sửa 6 lỗi type thật + để `npm run lint --fix` dọn định dạng phần còn lại).
+Sau khi sửa `VPS_APP_PATH` (từng để trống, khiến bước SSH `cd ""` ra `/root` không phải repo),
+một push thật lên `main` đã chạy trọn `ci` → `deploy` → health check trả `ok`.
+
 Sau bước này, mọi push lên `main` sẽ tự động: lint + build (job `ci`) → SSH vào VPS → `git reset --hard
 origin/main` → `npm ci` → `prisma generate` → `prisma migrate deploy` → `npm run build` →
 `pm2 restart all --update-env`. Không cần lặp lại các bước thủ công ở trên.
