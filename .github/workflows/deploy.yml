@@ -40,6 +40,10 @@ jobs:
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
             set -euo pipefail
+            # Phiên SSH không tương tác thường không nạp nvm từ ~/.bashrc —
+            # nạp tay để thấy được node/npm/pm2 nếu cài qua nvm.
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             cd "${{ secrets.VPS_APP_PATH }}"
             git fetch origin main
             git reset --hard origin/main
