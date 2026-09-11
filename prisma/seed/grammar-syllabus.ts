@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import { pinyin } from 'pinyin-pro';
 import { HSK4_EXPLAINED } from './grammar-explained-hsk4';
 import { HSK5_EXPLAINED } from './grammar-explained-hsk5';
+import { HSK6_EXPLAINED } from './grammar-explained-hsk6';
 
 /**
  * Mục ngữ pháp HSK 4–9 lấy TỪ ĐẠI CƯƠNG CHÍNH THỨC (krmanik/HSK-3.0,
@@ -135,6 +136,7 @@ export async function seedGrammarSyllabus(prisma: PrismaClient): Promise<void> {
   > = {
     4: HSK4_EXPLAINED,
     5: HSK5_EXPLAINED,
+    6: HSK6_EXPLAINED,
   };
 
   let n = 0;
