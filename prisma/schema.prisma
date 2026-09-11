@@ -137,21 +137,22 @@ model User {
   updatedAt       DateTime  @updatedAt
   lastActiveAt    DateTime?
 
-  accounts       Account[]
-  refreshTokens  RefreshToken[]
-  settings       UserSettings?
-  wordProgress   UserWordProgress[]
-  reviewLogs     ReviewLog[]
-  studySessions  StudySession[]
-  dailyActivity  UserDailyActivity[]
-  streak         UserStreak?
-  achievements   UserAchievement[]
-  levelProgress  UserLevelProgress[]
-  lessonProgress UserLessonProgress[]
-  quizAttempts   QuizAttempt[]
-  videos         Video[]
-  videoProgress  UserVideoProgress[]
-  examAttempts   ExamAttempt[]
+  accounts          Account[]
+  refreshTokens     RefreshToken[]
+  settings          UserSettings?
+  wordProgress      UserWordProgress[]
+  reviewLogs        ReviewLog[]
+  studySessions     StudySession[]
+  dailyActivity     UserDailyActivity[]
+  streak            UserStreak?
+  achievements      UserAchievement[]
+  levelProgress     UserLevelProgress[]
+  lessonProgress    UserLessonProgress[]
+  quizAttempts      QuizAttempt[]
+  videos            Video[]
+  videoProgress     UserVideoProgress[]
+  examAttempts      ExamAttempt[]
+  pushSubscriptions PushSubscription[]
 
   @@index([lastActiveAt])
 }
@@ -642,4 +643,23 @@ model ExamAttempt {
   createdAt    DateTime @default(now())
 
   @@index([userId, createdAt(sort: Desc)])
+}
+
+// ===================================================================
+//  THÔNG BÁO ĐẨY (Web Push)
+// ===================================================================
+
+/// Đăng ký nhận thông báo đẩy của 1 thiết bị/trình duyệt. 1 user có thể có
+/// nhiều thiết bị (điện thoại, máy tính…) → nhiều dòng.
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

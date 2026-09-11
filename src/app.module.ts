@@ -21,6 +21,7 @@ import { LearnModule } from './modules/learn/learn.module';
 import { VideosModule } from './modules/videos/videos.module';
 import { MailModule } from './modules/mail/mail.module';
 import { ProgressModule } from './modules/progress/progress.module';
+import { PushModule } from './modules/push/push.module';
 import { SrsModule } from './modules/srs/srs.module';
 import { UsersModule } from './modules/users/users.module';
 import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
@@ -70,6 +71,7 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
     GrammarModule,
     ExamsModule,
     LeaderboardModule,
+    PushModule,
     HealthModule,
   ],
   providers: [

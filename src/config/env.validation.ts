@@ -49,6 +49,13 @@ export const envSchema = z.object({
   THROTTLE_LIMIT: z.coerce.number().int().positive().default(100),
 
   AUDIO_BASE_URL: z.string().default(''),
+
+  // Thông báo đẩy (Web Push) — để trống thì PushService tự báo lỗi rõ ràng
+  // khi gọi, không chặn app khởi động.
+  VAPID_PUBLIC_KEY: z.string().default(''),
+  VAPID_PRIVATE_KEY: z.string().default(''),
+  VAPID_SUBJECT: z.string().default('mailto:support@hanni.app'),
+
   SEED_RESET: z
     .enum(['true', 'false'])
     .default('false')
