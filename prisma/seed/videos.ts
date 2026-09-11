@@ -57,6 +57,7 @@ interface Sample {
 const SAMPLES: Sample[] = [
   {
     youtubeId: 'wKM1rSEvMbo',
+    sortOrder: 17,
     title: 'Trói buộc phế tông: mỗi ngày được chia tu vi',
     titleZh: '绑定废宗，每人每天分我一点修为',
     author: '破晓动漫社 Dawn Anime Club',
@@ -254,6 +255,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'MSyCeuF3eyo',
+    sortOrder: 18,
     title: 'Tu tiên: từ điều của ta có thể mở hack',
     titleZh: '修仙：我的词条能开挂',
     author: '破晓动漫社 Dawn Anime Club',
@@ -265,6 +267,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'y_ZX85ss8nk',
+    sortOrder: 19,
     title: 'Ra ngõ gặp may: thiếu chủ ăn chơi thống lĩnh tông môn',
     titleZh: '出门撞大运，纨绔少主统领宗门',
     author: '破晓动漫社 Dawn Anime Club',
@@ -276,6 +279,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'tH6FIjh1Z8g',
+    sortOrder: 20,
     title: 'Chuyện trảm yêu của một người, một mập và một mèo đen',
     titleZh: '一人一胖一黑猫的斩妖日常',
     author: '破晓动漫社 Dawn Anime Club',
@@ -287,6 +291,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'bFN7fgGIUX4',
+    sortOrder: 39,
     title: 'Trước khi chạy nạn, ta đã chất đầy kho lương',
     titleZh: '逃荒前，我囤粮满仓',
     author: '破晓动漫社 Dawn Anime Club',
@@ -298,6 +303,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'r1X7c2RQOyo',
+    sortOrder: 40,
     title: 'Điền Điền bận trồng trọt: vườn quê có thú cưng',
     titleZh: '田田忙种田之田园有宠',
     author: '破晓动漫社 Dawn Anime Club',
@@ -309,6 +315,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: '8uEvs7pvEpY',
+    sortOrder: 41,
     title: 'Điền Điền bận trồng trọt: kỳ duyên tiếng thú',
     titleZh: '田田忙种田之兽语奇缘',
     author: '破晓动漫社 Dawn Anime Club',
@@ -320,6 +327,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'wvpGf5OR8KI',
+    sortOrder: 42,
     title: 'Xuân Hòa thời cổ: trồng trọt, săn bắn, nuôi con',
     titleZh: '春禾在古代，种田打猎养娃的日子',
     author: '破晓动漫社 Dawn Anime Club',
@@ -332,6 +340,7 @@ const SAMPLES: Sample[] = [
   // --- Tu tiên ---
   {
     youtubeId: '1pi8kNxjTKU',
+    sortOrder: 9,
     title: 'Tiểu công chúa Đại Đường là cục cưng của tiên môn',
     titleZh: '大唐小兕子是仙门团宠',
     author: '破晓动漫社 Dawn Anime Club',
@@ -343,6 +352,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: '1NMwCMkw2lM',
+    sortOrder: 10,
     title: 'Mở đầu nhặt được đỉnh vỡ, ta từ phàm nhân tu thành tiên',
     titleZh: '开局捡残鼎，我从凡夫修成仙',
     author: '破晓动漫社 Dawn Anime Club',
@@ -354,6 +364,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: '2PtyL6Fa7JQ',
+    sortOrder: 11,
     title: 'Ta thu mua phế phẩm trong giới tu tiên, âm thầm vô địch (Phần 2)',
     titleZh: '在修仙界收废品的我，悄悄无敌了（第二季）',
     author: '破晓动漫社 Dawn Anime Club',
@@ -365,6 +376,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: '9BUh3NwimmI',
+    sortOrder: 12,
     title: 'Cả lớp tu tiên trở về, người người Nguyên Anh còn ta đã Đại Thừa',
     titleZh: '全班修仙归来，你们元婴我大乘',
     author: '破晓动漫社 Dawn Anime Club',
@@ -376,6 +388,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'mpPAcCy2SdM',
+    sortOrder: 13,
     title: 'Ta thu mua phế phẩm trong giới tu tiên, âm thầm vô địch (Phần 1)',
     titleZh: '在修仙界收废品的我，悄悄无敌了（第一季）',
     author: '破晓动漫社 Dawn Anime Club',
@@ -387,6 +400,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'e6glSZuI400',
+    sortOrder: 14,
     title: 'Con gái phi phàm, dũng cảm xông pha giới tu tiên',
     titleZh: '女儿不凡，勇闯修仙界',
     author: '破晓动漫社 Dawn Anime Club',
@@ -398,6 +412,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'oLrkimF62mg',
+    sortOrder: 15,
     title: 'Tu tiên: mọi người nhìn ta cày cuốc điên cuồng',
     titleZh: '修仙：众人看我舔疯癫',
     author: '破晓动漫社 Dawn Anime Club',
@@ -409,6 +424,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'yC0NEyZavuM',
+    sortOrder: 16,
     title: 'Phàm nhân tu tiên: đốt thọ nguyên nghịch chuyển đường tiên',
     titleZh: '凡人修仙：寿元燃烧逆仙途',
     author: '破晓动漫社 Dawn Anime Club',
@@ -421,6 +437,7 @@ const SAMPLES: Sample[] = [
   // --- Tổng tài / ngôn tình / xuyên không ---
   {
     youtubeId: '_N0c1DP5LBE',
+    sortOrder: 27,
     title: 'Nữ nông dân dẫn gia đình làm giàu',
     titleZh: '农女带着家人致富',
     author: '破晓动漫社 Dawn Anime Club',
@@ -432,6 +449,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'ee4793u6VcI',
+    sortOrder: 28,
     title: 'Tổng tài, phu nhân lại bắt đầu ghi nợ mua dao rồi',
     titleZh: '总裁，夫人她又开始赊刀了',
     author: '破晓动漫社 Dawn Anime Club',
@@ -443,6 +461,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'FS7L4SiP2bM',
+    sortOrder: 29,
     title: 'Kiếp trước chết thảm chẳng ai thương, trùng sinh cả nhà họ Lệ nghe ta sai khiến',
     titleZh: '前世惨死无人怜，重生厉家全听我差遣',
     author: '破晓动漫社 Dawn Anime Club',
@@ -454,6 +473,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: '9GUPXXMysRg',
+    sortOrder: 30,
     title: 'Tổng tài là thần ẩm thực',
     titleZh: '总裁是食神',
     author: '破晓动漫社 Dawn Anime Club',
@@ -465,6 +485,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'AQBlOL_c1mE',
+    sortOrder: 31,
     title: 'Bồn báu sinh tài, dẫn con về quê',
     titleZh: '宝盆生财携崽归乡',
     author: '破晓动漫社 Dawn Anime Club',
@@ -476,6 +497,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: '73Bn2GH2pTU',
+    sortOrder: 32,
     title: 'Tông môn sủng ái độc nhất tiểu sư đệ? Ta xách thùng chạy trốn ngay trong đêm',
     titleZh: '宗门独宠小师弟？我连夜提桶跑路',
     author: '破晓动漫社 Dawn Anime Club',
@@ -487,6 +509,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'PpBvNtYprDo',
+    sortOrder: 33,
     title: 'Xuyên thành đích nữ nhà tướng, tiểu thư đây quyết nghịch thiên đổi mệnh',
     titleZh: '穿成将门嫡女本小姐要逆天改命',
     author: '破晓动漫社 Dawn Anime Club',
@@ -498,6 +521,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'qdviVy9zKj8',
+    sortOrder: 34,
     title: 'Xuyên sách rồi, tiếng lòng của ta giấu không nổi',
     titleZh: '穿书后我的心声藏不住了',
     author: '破晓动漫社 Dawn Anime Club',
@@ -509,6 +533,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'XzmrdcLWhT8',
+    sortOrder: 35,
     title: 'Xuyên sách nghịch tập, thu phục phong ấn tôn chủ',
     titleZh: '穿书逆袭收服封印尊主',
     author: '破晓动漫社 Dawn Anime Club',
@@ -520,6 +545,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: '2TGgp1Mfho8',
+    sortOrder: 36,
     title: 'Xuyên qua song phương: ta dùng lương thực chinh phục nữ đế thời cổ',
     titleZh: '双向穿梭：我在古代用粮食征服女帝',
     author: '破晓动漫社 Dawn Anime Club',
@@ -531,6 +557,7 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'iDl2EMf8rRU',
+    sortOrder: 37,
     title: 'Phu quân phản diện chỉ sủng mình ta, sao trăng xa xôi gửi về Nam Châu',
     titleZh: '反派夫君独宠我，星月迢迢寄南州',
     author: '破晓动漫社 Dawn Anime Club',
@@ -542,11 +569,182 @@ const SAMPLES: Sample[] = [
   },
   {
     youtubeId: 'COmDqMStWic',
+    sortOrder: 38,
     title: 'Xuyên qua hai giới, Chanh Bảo thành cục cưng cả nhà',
     titleZh: '两界穿梭，柠宝成团宠',
     author: '破晓动漫社 Dawn Anime Club',
     description:
       'Hoạt hình AI ngôn tình xuyên không dễ thương: cô bé Chanh Bảo có thể qua lại giữa hai thế giới, trở thành cục cưng được cả hai bên gia đình hết lòng che chở. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  // --- Tu tiên (đợt 2) ---
+  {
+    youtubeId: '0Zn2hHOnhA8',
+    sortOrder: 1,
+    title: 'Bồn tiên tụ bảo: chương linh giới',
+    titleZh: '聚宝仙盆灵界篇',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI tu tiên: mang linh căn tạp năm hành, nam chính vẫn nghịch tập tu luyện, vượt ngàn dặm đến linh giới cứu người thương, trải bao thử thách để đạt được bí thuật và Cửu Thiên Huyền Hỏa. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 5,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'lfdRFjLVx40',
+    sortOrder: 2,
+    title: 'Ai bảo không linh căn thì không tu tiên được',
+    titleZh: '谁说没灵根不能修仙的',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI tu tiên: tạp dịch không linh căn tình cờ nhặt được thanh kiếm gãy gỉ sét, phát hiện chỉ cần vung kiếm chém là có thể hấp thụ năng lượng, tự cường bản thân — không linh căn vẫn phá vào Luyện Khí, chấn động cả tông môn. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 5,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'Ut1_N1kcNjU',
+    sortOrder: 3,
+    title: 'Phàm nhân tu tiên: bắt đầu từ khi có được ký ức Đại Đế',
+    titleZh: '凡人修仙从获得大帝记忆开始',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI tu tiên: sinh ra không linh căn, bị coi là phế vật tu tiên, nam chính bất ngờ nhận được truyền thừa Càn Khôn Ngọc của một vị Đại Đế, từ đó tung hoành con đường tu tiên. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 5,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'QFLusV6HWXk',
+    sortOrder: 4,
+    title: 'Phàm nhân tu tiên: ta dựa vào cây non nghịch chuyển đường tiên',
+    titleZh: '凡人修仙：我靠小树苗逆仙途',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI tu tiên: tạp dịch linh căn kém tình cờ gặp được mầm linh dị, nuốt đan dược phế bỏ luyện thành bảo vật, âm thầm nhẫn nhịn tích lũy để cuối cùng nghịch tập phong thần. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 5,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'VX2YQTL1luk',
+    sortOrder: 5,
+    title: 'Bị đày đến ruộng hoang, linh căn phế lại trồng ra con đường tu tiên',
+    titleZh: '发配荒田，废灵根种出修仙路',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI tu tiên: bị đày đến mảnh ruộng hoang vì linh căn phế bỏ, nam chính không nản lòng mà từ chính mảnh đất ấy trồng ra cả một con đường tu tiên cho riêng mình. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 5,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: '4ObdsSjJBFA',
+    sortOrder: 6,
+    title: 'Kiếm Triều: phong lôi chiếu cốt',
+    titleZh: '剑朝：风雷照骨',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI tu tiên kiếm hiệp: trùng sinh trỗi dậy giữa thâm sơn tuyệt cảnh, dựa vào một thanh trường kiếm chém hết cường địch khắp thiên hạ, tiến đến đỉnh cao võ đạo chí tôn. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 5,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'NS98kS93YH8',
+    sortOrder: 7,
+    title: 'Trùng sinh rồi, ta không làm sư tôn ngốc nghếch nữa',
+    titleZh: '重生后，我不当大冤种师尊了',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI tu tiên: trùng sinh trở về, vị sư tôn từng bị đệ tử lợi dụng lần này quyết không ngốc nghếch chịu thiệt nữa, dùng trí tuệ và bản lĩnh xoay chuyển cả cục diện tông môn. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 5,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'NQFJddPqAYc',
+    sortOrder: 8,
+    title: 'Tỉnh thức hệ thống trảm yêu, từ bổ khoái đến võ thần',
+    titleZh: '觉醒斩妖系统，从捕快到武神',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI tu tiên: một bổ khoái bình thường tỉnh thức hệ thống trảm yêu, từng bước diệt trừ yêu ma, tu luyện trở thành võ thần vang danh thiên hạ. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 5,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  // --- Tổng tài / ngôn tình / xuyên không (đợt 2) ---
+  {
+    youtubeId: '8o8c_Htrt_E',
+    sortOrder: 21,
+    title: 'Xuyên thành pháo hôi rồi: không phải phản diện sao? Sao lại đòi ôm',
+    titleZh: '穿成炮灰后：不是反派吗？怎么要抱抱',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI xuyên sách ngôn tình: xuyên nhầm vào thân phận một nhân vật phụ chết yểu, lỡ tay làm bị thương vị vương gia quyền khuynh triều dã, từng bước cẩn trọng hóa giải hết tai họa này đến tai họa khác. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'qoEAvY8N5Vg',
+    sortOrder: 22,
+    title: 'Hai chị em thân thiết cùng xuyên sách, nam chính và phản diện mỗi người ôm một',
+    titleZh: '闺蜜双穿，男主反派我俩一人一个',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI xuyên sách ngôn tình hài hước: hai người bạn thân cùng xuyên vào tiểu thuyết, nhầm lẫn theo đuổi vị nhiếp chính vương, nữ chính bước vào kinh thành xoay chuyển mưu kế triều đình, mở ra hai tuyến tình yêu vừa hài vừa ngọt. Phần 2. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: '5Wix8Vba3SM',
+    sortOrder: 23,
+    title: 'Trùng sinh làm thần chứng khoán, ta nghịch tập cuộc đời',
+    titleZh: '重生做股神，我逆袭人生',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI đô thị trùng sinh: quay lại quá khứ với ký ức về thị trường chứng khoán, nam chính từng bước xoay chuyển vận mệnh, nghịch tập từ tay trắng thành người đứng đỉnh cao. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'kXim9iK9kBE',
+    sortOrder: 24,
+    title: 'Ta là độc giả nam tần, chấn chỉnh não yêu đương của nữ tần',
+    titleZh: '我男频读者，整治女频恋爱脑',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI xuyên không hài hước: một độc giả quen đọc tiểu thuyết nam chính xuyên vào thế giới tiểu thuyết nữ chính, phẫn nộ trước những tình tiết tiêu chuẩn kép vô lý, phá vỡ mọi khuôn sáo để nghịch chuyển cả triều đình. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'VxhOhjxC9jY',
+    sortOrder: 25,
+    title: 'Thần hào: mở đầu bị chia tay, kích hoạt hệ thống quay số',
+    titleZh: '神豪：开局被分手,激活抽奖系统',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI đô thị hài hước: bị bạn gái chia tay và chế giễu ngay tại chỗ, nam chính bất ngờ kích hoạt hệ thống quay số thần hào, liên tục quay trúng đại lễ, nghịch tập cả cuộc đời. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'AHsMFfyIczo',
+    sortOrder: 26,
+    title: 'Hệ thống thần hào: mở đầu ràng buộc nữ đế, càn quét vạn cổ',
+    titleZh: '神豪系统，开局绑定女帝，横扫万古',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI huyền huyễn ngôn tình: mang nợ nần bị đẩy vào Ma Uyên, nam chính ràng buộc cùng nữ đế và một hệ thống nghịch thiên, càn quét khắp thiên tài các phương, từng bước trở thành vương phu vô địch của nữ đế. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
     hskLevel: 4,
     kind: VideoKind.STORY,
     maxLines: 1500,
