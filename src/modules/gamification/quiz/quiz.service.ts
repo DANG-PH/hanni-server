@@ -20,11 +20,16 @@ function shuffle<T>(arr: T[]): T[] {
 
 export interface QuizQuestion {
   wordId: string;
+  mode: 'reading' | 'listening';
   prompt: string; // Hán tự
   pinyin: string;
+  audioUrl?: string | null; // chỉ có ở câu "nghe"
   options: string[]; // 4 nghĩa tiếng Việt
   answer: string; // nghĩa đúng
 }
+
+/** Tỉ lệ câu hỏi dạng "nghe" trong tổng số câu — mô phỏng phần nghe đứng trước phần đọc như đề thi thật. */
+const LISTENING_RATIO = 0.4;
 
 @Injectable()
 export class QuizService {
@@ -78,14 +83,34 @@ export class QuizService {
     const picked = shuffle(pool).slice(0, Math.min(size, pool.length));
     const allMeanings = pool.map((w) => w.meaningVi!).filter(Boolean);
 
-    const questions: QuizQuestion[] = picked.map((w) => {
+    // Phần "nghe" đứng trước phần "đọc" trong bài, giống cấu trúc đề thi HSK thật
+    // (chỉ những từ có audio mới được xếp vào phần nghe).
+    const withAudio = picked.filter((w) => w.audioUrl);
+    const listeningCount = Math.min(
+      withAudio.length,
+      Math.round(picked.length * LISTENING_RATIO),
+    );
+    const listeningIds = new Set(
+      withAudio.slice(0, listeningCount).map((w) => w.id),
+    );
+    const ordered = [
+      ...picked.filter((w) => listeningIds.has(w.id)),
+      ...picked.filter((w) => !listeningIds.has(w.id)),
+    ];
+
+    const questions: QuizQuestion[] = ordered.map((w) => {
       const distractors = shuffle(
         allMeanings.filter((m) => m !== w.meaningVi),
       ).slice(0, 3);
+      const mode: QuizQuestion['mode'] = listeningIds.has(w.id)
+        ? 'listening'
+        : 'reading';
       return {
         wordId: w.id,
+        mode,
         prompt: w.simplified,
         pinyin: w.pinyin,
+        audioUrl: mode === 'listening' ? w.audioUrl : null,
         options: shuffle([w.meaningVi!, ...distractors]),
         answer: w.meaningVi!,
       };
@@ -95,7 +120,7 @@ export class QuizService {
       data: {
         userId,
         totalQuestions: questions.length,
-        format: { type: 'hanzi_to_vi' },
+        format: { type: 'hanzi_to_vi_mixed_listening' },
       },
     });
 
