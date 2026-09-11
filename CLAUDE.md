@@ -50,15 +50,26 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 
 ## Trạng thái hiện tại
 Core đã dựng: auth (email + Google), vocabulary, SRS (SM-2 + FSRS), progress, gamification
-(streak/achievements/quiz), learn (731 bài), videos (học qua video), grammar (40 điểm HSK 1–3 có giải thích + 349 mục HSK 4–9 theo đại cương),
-exams (lịch sử kiểm tra), leaderboard (xếp theo từ đã thuộc), push (thông báo đẩy Web Push, VAPID), health, Swagger.
+(streak/achievements/quiz), learn (731 bài), videos (học qua video), grammar (40 điểm HSK 1–3
++ 195 điểm HSK 4–9 có giải thích thật, xem bên dưới), exams (lịch sử kiểm tra), leaderboard
+(xếp theo từ đã thuộc), push (thông báo đẩy Web Push, VAPID), health, Swagger.
 Seed đầy đủ để deploy: 9 cấp HSK · huy hiệu · 10.9k từ (`data/processed/words.seed.json`) ·
-731 bài · 40 điểm ngữ pháp HSK 1–3 + 349 mục HSK 4–9 (đại cương, prisma/seed/data/grammar-syllabus.raw.json) · 8 video (`prisma/seed/vi-cache.json` cache bản dịch máy) ·
+731 bài · 40 điểm ngữ pháp HSK 1–3 + 349 mục HSK 4–9 (đại cương, prisma/seed/data/grammar-syllabus.raw.json,
+195/349 mục đã có giải thích thật) · ~42 video (`prisma/seed/vi-cache.json` cache bản dịch máy) ·
 **`assets/audio/` ~58MB đã commit** (đừng gitignore lại — deploy VPS cần).
 
 **Học qua video**: `POST /videos` chỉ cần youtubeUrl (transcript tuỳ chọn) → tự lấy phụ đề CC
 tiếng Trung từ YouTube + dịch máy NỀN (`translate.util.ts`: Google free → MyMemory, bảng
 thuật ngữ tu tiên, cache). Không cần API key. `MYMEMORY_EMAIL` nâng hạn mức ngày.
+`youtube-transcript.util.ts` có timeout 20s/ngôn ngữ (tránh treo vô thời hạn nếu 1 video lỗi).
 
-Chưa làm (roadmap, chừa chỗ): câu ví dụ cho từ vựng, ngữ pháp HSK 4–9, cấu trúc đề thi HSK
+**Ngữ pháp HSK 4–9**: 349 mục từ đại cương chính thức, chia 2 loại —
+(1) mẫu câu/cấu trúc thật (句子的类型/句子成分/固定格式/特殊表达法/语段) → đã soạn giải thích +
+ví dụ tay trong `prisma/seed/grammar-explained-hsk{4,5,6,7}.ts` (63+38+24+70 = 195 mục, khớp
+`content` nguyên văn với raw.json — LUÔN chạy lại script verify key trước khi sửa, xem cách làm
+trong các file đó); (2) danh sách từ vựng theo từ loại (词类/短语) → giữ dạng rút gọn, không cần
+giải thích riêng từng mục. Field `flat` (tính trong grammar.service.ts) tự bật/tắt theo
+`explanationVi` có rỗng hay không — không cần sửa gì ở FE khi thêm giải thích mới.
+
+Chưa làm (roadmap, chừa chỗ): câu ví dụ cho từ vựng, cấu trúc đề thi HSK
 thật (nghe/đọc/tính giờ), RAG chatbot, minigame, social/bạn bè.
