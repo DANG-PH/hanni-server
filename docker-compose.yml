@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: hanni
       POSTGRES_DB: hanni
     ports:
-      - "2222:5432"
+      - "127.0.0.1:2222:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -17,7 +17,7 @@ services:
     container_name: hanni-redis
     restart: unless-stopped
     ports:
-      - "2223:6379"
+      - "127.0.0.1:2223:6379"
     volumes:
       - redis_data:/data
 
