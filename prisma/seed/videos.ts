@@ -329,6 +329,228 @@ const SAMPLES: Sample[] = [
     kind: VideoKind.STORY,
     maxLines: 1500,
   },
+  // --- Tu tiên ---
+  {
+    youtubeId: '1pi8kNxjTKU',
+    title: 'Tiểu công chúa Đại Đường là cục cưng của tiên môn',
+    titleZh: '大唐小兕子是仙门团宠',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI tu tiên: công chúa Đại Đường xuyên vào giới tu tiên bái sư học đạo, qua lại giữa Đại Đường và tiên vực để bảo vệ người thân. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 5,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: '1NMwCMkw2lM',
+    title: 'Mở đầu nhặt được đỉnh vỡ, ta từ phàm nhân tu thành tiên',
+    titleZh: '开局捡残鼎，我从凡夫修成仙',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI tu tiên: thiếu niên nhặt được thần đỉnh tàn khuyết, từ đó bước lên con đường tu tiên. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 5,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: '2PtyL6Fa7JQ',
+    title: 'Ta thu mua phế phẩm trong giới tu tiên, âm thầm vô địch (Phần 2)',
+    titleZh: '在修仙界收废品的我，悄悄无敌了（第二季）',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI tu tiên: khởi nghiệp bằng nghề nhặt phế phẩm, luyện hóa đan dược pháp khí bỏ đi thành bảo vật, từng bước đánh bại kẻ thù lên đỉnh tiên giới. Phần 2. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 5,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: '9BUh3NwimmI',
+    title: 'Cả lớp tu tiên trở về, người người Nguyên Anh còn ta đã Đại Thừa',
+    titleZh: '全班修仙归来，你们元婴我大乘',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI tu tiên: cả lớp cùng xuyên không tu tiên rồi trở về, nhưng cảnh giới của nam chính bỏ xa tất cả bạn học. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 5,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'mpPAcCy2SdM',
+    title: 'Ta thu mua phế phẩm trong giới tu tiên, âm thầm vô địch (Phần 1)',
+    titleZh: '在修仙界收废品的我，悄悄无敌了（第一季）',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI tu tiên: khởi nghiệp bằng nghề nhặt phế phẩm, luyện hóa đan dược pháp khí bỏ đi thành bảo vật, từng bước đánh bại kẻ thù lên đỉnh tiên giới. Phần 1 (video gốc dài nhất trong loạt — ghép 138 tập). Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu.',
+    hskLevel: 5,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'e6glSZuI400',
+    title: 'Con gái phi phàm, dũng cảm xông pha giới tu tiên',
+    titleZh: '女儿不凡，勇闯修仙界',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI tu tiên: cô con gái mang tư chất phi phàm một mình xông pha giới tu tiên đầy hiểm nguy. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 5,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'oLrkimF62mg',
+    title: 'Tu tiên: mọi người nhìn ta cày cuốc điên cuồng',
+    titleZh: '修仙：众人看我舔疯癫',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI tu tiên: nam chính bám trụ tiệm luyện đan, khổ luyện không ngừng, liên tục gặp cơ duyên thu thập thần công bí bảo, từng bước vươn lên đỉnh cao tu tiên. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 5,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'yC0NEyZavuM',
+    title: 'Phàm nhân tu tiên: đốt thọ nguyên nghịch chuyển đường tiên',
+    titleZh: '凡人修仙：寿元燃烧逆仙途',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI tu tiên: một phàm nhân không tư chất, phải đốt thọ nguyên của chính mình để đổi lấy sức mạnh nghịch thiên trên con đường tu tiên. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 5,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  // --- Tổng tài / ngôn tình / xuyên không ---
+  {
+    youtubeId: '_N0c1DP5LBE',
+    title: 'Nữ nông dân dẫn gia đình làm giàu',
+    titleZh: '农女带着家人致富',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI ngôn tình xuyên không: nữ y toàn năng xuyên về nhà nông, ly hôn chồng bội bạc, dẫn con về quê, nhờ không gian bồn báu mà buôn bán làm giàu giữa thời loạn. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'ee4793u6VcI',
+    title: 'Tổng tài, phu nhân lại bắt đầu ghi nợ mua dao rồi',
+    titleZh: '总裁，夫人她又开始赊刀了',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI ngôn tình tổng tài: vì muốn phá lời nguyền chết yểu, cô gái bán dao ghi nợ gả cho phú hào số một, cùng nhau phá âm mưu, dần nảy sinh tình cảm. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'FS7L4SiP2bM',
+    title: 'Kiếp trước chết thảm chẳng ai thương, trùng sinh cả nhà họ Lệ nghe ta sai khiến',
+    titleZh: '前世惨死无人怜，重生厉家全听我差遣',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI ngôn tình trùng sinh: kiếp trước chết oan không ai thương xót, kiếp này trở lại nắm quyền, khiến cả gia tộc phải nghe theo mình. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: '9GUPXXMysRg',
+    title: 'Tổng tài là thần ẩm thực',
+    titleZh: '总裁是食神',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI ngôn tình tổng tài: vị tổng tài bá đạo hóa ra là một thần ẩm thực ẩn danh, sau khi sa cơ đã trở lại giang hồ, vừa nấu ăn vừa vạch trần âm mưu để giành lại vị trí. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'AQBlOL_c1mE',
+    title: 'Bồn báu sinh tài, dẫn con về quê',
+    titleZh: '宝盆生财携崽归乡',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI ngôn tình xuyên không: nữ y toàn năng xuyên không, gặp chồng bội bạc rồi ly hôn, dẫn con về quê, nhờ không gian bồn báu buôn bán làm giàu, tránh xa thời loạn. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: '73Bn2GH2pTU',
+    title: 'Tông môn sủng ái độc nhất tiểu sư đệ? Ta xách thùng chạy trốn ngay trong đêm',
+    titleZh: '宗门独宠小师弟？我连夜提桶跑路',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI xuyên sách: xuyên thành vai phụ lót đường cho nam chính, sau khi tỉnh ngộ liền vùng lên phản kháng số phận đã định sẵn. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'PpBvNtYprDo',
+    title: 'Xuyên thành đích nữ nhà tướng, tiểu thư đây quyết nghịch thiên đổi mệnh',
+    titleZh: '穿成将门嫡女本小姐要逆天改命',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI ngôn tình xuyên không: xuyên thành đích nữ của một nhà tướng quân, quyết tâm thay đổi vận mệnh đã được định sẵn trong sách. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'qdviVy9zKj8',
+    title: 'Xuyên sách rồi, tiếng lòng của ta giấu không nổi',
+    titleZh: '穿书后我的心声藏不住了',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI xuyên sách hài hước: sau khi xuyên vào tiểu thuyết, suy nghĩ trong lòng nữ chính cứ vô tình bị người khác nghe thấy hết, gây ra hàng loạt tình huống dở khóc dở cười. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'XzmrdcLWhT8',
+    title: 'Xuyên sách nghịch tập, thu phục phong ấn tôn chủ',
+    titleZh: '穿书逆袭收服封印尊主',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI xuyên sách tu tiên: xuyên vào tiểu thuyết ở vị trí bất lợi, nữ chính từng bước nghịch tập, thu phục vị tôn chủ đang bị phong ấn. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí (có bảng thuật ngữ tu tiên) — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: '2TGgp1Mfho8',
+    title: 'Xuyên qua song phương: ta dùng lương thực chinh phục nữ đế thời cổ',
+    titleZh: '双向穿梭：我在古代用粮食征服女帝',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI xuyên không nông nghiệp: có thể qua lại tự do giữa hiện đại và cổ đại, nam chính mang lương thực và kỹ thuật trồng trọt hiện đại về giúp nữ đế thời cổ, dần chiếm được lòng nàng. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'iDl2EMf8rRU',
+    title: 'Phu quân phản diện chỉ sủng mình ta, sao trăng xa xôi gửi về Nam Châu',
+    titleZh: '反派夫君独宠我，星月迢迢寄南州',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI ngôn tình xuyên sách: xuyên thành vợ của nhân vật phản diện trong truyện, không ngờ vị phu quân này lại chỉ hết lòng sủng ái riêng mình nàng. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
+  {
+    youtubeId: 'COmDqMStWic',
+    title: 'Xuyên qua hai giới, Chanh Bảo thành cục cưng cả nhà',
+    titleZh: '两界穿梭，柠宝成团宠',
+    author: '破晓动漫社 Dawn Anime Club',
+    description:
+      'Hoạt hình AI ngôn tình xuyên không dễ thương: cô bé Chanh Bảo có thể qua lại giữa hai thế giới, trở thành cục cưng được cả hai bên gia đình hết lòng che chở. Bản chép chạy đồng bộ theo lời nói; bản dịch tiếng Việt do máy dịch miễn phí — đọc để nắm ý, có thể sai/thô. Trích ~90 phút đầu (video gốc là bản ghép nhiều tập, dài 2–3 tiếng).',
+    hskLevel: 4,
+    kind: VideoKind.STORY,
+    maxLines: 1500,
+  },
 ];
 
 export async function seedVideos(prisma: PrismaClient): Promise<void> {
