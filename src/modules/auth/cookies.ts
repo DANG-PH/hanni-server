@@ -16,9 +16,7 @@ function base(cfg: CookieConfig): CookieOptions {
     // Bỏ thuộc tính Domain khi là localhost: cookie thành host-only cho host
     // "localhost" (không phụ thuộc cổng) → gửi được từ client :3000 sang API :8000,
     // đồng thời tránh việc trình duyệt từ chối `Domain=localhost`.
-    ...(cfg.domain && cfg.domain !== 'localhost'
-      ? { domain: cfg.domain }
-      : {}),
+    ...(cfg.domain && cfg.domain !== 'localhost' ? { domain: cfg.domain } : {}),
     path: '/',
   };
 }

@@ -52,7 +52,9 @@ export class UsersService {
   }
 
   findByEmail(email: string): Promise<User | null> {
-    return this.prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    return this.prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
   }
 
   findById(id: string): Promise<User | null> {
@@ -62,7 +64,11 @@ export class UsersService {
   async getProfile(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
-      include: { settings: true, streak: true, accounts: { select: { provider: true } } },
+      include: {
+        settings: true,
+        streak: true,
+        accounts: { select: { provider: true } },
+      },
     });
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
     const { passwordHash, ...safe } = user;
@@ -72,7 +78,9 @@ export class UsersService {
   /** Tạo user kèm settings + streak mặc định trong 1 transaction. */
   async createUser(input: CreateUserInput): Promise<User> {
     const defaultTz = this.config.get('DEFAULT_USER_TIMEZONE', { infer: true });
-    const newPerDay = this.config.get('SRS_DEFAULT_NEW_PER_DAY', { infer: true });
+    const newPerDay = this.config.get('SRS_DEFAULT_NEW_PER_DAY', {
+      infer: true,
+    });
     const retention = this.config.get('SRS_DEFAULT_TARGET_RETENTION', {
       infer: true,
     });
@@ -127,7 +135,12 @@ export class UsersService {
           providerAccountId: data.providerAccountId,
         },
       },
-      create: { userId, provider, providerAccountId: data.providerAccountId, ...payload },
+      create: {
+        userId,
+        provider,
+        providerAccountId: data.providerAccountId,
+        ...payload,
+      },
       update: payload,
     });
   }
@@ -150,9 +163,15 @@ export class UsersService {
 
   async updateProfile(
     id: string,
-    data: { displayName?: string; avatarUrl?: string; timezone?: string; locale?: string },
+    data: {
+      displayName?: string;
+      avatarUrl?: string;
+      timezone?: string;
+      locale?: string;
+    },
   ) {
     const user = await this.prisma.user.update({ where: { id }, data });
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- huỷ passwordHash khỏi kết quả trả về
     const { passwordHash, ...safe } = user;
     return safe;
   }

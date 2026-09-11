@@ -44,7 +44,8 @@ export class LeaderboardService {
 
   /** Bảng xếp hạng theo `metric`. Kèm hạng của user hiện tại. */
   async top(userId: string, metric: LeaderboardMetric, limit = 50) {
-    if (!METRICS[metric]) throw new BadRequestException('Tiêu chí không hợp lệ');
+    if (!METRICS[metric])
+      throw new BadRequestException('Tiêu chí không hợp lệ');
 
     const ranked = await this.rankedPairs(metric);
     const myIndex = ranked.findIndex((r) => r.userId === userId);

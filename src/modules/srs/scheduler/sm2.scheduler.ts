@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ReviewRating, SrsState } from '@prisma/client';
 import { endOfLocalDay } from '../../../common/time.util';
-import type { Scheduler, SchedulerInput, SchedulerOutput } from './scheduler.types';
+import type {
+  Scheduler,
+  SchedulerInput,
+  SchedulerOutput,
+} from './scheduler.types';
 
 const MIN_EF = 1.3;
 const LEECH_LAPSES = 8;
@@ -75,7 +79,17 @@ export class Sm2Scheduler implements Scheduler {
         intervalDays = 4;
         dueAt = dayDue(4);
       }
-      return { state, reps, lapses, easeFactor, intervalDays, stability: null, difficulty: null, dueAt, isCorrect };
+      return {
+        state,
+        reps,
+        lapses,
+        easeFactor,
+        intervalDays,
+        stability: null,
+        difficulty: null,
+        dueAt,
+        isCorrect,
+      };
     }
 
     if (state === SrsState.RELEARNING) {
@@ -90,7 +104,17 @@ export class Sm2Scheduler implements Scheduler {
         intervalDays = Math.max(1, Math.round(intervalDays * 0.5)) || 1;
         dueAt = dayDue(intervalDays);
       }
-      return { state, reps, lapses, easeFactor, intervalDays, stability: null, difficulty: null, dueAt, isCorrect };
+      return {
+        state,
+        reps,
+        lapses,
+        easeFactor,
+        intervalDays,
+        stability: null,
+        difficulty: null,
+        dueAt,
+        isCorrect,
+      };
     }
 
     // state === REVIEW
@@ -110,11 +134,15 @@ export class Sm2Scheduler implements Scheduler {
           easeFactor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)),
         );
         intervalDays =
-          reps <= 1 ? 6 : fuzz(Math.max(1, Math.round(intervalDays * easeFactor)));
+          reps <= 1
+            ? 6
+            : fuzz(Math.max(1, Math.round(intervalDays * easeFactor)));
       } else {
         // EASY
         easeFactor = clampEf(easeFactor + 0.15);
-        intervalDays = fuzz(Math.max(1, Math.round(intervalDays * easeFactor * 1.3)));
+        intervalDays = fuzz(
+          Math.max(1, Math.round(intervalDays * easeFactor * 1.3)),
+        );
       }
       reps += 1;
       dueAt = dayDue(intervalDays);

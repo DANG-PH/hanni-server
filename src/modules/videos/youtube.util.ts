@@ -39,8 +39,7 @@ export async function fetchOembed(youtubeId: string): Promise<Oembed> {
       title: d.title,
       author: d.author_name,
       thumbnailUrl:
-        d.thumbnail_url ??
-        `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg`,
+        d.thumbnail_url ?? `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg`,
     };
   } catch {
     return {

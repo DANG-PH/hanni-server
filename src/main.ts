@@ -50,7 +50,7 @@ async function bootstrap(): Promise<void> {
 
   const port = config.get('PORT', { infer: true });
   await app.listen(port);
-  // eslint-disable-next-line no-console
+
   console.log(`Hanni API chạy tại http://localhost:${port}${apiPrefix}`);
 }
 

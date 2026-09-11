@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { OAuth2Client } from 'google-auth-library';
+import { OAuth2Client, type TokenPayload } from 'google-auth-library';
 import type { Env } from '../../config/env.validation';
 
 export interface GoogleProfile {
@@ -27,7 +27,7 @@ export class GoogleOAuthService {
   }
 
   async verifyIdToken(idToken: string): Promise<GoogleProfile> {
-    let payload;
+    let payload: TokenPayload | undefined;
     try {
       const ticket = await this.client.verifyIdToken({
         idToken,
@@ -35,7 +35,9 @@ export class GoogleOAuthService {
       });
       payload = ticket.getPayload();
     } catch {
-      throw new UnauthorizedException('Google token không hợp lệ hoặc đã hết hạn');
+      throw new UnauthorizedException(
+        'Google token không hợp lệ hoặc đã hết hạn',
+      );
     }
     if (!payload?.sub || !payload.email) {
       throw new UnauthorizedException('Google token thiếu thông tin');

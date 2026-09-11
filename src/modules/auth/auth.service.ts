@@ -70,7 +70,10 @@ export class AuthService {
     return this.tokens.issueForUser(user, ctx);
   }
 
-  async refresh(rawToken: string | undefined, ctx: RequestCtx): Promise<IssuedTokens> {
+  async refresh(
+    rawToken: string | undefined,
+    ctx: RequestCtx,
+  ): Promise<IssuedTokens> {
     if (!rawToken) throw new UnauthorizedException('Thiếu refresh token');
     return this.tokens.rotate(rawToken, ctx);
   }

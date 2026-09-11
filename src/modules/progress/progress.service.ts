@@ -149,7 +149,8 @@ export class ProgressService {
     for (const r of mine) {
       const isLearned =
         r.learnedAt != null ||
-        (r.state === SrsState.REVIEW && r.intervalDays >= LEARNED_INTERVAL_DAYS);
+        (r.state === SrsState.REVIEW &&
+          r.intervalDays >= LEARNED_INTERVAL_DAYS);
       if (isLearned) learnedWords += 1;
       else if (r.state !== SrsState.NEW) reviewingWords += 1;
       if (!r.isSuspended && r.state !== SrsState.NEW && r.dueAt) {

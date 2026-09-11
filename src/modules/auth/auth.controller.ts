@@ -37,7 +37,10 @@ export class AuthController {
     setAuthCookies(
       res,
       tokens,
-      { accessMs: this.tokens.accessTtlMs, refreshMs: this.tokens.refreshTtlMs },
+      {
+        accessMs: this.tokens.accessTtlMs,
+        refreshMs: this.tokens.refreshTtlMs,
+      },
       this.cookieCfg,
     );
   }
@@ -71,7 +74,11 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const tokens = await this.auth.login(dto.email, dto.password, this.ctx(req));
+    const tokens = await this.auth.login(
+      dto.email,
+      dto.password,
+      this.ctx(req),
+    );
     this.send(res, tokens);
     return { ok: true };
   }

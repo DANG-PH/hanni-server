@@ -16,15 +16,18 @@ export class HealthController {
   @Get()
   async check() {
     const [db, cache] = await Promise.all([
-      this.prisma
-        .$queryRaw`SELECT 1`.then(() => 'up')
-        .catch(() => 'down'),
+      this.prisma.$queryRaw`SELECT 1`.then(() => 'up').catch(() => 'down'),
       this.redis.client
         .ping()
         .then(() => 'up')
         .catch(() => 'down'),
     ]);
     const ok = db === 'up' && cache === 'up';
-    return { status: ok ? 'ok' : 'degraded', db, redis: cache, ts: new Date().toISOString() };
+    return {
+      status: ok ? 'ok' : 'degraded',
+      db,
+      redis: cache,
+      ts: new Date().toISOString(),
+    };
   }
 }

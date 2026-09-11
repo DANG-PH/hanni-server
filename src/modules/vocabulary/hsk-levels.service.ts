@@ -24,7 +24,9 @@ export class HskLevelsService {
   async get(level: number) {
     const row = await this.prisma.hskLevel.findUnique({ where: { level } });
     if (!row) throw new NotFoundException('Cấp HSK không hợp lệ');
-    const wordsInDb = await this.prisma.word.count({ where: { hskLevel: level } });
+    const wordsInDb = await this.prisma.word.count({
+      where: { hskLevel: level },
+    });
     return { ...row, wordsInDb };
   }
 }

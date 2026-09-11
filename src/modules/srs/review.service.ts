@@ -99,7 +99,8 @@ export class ReviewService {
       : 0;
 
     const nowLearned =
-      out.state === SrsState.REVIEW && out.intervalDays >= LEARNED_INTERVAL_DAYS;
+      out.state === SrsState.REVIEW &&
+      out.intervalDays >= LEARNED_INTERVAL_DAYS;
 
     const progressData = {
       hskLevel: word.hskLevel,
@@ -201,7 +202,11 @@ export class ReviewService {
     if (!user) throw new NotFoundException('Người dùng không tồn tại');
 
     const now = new Date();
-    const dayStart = startOfLocalDayInstant(now, user.timezone, this.cutoffHour);
+    const dayStart = startOfLocalDayInstant(
+      now,
+      user.timezone,
+      this.cutoffHour,
+    );
     const limit = query.limit ?? 60;
     const newPerDay = user.settings?.newCardsPerDay ?? 10;
 
@@ -219,25 +224,24 @@ export class ReviewService {
       ...wordScope,
     };
 
-    const [newDoneToday, reviewsDoneToday, dueCount, dueRows] = await Promise.all([
-      this.prisma.reviewLog.count({
-        where: { userId, reviewType: 'LEARN', reviewedAt: { gte: dayStart } },
-      }),
-      this.prisma.reviewLog.count({
-        where: { userId, reviewedAt: { gte: dayStart } },
-      }),
-      this.prisma.userWordProgress.count({ where: dueWhere }),
-      this.prisma.userWordProgress.findMany({
-        where: dueWhere,
-        include: { word: true },
-        orderBy: [{ dueAt: 'asc' }, { easeFactor: 'asc' }],
-        take: limit,
-      }),
-    ]);
+    const [newDoneToday, reviewsDoneToday, dueCount, dueRows] =
+      await Promise.all([
+        this.prisma.reviewLog.count({
+          where: { userId, reviewType: 'LEARN', reviewedAt: { gte: dayStart } },
+        }),
+        this.prisma.reviewLog.count({
+          where: { userId, reviewedAt: { gte: dayStart } },
+        }),
+        this.prisma.userWordProgress.count({ where: dueWhere }),
+        this.prisma.userWordProgress.findMany({
+          where: dueWhere,
+          include: { word: true },
+          orderBy: [{ dueAt: 'asc' }, { easeFactor: 'asc' }],
+          take: limit,
+        }),
+      ]);
 
-    const newRemaining = byLesson
-      ? 25
-      : Math.max(0, newPerDay - newDoneToday);
+    const newRemaining = byLesson ? 25 : Math.max(0, newPerDay - newDoneToday);
     const newRows =
       newRemaining > 0
         ? await this.prisma.word.findMany({
@@ -277,7 +281,11 @@ export class ReviewService {
     });
     if (!user) throw new NotFoundException('Người dùng không tồn tại');
     const now = new Date();
-    const dayStart = startOfLocalDayInstant(now, user.timezone, this.cutoffHour);
+    const dayStart = startOfLocalDayInstant(
+      now,
+      user.timezone,
+      this.cutoffHour,
+    );
     const newPerDay = user.settings?.newCardsPerDay ?? 10;
 
     const [dueNow, learnedTotal, inProgress, reviewsDoneToday, newDoneToday] =

@@ -14,7 +14,10 @@ import type {
 import { pinyin } from 'pinyin-pro';
 import { parseTranscript, type ParsedLine } from './transcript.util';
 import { translateLinesToVi } from './translate.util';
-import { fetchTimedTranscript } from './youtube-transcript.util';
+import {
+  fetchTimedTranscript,
+  type TimedLine,
+} from './youtube-transcript.util';
 import { fetchOembed, parseYoutubeId } from './youtube.util';
 
 const KIND_VI: Record<VideoKind, string> = {
@@ -78,9 +81,7 @@ export class VideosService {
       ...v,
       isOwner: v.createdById === userId,
       progressPct: v.sentenceCount
-        ? Math.round(
-            ((pBy.get(v.id)?.linesRead ?? 0) / v.sentenceCount) * 100,
-          )
+        ? Math.round(((pBy.get(v.id)?.linesRead ?? 0) / v.sentenceCount) * 100)
         : 0,
       completed: Boolean(pBy.get(v.id)?.completedAt),
     }));
@@ -117,7 +118,9 @@ export class VideosService {
     if (dto.transcript?.trim()) {
       parsed = parseTranscript(dto.transcript);
     } else {
-      const timed = await fetchTimedTranscript(youtubeId).catch(() => []);
+      const timed = await fetchTimedTranscript(youtubeId).catch(
+        (): TimedLine[] => [],
+      );
       parsed = timed.map((tl, i) => ({
         index: i + 1,
         startMs: tl.startMs,
@@ -202,10 +205,7 @@ export class VideosService {
         });
       }
     } catch (err) {
-      console.error(
-        `Dịch nền video ${videoId} lỗi:`,
-        (err as Error).message,
-      );
+      console.error(`Dịch nền video ${videoId} lỗi:`, (err as Error).message);
     }
   }
 

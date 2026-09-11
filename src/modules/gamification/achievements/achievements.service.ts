@@ -44,7 +44,8 @@ export class AchievementsService {
   /** Gọi khi có sự kiện streak.updated. */
   async onStreakUpdated(userId: string, currentStreak: number): Promise<void> {
     for (const t of [7, 30, 100]) {
-      if (currentStreak >= t) await this.unlock(userId, `STREAK_${t}`, currentStreak);
+      if (currentStreak >= t)
+        await this.unlock(userId, `STREAK_${t}`, currentStreak);
     }
   }
 

@@ -40,7 +40,11 @@ export const envSchema = z.object({
 
   SRS_SCHEDULER: z.enum(['sm2', 'fsrs']).default('sm2'),
   SRS_DEFAULT_NEW_PER_DAY: z.coerce.number().int().positive().default(10),
-  SRS_DEFAULT_TARGET_RETENTION: z.coerce.number().min(0.7).max(0.99).default(0.9),
+  SRS_DEFAULT_TARGET_RETENTION: z.coerce
+    .number()
+    .min(0.7)
+    .max(0.99)
+    .default(0.9),
 
   DEFAULT_USER_TIMEZONE: z.string().default('Asia/Ho_Chi_Minh'),
   STREAK_DAY_CUTOFF_HOUR: z.coerce.number().int().min(0).max(23).default(3),

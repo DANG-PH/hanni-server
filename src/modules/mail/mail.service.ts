@@ -23,10 +23,18 @@ export class MailService {
 
   async sendPasswordReset(to: string, token: string): Promise<void> {
     const link = `${this.frontendUrl}/auth/reset-password?token=${token}`;
-    await this.deliver(to, 'Đặt lại mật khẩu Hanni', `Nhấn để đặt lại: ${link}`);
+    await this.deliver(
+      to,
+      'Đặt lại mật khẩu Hanni',
+      `Nhấn để đặt lại: ${link}`,
+    );
   }
 
-  private async deliver(to: string, subject: string, body: string): Promise<void> {
+  private async deliver(
+    to: string,
+    subject: string,
+    body: string,
+  ): Promise<void> {
     const host = this.config.get('MAIL_HOST', { infer: true });
     if (!host) {
       this.logger.log(`[MAIL:dev] tới=${to} | ${subject}\n${body}`);

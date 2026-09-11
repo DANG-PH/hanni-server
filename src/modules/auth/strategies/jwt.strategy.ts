@@ -8,8 +8,9 @@ import type { Env } from '../../../config/env.validation';
 import { ACCESS_COOKIE } from '../cookies';
 
 function fromCookie(req: Request): string | null {
-  const cookies = (req as Request & { cookies?: Record<string, string> }).cookies;
-  return cookies?.[ACCESS_COOKIE] ?? null;
+  const cookies = req.cookies as Record<string, string> | undefined;
+  const value = cookies?.[ACCESS_COOKIE];
+  return typeof value === 'string' ? value : null;
 }
 
 @Injectable()

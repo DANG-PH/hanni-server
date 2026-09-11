@@ -4,11 +4,7 @@ import { PrismaService } from '../../infra/prisma/prisma.service';
 
 const LEARNED_INTERVAL_DAYS = 21;
 
-export type LessonStatus =
-  | 'COMPLETED'
-  | 'IN_PROGRESS'
-  | 'AVAILABLE'
-  | 'LOCKED';
+export type LessonStatus = 'COMPLETED' | 'IN_PROGRESS' | 'AVAILABLE' | 'LOCKED';
 
 export interface LessonNode {
   id: string;
@@ -84,7 +80,8 @@ export class LearnService {
       agg.started += 1;
       const isLearned =
         p.learnedAt != null ||
-        (p.state === SrsState.REVIEW && p.intervalDays >= LEARNED_INTERVAL_DAYS);
+        (p.state === SrsState.REVIEW &&
+          p.intervalDays >= LEARNED_INTERVAL_DAYS);
       if (isLearned) agg.learned += 1;
       if (
         !p.isSuspended &&
@@ -98,7 +95,10 @@ export class LearnService {
 
     // preview: 3 từ đầu mỗi bài
     const firstWords = await this.prisma.word.findMany({
-      where: { lessonId: { in: lessons.map((l) => l.id) }, lessonOrder: { lte: 3 } },
+      where: {
+        lessonId: { in: lessons.map((l) => l.id) },
+        lessonOrder: { lte: 3 },
+      },
       select: { lessonId: true, simplified: true, lessonOrder: true },
       orderBy: { lessonOrder: 'asc' },
     });

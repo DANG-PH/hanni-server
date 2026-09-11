@@ -2,11 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { randomBytes, scrypt as scryptCb, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 
-const scrypt = promisify(scryptCb) as (
+const scrypt: (
   password: string | Buffer,
   salt: string | Buffer,
   keylen: number,
-) => Promise<Buffer>;
+) => Promise<Buffer> = promisify(scryptCb);
 
 const KEYLEN = 64;
 const SALT_BYTES = 16;
@@ -23,7 +23,10 @@ export class PasswordService {
     return `scrypt$${salt.toString('hex')}$${derived.toString('hex')}`;
   }
 
-  async verify(plain: string, stored: string | null | undefined): Promise<boolean> {
+  async verify(
+    plain: string,
+    stored: string | null | undefined,
+  ): Promise<boolean> {
     if (!stored) return false;
     const [scheme, saltHex, hashHex] = stored.split('$');
     if (scheme !== 'scrypt' || !saltHex || !hashHex) return false;

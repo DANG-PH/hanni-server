@@ -37,7 +37,9 @@ export class GrammarService {
   }
 
   async get(slug: string) {
-    const point = await this.prisma.grammarPoint.findUnique({ where: { slug } });
+    const point = await this.prisma.grammarPoint.findUnique({
+      where: { slug },
+    });
     if (!point) throw new NotFoundException('Không tìm thấy điểm ngữ pháp');
     return point;
   }

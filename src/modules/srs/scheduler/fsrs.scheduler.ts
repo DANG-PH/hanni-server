@@ -9,7 +9,11 @@ import {
   type Card,
   type Grade,
 } from 'ts-fsrs';
-import type { Scheduler, SchedulerInput, SchedulerOutput } from './scheduler.types';
+import type {
+  Scheduler,
+  SchedulerInput,
+  SchedulerOutput,
+} from './scheduler.types';
 
 const STATE_TO_FSRS: Record<SrsState, State> = {
   NEW: State.New,
