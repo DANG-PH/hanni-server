@@ -71,5 +71,11 @@ trong các file đó); (2) danh sách từ vựng theo từ loại (词类/短�
 giải thích riêng từng mục. Field `flat` (tính trong grammar.service.ts) tự bật/tắt theo
 `explanationVi` có rỗng hay không — không cần sửa gì ở FE khi thêm giải thích mới.
 
+**Quiz** (`src/modules/gamification/quiz/quiz.service.ts`): `generate()` trộn 2 dạng câu —
+`listening` (~`LISTENING_RATIO` 40% số câu, chỉ lấy từ có `audioUrl`, xếp trước) và `reading`
+(còn lại) — mô phỏng thứ tự nghe-trước-đọc-sau của đề thi thật. Field `mode`/`audioUrl` trả về
+theo từng câu, client tự quyết định ẩn/hiện Hán tự.
+
 Chưa làm (roadmap, chừa chỗ): câu ví dụ cho từ vựng, cấu trúc đề thi HSK
-thật (nghe/đọc/tính giờ), RAG chatbot, minigame, social/bạn bè.
+thật đầy đủ (nhiều phần nghe/đọc/viết đúng số câu + thời gian từng cấp — hiện mới có câu
+nghe/đọc trộn vào quiz từ vựng, chưa đúng cấu trúc thật), RAG chatbot, minigame, social/bạn bè.
