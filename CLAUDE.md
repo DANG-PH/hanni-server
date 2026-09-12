@@ -50,13 +50,13 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 
 ## Trạng thái hiện tại
 Core đã dựng: auth (email + Google), vocabulary, SRS (SM-2 + FSRS), progress, gamification
-(streak/achievements/quiz), learn (753 bài — HSK1-3 đã có chủ đề thật, xem bên dưới), videos
-(học qua video), grammar (40 điểm HSK 1–3 + 195 điểm HSK 4–9 có giải thích thật, xem bên
-dưới), exams (lịch sử kiểm tra), leaderboard (xếp theo từ đã thuộc), push (thông báo đẩy Web
-Push, VAPID), health, Swagger.
+(streak/achievements/quiz), learn (744 bài — TOÀN BỘ HSK1-9 đã có chủ đề thật, xem bên dưới),
+videos (học qua video), grammar (40 điểm HSK 1–3 + 195 điểm HSK 4–9 có giải thích thật, xem
+bên dưới), exams (lịch sử kiểm tra), leaderboard (xếp theo từ đã thuộc), push (thông báo đẩy
+Web Push, VAPID), health, Swagger.
 Seed đầy đủ để deploy: 9 cấp HSK · huy hiệu · 10.9k từ (`data/processed/words.seed.json`) ·
-753 bài (HSK1-3: 89 bài theo chủ đề — 27+19+43, xem bên dưới; HSK4 trở lên vẫn chia đều
-15 từ/bài theo tần suất) · 40 điểm ngữ pháp HSK 1–3 + 349 mục HSK 4–9 (đại cương,
+744 bài, TOÀN BỘ 9 cấp đều chia theo chủ đề thật (xem bên dưới) — không còn cấp nào chia đều
+15 từ/bài theo tần suất · 40 điểm ngữ pháp HSK 1–3 + 349 mục HSK 4–9 (đại cương,
 prisma/seed/data/grammar-syllabus.raw.json, 195/349 mục đã có giải thích thật) · ~42 video
 (`prisma/seed/vi-cache.json` cache bản dịch máy) · **`assets/audio/` ~58MB đã commit** (đừng
 gitignore lại — deploy VPS cần).
@@ -65,13 +65,20 @@ gitignore lại — deploy VPS cần).
 `data/curated/lesson-themes-hsk{level}.json` (mapping mỗi từ → 1 trong N chủ đề soạn tay,
 xem `themeOrder`/`themeNames`) thì `scripts/import/build-words.ts` nhóm từ theo CHỦ ĐỀ trước
 (vẫn sắp theo tần suất trong mỗi chủ đề), chủ đề dài hơn `MAX_THEME_LESSON` (16 từ) tự tách
-"(1/2)", "(2/2)"...; cấp chưa có file giữ cách chia đều 15 từ/bài cũ (`lessons.ts` tự đặt
-"Bài N"). Đã làm xong khối "sơ cấp": HSK1 (300 từ, 15 chủ đề, 27 bài), HSK2 (197 từ, 17 chủ
-đề, 19 bài), HSK3 (495 từ, 24 chủ đề, 43 bài) — HSK4 trở lên vẫn chia đều, chưa có chủ đề.
-Đổi chủ đề cho DB ĐÃ seed sẵn (không xoá/tạo lại Word) thì chạy
-`npx tsx scripts/migrate-lesson-themes.ts` (tự dò mọi cấp có file lesson-themes) — chỉ cập
-nhật `Word.lessonId/lessonOrder` + upsert `Lesson.title`, không đụng `UserWordProgress` nên
-tiến độ người dùng không mất.
+"(1/2)", "(2/2)"... TOÀN BỘ HSK1-9 đã xong (không còn cấp nào chia đều "Bài N" kiểu cũ):
+HSK1 (300 từ, 15 chủ đề, 27 bài), HSK2 (197 từ, 17 chủ đề, 19 bài), HSK3 (495 từ, 24 chủ đề,
+43 bài), HSK4 (992 từ, 19 chủ đề, 70 bài), HSK5 (1.582 từ, 21 chủ đề, 109 bài), HSK6
+(1.779 từ, 22 chủ đề, 119 bài), HSK7-9/level=7 gộp chung (5.567 từ — khối lớn nhất, hơn cả
+HSK1-6 cộng lại — 23 chủ đề gồm 22 chủ đề cũ + chủ đề mới `thanh_ngu` cho thành ngữ 4 chữ vì
+mật độ dày đặc ở cấp này, 357 bài). Đổi chủ đề cho DB ĐÃ seed sẵn (không xoá/tạo lại Word) thì
+chạy `npx tsx scripts/migrate-lesson-themes.ts` (tự dò mọi cấp có file lesson-themes) — chỉ
+cập nhật `Word.lessonId/lessonOrder` + upsert `Lesson.title`, không đụng `UserWordProgress`
+nên tiến độ người dùng không mất. Idempotent, chạy lại vô hại (re-seed VPS mới cũng chỉ cần
+file `data/curated/lesson-themes-hsk*.json` + chạy lại `data:build-words` rồi script này).
+Script chạy qua tunnel SSH tới DB xa (VPS ở nước ngoài) có thể bị đứt kết nối giữa chừng nếu
+chạy lâu (HSK7 ~5.5k từ từng bị rớt sau ~50 phút do tunnel) — script an toàn để chạy lại từ
+đầu, nhưng nếu tiện hơn thì `git pull` + chạy thẳng trên VPS (kết nối `localhost:2222` nội bộ,
+không qua internet) sẽ nhanh hơn nhiều (vài giây thay vì hàng chục phút).
 
 **Học qua video**: `POST /videos` chỉ cần youtubeUrl (transcript tuỳ chọn) → tự lấy phụ đề CC
 tiếng Trung từ YouTube + dịch máy NỀN (`translate.util.ts`: Google free → MyMemory, bảng
