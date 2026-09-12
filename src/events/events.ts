@@ -12,6 +12,7 @@ export const AppEvent = {
   QuizCompleted: 'quiz.completed',
   CommentCreated: 'comment.created',
   VideoLiked: 'video.liked',
+  PracticeAttempted: 'practice.attempted',
 } as const;
 
 export interface WordReviewedPayload {
@@ -60,4 +61,12 @@ export interface CommentCreatedPayload {
 export interface VideoLikedPayload {
   videoId: string;
   likerId: string;
+}
+
+export interface PracticeAttemptedPayload {
+  userId: string;
+  wordId: string;
+  skill: 'LISTENING' | 'PRONUNCIATION';
+  isCorrect: boolean | null;
+  at: string; // ISO
 }

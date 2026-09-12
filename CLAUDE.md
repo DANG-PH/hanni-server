@@ -19,6 +19,7 @@ src/
 ├── modules/<domain>/   auth · users · mail · vocabulary · srs · progress · gamification
 │                        · learn · videos (+ videos/comments, videos/likes) · grammar
 │                        · exams · leaderboard · push · notifications (WebSocket gateway)
+│                        · practice (lưu kết quả luyện nghe/phát âm)
 └── health/
 prisma/  schema.prisma + seed/ (hsk-levels, achievements, words)
 scripts/import/  ETL nguồn mở → data/processed/words.seed.json
@@ -60,6 +61,13 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `/notifications/socket.io/`). 3 loại thông báo: `COMMENT_REPLY`, `VIDEO_COMMENT` (bình luận
   vào video mình thêm), `VIDEO_LIKE` (thích video mình thêm) — video hệ thống seed sẵn có
   `createdById = null` nên không phát 2 loại sau cho video đó.
+- **Luyện nghe/phát âm (`src/modules/practice`)**: `POST /practice/attempts` ghi 1 lượt luyện
+  (`wordId`, `skill: LISTENING|PRONUNCIATION`, `isCorrect?` — chỉ dùng cho LISTENING vì
+  PRONUNCIATION chưa có chấm điểm tự động, luôn lưu `null`). `GET /practice/stats?skill=` trả
+  tổng lượt luyện + số từ khác nhau + (LISTENING) tỉ lệ đúng. Phát `AppEvent.PracticeAttempted`
+  khi ghi nhận nhưng CHƯA có listener nào tiêu thụ (giống `QuizCompleted`) — chừa chỗ cho sau
+  này (huy hiệu luyện tập, tính vào streak...), không tự ý gộp vào mục tiêu ngày hiện tại vì đó
+  là quyết định sản phẩm cần bàn riêng.
 
 ## Lệnh
 `npm run start:dev` · `npm run build` · `npm run prisma:migrate` · `npm run db:seed` ·
@@ -72,7 +80,7 @@ videos (học qua video, kèm bình luận 1 cấp trả lời + thích video), 
 195 điểm HSK 4–9 có giải thích thật, xem bên dưới), exams (lịch sử kiểm tra), leaderboard (xếp
 theo từ đã thuộc), push (thông báo đẩy Web Push, VAPID), notifications (thông báo trong app —
 lưu DB + đẩy realtime qua WebSocket khi có người trả lời bình luận/bình luận hoặc thích video
-mình thêm), health, Swagger.
+mình thêm), practice (lưu kết quả luyện nghe/phát âm lên server, xem bên dưới), health, Swagger.
 Seed đầy đủ để deploy: 9 cấp HSK · huy hiệu · 10.9k từ (`data/processed/words.seed.json`) ·
 744 bài, TOÀN BỘ 9 cấp đều chia theo chủ đề thật (xem bên dưới) — không còn cấp nào chia đều
 15 từ/bài theo tần suất · 40 điểm ngữ pháp HSK 1–3 + 349 mục HSK 4–9 (đại cương,
@@ -116,6 +124,12 @@ giải thích riêng từng mục. Field `flat` (tính trong grammar.service.ts)
 `listening` (~`LISTENING_RATIO` 40% số câu, chỉ lấy từ có `audioUrl`, xếp trước) và `reading`
 (còn lại) — mô phỏng thứ tự nghe-trước-đọc-sau của đề thi thật. Field `mode`/`audioUrl` trả về
 theo từng câu, client tự quyết định ẩn/hiện Hán tự.
+
+**Luyện nghe/phát âm lưu server** (`src/modules/practice`): trước đây `/listening` và
+`/pronunciation` thuần client, kết quả mất khi rời trang. Giờ mỗi lần kiểm tra đáp án (nghe)
+hoặc ghi âm xong (phát âm) đều gọi `POST /practice/attempts`; `GET /practice/stats?skill=`
+cho tổng lượt luyện + số từ khác nhau + tỉ lệ đúng (chỉ LISTENING). Xem thêm ở mục "Bình luận +
+thích video + thông báo" phía trên.
 
 Chưa làm (roadmap, chừa chỗ): câu ví dụ cho từ vựng, cấu trúc đề thi HSK
 thật đầy đủ (nhiều phần nghe/đọc/viết đúng số câu + thời gian từng cấp — hiện mới có câu

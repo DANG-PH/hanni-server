@@ -157,6 +157,7 @@ model User {
   pushSubscriptions   PushSubscription[]
   notifications       Notification[]       @relation("NotificationRecipient")
   notificationsCaused Notification[]       @relation("NotificationActor")
+  practiceAttempts    PracticeAttempt[]
 
   @@index([lastActiveAt])
 }
@@ -296,8 +297,9 @@ model Word {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
-  examples WordExample[]
-  progress UserWordProgress[]
+  examples         WordExample[]
+  progress         UserWordProgress[]
+  practiceAttempts PracticeAttempt[]
 
   @@unique([simplified, pinyinNumeric])
   @@index([hskLevel, frequencyRank]) // chọn thứ tự học từ mới
@@ -733,4 +735,30 @@ model Notification {
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, readAt])
+}
+
+// ===================================================================
+//  LUYỆN NGHE / PHÁT ÂM (lưu kết quả lên server)
+// ===================================================================
+
+enum PracticeSkill {
+  LISTENING
+  PRONUNCIATION
+}
+
+/// Một lượt luyện nghe hoặc luyện phát âm cho 1 từ. `isCorrect` chỉ có ý
+/// nghĩa với LISTENING (so khớp Hán tự gõ vào) — PRONUNCIATION chưa có chấm
+/// điểm tự động nên luôn null, chỉ ghi nhận "đã luyện".
+model PracticeAttempt {
+  id        String        @id @default(uuid()) @db.Uuid
+  userId    String        @db.Uuid
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wordId    String        @db.Uuid
+  word      Word          @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  skill     PracticeSkill
+  isCorrect Boolean?
+  createdAt DateTime      @default(now())
+
+  @@index([userId, skill, createdAt])
+  @@index([wordId])
 }
