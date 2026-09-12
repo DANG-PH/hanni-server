@@ -50,13 +50,25 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 
 ## Trạng thái hiện tại
 Core đã dựng: auth (email + Google), vocabulary, SRS (SM-2 + FSRS), progress, gamification
-(streak/achievements/quiz), learn (731 bài), videos (học qua video), grammar (40 điểm HSK 1–3
-+ 195 điểm HSK 4–9 có giải thích thật, xem bên dưới), exams (lịch sử kiểm tra), leaderboard
-(xếp theo từ đã thuộc), push (thông báo đẩy Web Push, VAPID), health, Swagger.
+(streak/achievements/quiz), learn (738 bài — HSK1 đã có chủ đề thật, xem bên dưới), videos
+(học qua video), grammar (40 điểm HSK 1–3 + 195 điểm HSK 4–9 có giải thích thật, xem bên
+dưới), exams (lịch sử kiểm tra), leaderboard (xếp theo từ đã thuộc), push (thông báo đẩy Web
+Push, VAPID), health, Swagger.
 Seed đầy đủ để deploy: 9 cấp HSK · huy hiệu · 10.9k từ (`data/processed/words.seed.json`) ·
-731 bài · 40 điểm ngữ pháp HSK 1–3 + 349 mục HSK 4–9 (đại cương, prisma/seed/data/grammar-syllabus.raw.json,
+738 bài (HSK1: 27 bài theo chủ đề, các cấp còn lại chia đều 15 từ/bài theo tần suất) · 40 điểm
+ngữ pháp HSK 1–3 + 349 mục HSK 4–9 (đại cương, prisma/seed/data/grammar-syllabus.raw.json,
 195/349 mục đã có giải thích thật) · ~42 video (`prisma/seed/vi-cache.json` cache bản dịch máy) ·
 **`assets/audio/` ~58MB đã commit** (đừng gitignore lại — deploy VPS cần).
+
+**Bài học theo chủ đề (`/learn`)**: cấp nào có file
+`data/curated/lesson-themes-hsk{level}.json` (mapping mỗi từ → 1 trong N chủ đề soạn tay,
+xem `themeOrder`/`themeNames`) thì `scripts/import/build-words.ts` nhóm từ theo CHỦ ĐỀ trước
+(vẫn sắp theo tần suất trong mỗi chủ đề), chủ đề dài hơn `MAX_THEME_LESSON` (16 từ) tự tách
+"(1/2)", "(2/2)"...; cấp chưa có file giữ cách chia đều 15 từ/bài cũ (`lessons.ts` tự đặt
+"Bài N"). Hiện chỉ HSK1 (300/300 từ, 15 chủ đề, 27 bài) đã làm — HSK2/3 và cao hơn vẫn chia
+đều, chưa có chủ đề. Đổi chủ đề cho DB ĐÃ seed sẵn (không xoá/tạo lại Word) thì chạy
+`npx tsx scripts/migrate-hsk1-lesson-themes.ts` — chỉ cập nhật `Word.lessonId/lessonOrder` +
+upsert `Lesson.title`, không đụng `UserWordProgress` nên tiến độ người dùng không mất.
 
 **Học qua video**: `POST /videos` chỉ cần youtubeUrl (transcript tuỳ chọn) → tự lấy phụ đề CC
 tiếng Trung từ YouTube + dịch máy NỀN (`translate.util.ts`: Google free → MyMemory, bảng

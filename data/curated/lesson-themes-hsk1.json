@@ -1,0 +1,1538 @@
+{
+ "themeOrder": [
+  "chao_hoi_xa_giao",
+  "dai_tu_nhan_xung",
+  "so_dem_so_luong",
+  "dai_tu_hoi_chi_dinh",
+  "tro_tu_ngu_phap",
+  "gia_dinh_con_nguoi",
+  "thoi_gian_ngay_thang",
+  "dia_diem",
+  "do_vat_phuong_tien",
+  "do_an_thuc_uong",
+  "thoi_tiet",
+  "tinh_tu_mo_ta",
+  "dong_tu_nhan_thuc",
+  "dong_tu_sinh_hoat",
+  "dong_tu_di_lai_cong_viec"
+ ],
+ "themeNames": {
+  "chao_hoi_xa_giao": "Chào hỏi & giao tiếp xã giao",
+  "dai_tu_nhan_xung": "Đại từ nhân xưng",
+  "so_dem_so_luong": "Số đếm & số lượng",
+  "dai_tu_hoi_chi_dinh": "Đại từ chỉ định & câu hỏi",
+  "tro_tu_ngu_phap": "Trợ từ & phó từ ngữ pháp cơ bản",
+  "gia_dinh_con_nguoi": "Gia đình & con người",
+  "thoi_gian_ngay_thang": "Thời gian & ngày tháng",
+  "dia_diem": "Địa điểm & nơi chốn",
+  "do_vat_phuong_tien": "Đồ vật & phương tiện",
+  "do_an_thuc_uong": "Đồ ăn & thức uống",
+  "thoi_tiet": "Thời tiết",
+  "tinh_tu_mo_ta": "Tính từ mô tả",
+  "dong_tu_nhan_thuc": "Động từ nói, nghĩ, biết, thích",
+  "dong_tu_sinh_hoat": "Động từ sinh hoạt cá nhân",
+  "dong_tu_di_lai_cong_viec": "Động từ đi lại & công việc"
+ },
+ "wordThemes": [
+  {
+   "simplified": "你好",
+   "pinyinNumeric": "ni3 hao3",
+   "theme": "chao_hoi_xa_giao"
+  },
+  {
+   "simplified": "谢谢",
+   "pinyinNumeric": "xie4 xie5",
+   "theme": "chao_hoi_xa_giao"
+  },
+  {
+   "simplified": "不客气",
+   "pinyinNumeric": "bu4 ke4 qi5",
+   "theme": "chao_hoi_xa_giao"
+  },
+  {
+   "simplified": "对不起",
+   "pinyinNumeric": "dui4 bu5 qi3",
+   "theme": "chao_hoi_xa_giao"
+  },
+  {
+   "simplified": "请",
+   "pinyinNumeric": "qing3",
+   "theme": "chao_hoi_xa_giao"
+  },
+  {
+   "simplified": "请问",
+   "pinyinNumeric": "qing3 wen4",
+   "theme": "chao_hoi_xa_giao"
+  },
+  {
+   "simplified": "再见",
+   "pinyinNumeric": "zai4 jian4",
+   "theme": "chao_hoi_xa_giao"
+  },
+  {
+   "simplified": "喂",
+   "pinyinNumeric": "wei4",
+   "theme": "chao_hoi_xa_giao"
+  },
+  {
+   "simplified": "没事",
+   "pinyinNumeric": "mei2 shi4",
+   "theme": "chao_hoi_xa_giao"
+  },
+  {
+   "simplified": "没关系",
+   "pinyinNumeric": "mei2 guan1 xi5",
+   "theme": "chao_hoi_xa_giao"
+  },
+  {
+   "simplified": "我",
+   "pinyinNumeric": "wo3",
+   "theme": "dai_tu_nhan_xung"
+  },
+  {
+   "simplified": "你",
+   "pinyinNumeric": "ni3",
+   "theme": "dai_tu_nhan_xung"
+  },
+  {
+   "simplified": "他",
+   "pinyinNumeric": "ta1",
+   "theme": "dai_tu_nhan_xung"
+  },
+  {
+   "simplified": "我们",
+   "pinyinNumeric": "wo3 men5",
+   "theme": "dai_tu_nhan_xung"
+  },
+  {
+   "simplified": "她",
+   "pinyinNumeric": "ta1",
+   "theme": "dai_tu_nhan_xung"
+  },
+  {
+   "simplified": "你们",
+   "pinyinNumeric": "ni3 men5",
+   "theme": "dai_tu_nhan_xung"
+  },
+  {
+   "simplified": "他们",
+   "pinyinNumeric": "ta1 men5",
+   "theme": "dai_tu_nhan_xung"
+  },
+  {
+   "simplified": "它",
+   "pinyinNumeric": "ta1",
+   "theme": "dai_tu_nhan_xung"
+  },
+  {
+   "simplified": "您",
+   "pinyinNumeric": "nin2",
+   "theme": "dai_tu_nhan_xung"
+  },
+  {
+   "simplified": "它们",
+   "pinyinNumeric": "ta1 men5",
+   "theme": "dai_tu_nhan_xung"
+  },
+  {
+   "simplified": "她们",
+   "pinyinNumeric": "ta1 men5",
+   "theme": "dai_tu_nhan_xung"
+  },
+  {
+   "simplified": "大家",
+   "pinyinNumeric": "da4 jia1",
+   "theme": "dai_tu_nhan_xung"
+  },
+  {
+   "simplified": "一",
+   "pinyinNumeric": "yi1",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "二",
+   "pinyinNumeric": "er4",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "三",
+   "pinyinNumeric": "san1",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "四",
+   "pinyinNumeric": "si4",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "五",
+   "pinyinNumeric": "wu3",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "六",
+   "pinyinNumeric": "liu4",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "七",
+   "pinyinNumeric": "qi1",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "八",
+   "pinyinNumeric": "ba1",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "九",
+   "pinyinNumeric": "jiu3",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "十",
+   "pinyinNumeric": "shi2",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "百",
+   "pinyinNumeric": "bai3",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "千",
+   "pinyinNumeric": "qian1",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "零",
+   "pinyinNumeric": "ling2",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "两",
+   "pinyinNumeric": "liang3",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "半",
+   "pinyinNumeric": "ban4",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "一半",
+   "pinyinNumeric": "yi1 ban4",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "些",
+   "pinyinNumeric": "xie1",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "一些",
+   "pinyinNumeric": "yi1 xie1",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "有些",
+   "pinyinNumeric": "you3 xie1",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "有的",
+   "pinyinNumeric": "you3 de5",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "一点儿",
+   "pinyinNumeric": "yi1 dian3 r5",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "有（一）点儿",
+   "pinyinNumeric": "youyidianr",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "岁",
+   "pinyinNumeric": "sui4",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "件",
+   "pinyinNumeric": "jian4",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "本",
+   "pinyinNumeric": "ben3",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "只",
+   "pinyinNumeric": "zhi1",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "个",
+   "pinyinNumeric": "ge3",
+   "theme": "so_dem_so_luong"
+  },
+  {
+   "simplified": "这",
+   "pinyinNumeric": "zhe4",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "那",
+   "pinyinNumeric": "na3",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "什么",
+   "pinyinNumeric": "shen2 me5",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "这里",
+   "pinyinNumeric": "zhe4 li3",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "谁",
+   "pinyinNumeric": "shei2",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "哪",
+   "pinyinNumeric": "na3",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "这些",
+   "pinyinNumeric": "zhe4 xie1",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "那里",
+   "pinyinNumeric": "na4 li5",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "哪儿",
+   "pinyinNumeric": "na3 r5",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "哪里",
+   "pinyinNumeric": "na3 li3",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "那儿",
+   "pinyinNumeric": "na4 r5",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "那些",
+   "pinyinNumeric": "na4 xie1",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "那边",
+   "pinyinNumeric": "na4 bian5",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "这边",
+   "pinyinNumeric": "zhe4 bian1",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "那个",
+   "pinyinNumeric": "na4 ge5",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "哪个",
+   "pinyinNumeric": "na3 ge5",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "这个",
+   "pinyinNumeric": "zhe4 ge5",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "怎么",
+   "pinyinNumeric": "zen3 me5",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "怎么样",
+   "pinyinNumeric": "zen3 me5 yang4",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "几",
+   "pinyinNumeric": "ji3",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "多少",
+   "pinyinNumeric": "duo1 shao3",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "这儿",
+   "pinyinNumeric": "zhe4 r5",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "哪些",
+   "pinyinNumeric": "na3 xie1",
+   "theme": "dai_tu_hoi_chi_dinh"
+  },
+  {
+   "simplified": "的",
+   "pinyinNumeric": "de5",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "了",
+   "pinyinNumeric": "le5",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "吗",
+   "pinyinNumeric": "ma2",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "呢",
+   "pinyinNumeric": "ne5",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "吧",
+   "pinyinNumeric": "ba1",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "不",
+   "pinyinNumeric": "bu4",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "也",
+   "pinyinNumeric": "ye3",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "都",
+   "pinyinNumeric": "dou1",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "很",
+   "pinyinNumeric": "hen3",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "太",
+   "pinyinNumeric": "tai4",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "还",
+   "pinyinNumeric": "hai2",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "再",
+   "pinyinNumeric": "zai4",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "正在",
+   "pinyinNumeric": "zheng4 zai4",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "非常",
+   "pinyinNumeric": "fei1 chang2",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "真",
+   "pinyinNumeric": "zhen1",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "一下",
+   "pinyinNumeric": "yi1 xia4",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "没（有）",
+   "pinyinNumeric": "meiyou",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "们",
+   "pinyinNumeric": "men5",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "在",
+   "pinyinNumeric": "zai4",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "和",
+   "pinyinNumeric": "he4",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "第",
+   "pinyinNumeric": "di4",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "不要",
+   "pinyinNumeric": "bu4 yao4",
+   "theme": "tro_tu_ngu_phap"
+  },
+  {
+   "simplified": "人",
+   "pinyinNumeric": "ren2",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "孩子",
+   "pinyinNumeric": "hai2 zi5",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "朋友",
+   "pinyinNumeric": "peng2 you5",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "妈妈",
+   "pinyinNumeric": "ma1 ma5",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "爸爸",
+   "pinyinNumeric": "ba4 ba5",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "儿子",
+   "pinyinNumeric": "er2 zi5",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "女儿",
+   "pinyinNumeric": "nü3 er2",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "哥哥",
+   "pinyinNumeric": "ge1 ge5",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "姐姐",
+   "pinyinNumeric": "jie3 jie5",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "弟弟",
+   "pinyinNumeric": "di4 di5",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "妹妹",
+   "pinyinNumeric": "mei4 mei5",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "男朋友",
+   "pinyinNumeric": "nan2 peng2 you5",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "女朋友",
+   "pinyinNumeric": "nü3 peng2 you5",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "家人",
+   "pinyinNumeric": "jia1 ren2",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "同学",
+   "pinyinNumeric": "tong2 xue2",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "老师",
+   "pinyinNumeric": "lao3 shi1",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "先生",
+   "pinyinNumeric": "xian1 sheng5",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "女士",
+   "pinyinNumeric": "nü3 shi4",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "医生",
+   "pinyinNumeric": "yi1 sheng1",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "学生",
+   "pinyinNumeric": "xue2 sheng5",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "小朋友",
+   "pinyinNumeric": "xiao3 peng2 you3",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "大学生",
+   "pinyinNumeric": "da4 xue2 sheng1",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "中学生",
+   "pinyinNumeric": "zhong1 xue2 sheng1",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "小学生",
+   "pinyinNumeric": "xiao3 xue2 sheng1",
+   "theme": "gia_dinh_con_nguoi"
+  },
+  {
+   "simplified": "现在",
+   "pinyinNumeric": "xian4 zai4",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "时候",
+   "pinyinNumeric": "shi2 hou5",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "天",
+   "pinyinNumeric": "tian1",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "年",
+   "pinyinNumeric": "nian2",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "时间",
+   "pinyinNumeric": "shi2 jian1",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "今天",
+   "pinyinNumeric": "jin1 tian1",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "明天",
+   "pinyinNumeric": "ming2 tian1",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "昨天",
+   "pinyinNumeric": "zuo2 tian1",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "今年",
+   "pinyinNumeric": "jin1 nian2",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "去年",
+   "pinyinNumeric": "qu4 nian2",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "明年",
+   "pinyinNumeric": "ming2 nian2",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "早上",
+   "pinyinNumeric": "zao3 shang5",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "上午",
+   "pinyinNumeric": "shang4 wu3",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "中午",
+   "pinyinNumeric": "zhong1 wu3",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "下午",
+   "pinyinNumeric": "xia4 wu3",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "晚上",
+   "pinyinNumeric": "wan3 shang5",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "白天",
+   "pinyinNumeric": "bai2 tian1",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "星期",
+   "pinyinNumeric": "xing1 qi1",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "星期天",
+   "pinyinNumeric": "xing1 qi1 tian1",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "星期日",
+   "pinyinNumeric": "xing1 qi1 ri4",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "小时",
+   "pinyinNumeric": "xiao3 shi2",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "分钟",
+   "pinyinNumeric": "fen1 zhong1",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "月",
+   "pinyinNumeric": "yue4",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "日",
+   "pinyinNumeric": "ri4",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "号",
+   "pinyinNumeric": "hao2",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "点",
+   "pinyinNumeric": "dian3",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "前",
+   "pinyinNumeric": "qian2",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "后",
+   "pinyinNumeric": "hou4",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "外",
+   "pinyinNumeric": "wai4",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "上",
+   "pinyinNumeric": "shang4",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "下",
+   "pinyinNumeric": "xia4",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "里",
+   "pinyinNumeric": "li3",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "边",
+   "pinyinNumeric": "bian1",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "回",
+   "pinyinNumeric": "hui2",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "分",
+   "pinyinNumeric": "fen4",
+   "theme": "thoi_gian_ngay_thang"
+  },
+  {
+   "simplified": "家",
+   "pinyinNumeric": "jia1",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "学校",
+   "pinyinNumeric": "xue2 xiao4",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "公司",
+   "pinyinNumeric": "gong1 si1",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "医院",
+   "pinyinNumeric": "yi1 yuan4",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "商店",
+   "pinyinNumeric": "shang1 dian4",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "超市",
+   "pinyinNumeric": "chao1 shi4",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "书店",
+   "pinyinNumeric": "shu1 dian4",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "大学",
+   "pinyinNumeric": "da4 xue2",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "中学",
+   "pinyinNumeric": "zhong1 xue2",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "小学",
+   "pinyinNumeric": "xiao3 xue2",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "电影院",
+   "pinyinNumeric": "dian4 ying3 yuan4",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "店",
+   "pinyinNumeric": "dian4",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "中国",
+   "pinyinNumeric": "zhong1 guo2",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "汉语",
+   "pinyinNumeric": "han4 yu3",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "中文",
+   "pinyinNumeric": "zhong1 wen2",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "国",
+   "pinyinNumeric": "guo2",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "外边",
+   "pinyinNumeric": "wai4 bian5",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "钱",
+   "pinyinNumeric": "qian2",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "块",
+   "pinyinNumeric": "kuai4",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "元",
+   "pinyinNumeric": "yuan2",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "房间",
+   "pinyinNumeric": "fang2 jian1",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "饭店",
+   "pinyinNumeric": "fan4 dian4",
+   "theme": "dia_diem"
+  },
+  {
+   "simplified": "车",
+   "pinyinNumeric": "che1",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "电话",
+   "pinyinNumeric": "dian4 hua4",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "手机",
+   "pinyinNumeric": "shou3 ji1",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "电脑",
+   "pinyinNumeric": "dian4 nao3",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "电视",
+   "pinyinNumeric": "dian4 shi4",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "电影",
+   "pinyinNumeric": "dian4 ying3",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "书",
+   "pinyinNumeric": "shu1",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "桌子",
+   "pinyinNumeric": "zhuo1 zi5",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "椅子",
+   "pinyinNumeric": "yi3 zi5",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "杯子",
+   "pinyinNumeric": "bei1 zi5",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "衣服",
+   "pinyinNumeric": "yi1 fu5",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "字",
+   "pinyinNumeric": "zi4",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "汉字",
+   "pinyinNumeric": "han4 zi4",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "名字",
+   "pinyinNumeric": "ming2 zi5",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "东西",
+   "pinyinNumeric": "dong1 xi5",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "事",
+   "pinyinNumeric": "shi4",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "问题",
+   "pinyinNumeric": "wen4 ti2",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "课",
+   "pinyinNumeric": "ke4",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "歌",
+   "pinyinNumeric": "ge1",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "火车",
+   "pinyinNumeric": "huo3 che1",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "飞机",
+   "pinyinNumeric": "fei1 ji1",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "出租车",
+   "pinyinNumeric": "chu1 zu1 che1",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "打电话",
+   "pinyinNumeric": "da3 dian4 hua4",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "狗",
+   "pinyinNumeric": "gou3",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "猫",
+   "pinyinNumeric": "mao1",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "口",
+   "pinyinNumeric": "kou3",
+   "theme": "do_vat_phuong_tien"
+  },
+  {
+   "simplified": "菜",
+   "pinyinNumeric": "cai4",
+   "theme": "do_an_thuc_uong"
+  },
+  {
+   "simplified": "茶",
+   "pinyinNumeric": "cha2",
+   "theme": "do_an_thuc_uong"
+  },
+  {
+   "simplified": "水",
+   "pinyinNumeric": "shui3",
+   "theme": "do_an_thuc_uong"
+  },
+  {
+   "simplified": "饭",
+   "pinyinNumeric": "fan4",
+   "theme": "do_an_thuc_uong"
+  },
+  {
+   "simplified": "米饭",
+   "pinyinNumeric": "mi3 fan4",
+   "theme": "do_an_thuc_uong"
+  },
+  {
+   "simplified": "面包",
+   "pinyinNumeric": "mian4 bao1",
+   "theme": "do_an_thuc_uong"
+  },
+  {
+   "simplified": "苹果",
+   "pinyinNumeric": "ping2 guo3",
+   "theme": "do_an_thuc_uong"
+  },
+  {
+   "simplified": "水果",
+   "pinyinNumeric": "shui3 guo3",
+   "theme": "do_an_thuc_uong"
+  },
+  {
+   "simplified": "牛奶",
+   "pinyinNumeric": "niu2 nai3",
+   "theme": "do_an_thuc_uong"
+  },
+  {
+   "simplified": "鸡蛋",
+   "pinyinNumeric": "ji1 dan4",
+   "theme": "do_an_thuc_uong"
+  },
+  {
+   "simplified": "饺子",
+   "pinyinNumeric": "jiao3 zi5",
+   "theme": "do_an_thuc_uong"
+  },
+  {
+   "simplified": "包子",
+   "pinyinNumeric": "bao1 zi5",
+   "theme": "do_an_thuc_uong"
+  },
+  {
+   "simplified": "面条儿",
+   "pinyinNumeric": "mian4 tiao2 r5",
+   "theme": "do_an_thuc_uong"
+  },
+  {
+   "simplified": "早饭",
+   "pinyinNumeric": "zao3 fan4",
+   "theme": "do_an_thuc_uong"
+  },
+  {
+   "simplified": "午饭",
+   "pinyinNumeric": "wu3 fan4",
+   "theme": "do_an_thuc_uong"
+  },
+  {
+   "simplified": "晚饭",
+   "pinyinNumeric": "wan3 fan4",
+   "theme": "do_an_thuc_uong"
+  },
+  {
+   "simplified": "天气",
+   "pinyinNumeric": "tian1 qi4",
+   "theme": "thoi_tiet"
+  },
+  {
+   "simplified": "雨",
+   "pinyinNumeric": "yu3",
+   "theme": "thoi_tiet"
+  },
+  {
+   "simplified": "雪",
+   "pinyinNumeric": "xue3",
+   "theme": "thoi_tiet"
+  },
+  {
+   "simplified": "下雨",
+   "pinyinNumeric": "xia4 yu3",
+   "theme": "thoi_tiet"
+  },
+  {
+   "simplified": "好",
+   "pinyinNumeric": "hao3",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "大",
+   "pinyinNumeric": "da4",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "小",
+   "pinyinNumeric": "xiao3",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "多",
+   "pinyinNumeric": "duo1",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "少",
+   "pinyinNumeric": "shao3",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "新",
+   "pinyinNumeric": "xin1",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "早",
+   "pinyinNumeric": "zao3",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "晚",
+   "pinyinNumeric": "wan3",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "忙",
+   "pinyinNumeric": "mang2",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "冷",
+   "pinyinNumeric": "leng3",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "热",
+   "pinyinNumeric": "re4",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "贵",
+   "pinyinNumeric": "gui4",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "便宜",
+   "pinyinNumeric": "pian2 yi5",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "漂亮",
+   "pinyinNumeric": "piao4 liang5",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "好看",
+   "pinyinNumeric": "hao3 kan4",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "好吃",
+   "pinyinNumeric": "hao4 chi1",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "好听",
+   "pinyinNumeric": "hao3 ting1",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "高兴",
+   "pinyinNumeric": "gao1 xing4",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "男",
+   "pinyinNumeric": "nan2",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "女",
+   "pinyinNumeric": "nü3",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "对",
+   "pinyinNumeric": "dui4",
+   "theme": "tinh_tu_mo_ta"
+  },
+  {
+   "simplified": "是",
+   "pinyinNumeric": "shi4",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "有",
+   "pinyinNumeric": "you3",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "会",
+   "pinyinNumeric": "hui4",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "要",
+   "pinyinNumeric": "yao1",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "说",
+   "pinyinNumeric": "shuo1",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "想",
+   "pinyinNumeric": "xiang3",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "知道",
+   "pinyinNumeric": "zhi1 dao4",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "觉得",
+   "pinyinNumeric": "jue2 de5",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "认识",
+   "pinyinNumeric": "ren4 shi5",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "看",
+   "pinyinNumeric": "kan4",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "听",
+   "pinyinNumeric": "ting1",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "见",
+   "pinyinNumeric": "jian4",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "看见",
+   "pinyinNumeric": "kan4 jian4",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "听见",
+   "pinyinNumeric": "ting1 jian4",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "找",
+   "pinyinNumeric": "zhao3",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "问",
+   "pinyinNumeric": "wen4",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "叫",
+   "pinyinNumeric": "jiao4",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "喜欢",
+   "pinyinNumeric": "xi3 huan5",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "爱",
+   "pinyinNumeric": "ai4",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "能",
+   "pinyinNumeric": "neng2",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "可以",
+   "pinyinNumeric": "ke3 yi3",
+   "theme": "dong_tu_nhan_thuc"
+  },
+  {
+   "simplified": "吃",
+   "pinyinNumeric": "chi1",
+   "theme": "dong_tu_sinh_hoat"
+  },
+  {
+   "simplified": "喝",
+   "pinyinNumeric": "he4",
+   "theme": "dong_tu_sinh_hoat"
+  },
+  {
+   "simplified": "写",
+   "pinyinNumeric": "xie3",
+   "theme": "dong_tu_sinh_hoat"
+  },
+  {
+   "simplified": "穿",
+   "pinyinNumeric": "chuan1",
+   "theme": "dong_tu_sinh_hoat"
+  },
+  {
+   "simplified": "坐",
+   "pinyinNumeric": "zuo4",
+   "theme": "dong_tu_sinh_hoat"
+  },
+  {
+   "simplified": "睡",
+   "pinyinNumeric": "shui4",
+   "theme": "dong_tu_sinh_hoat"
+  },
+  {
+   "simplified": "睡觉",
+   "pinyinNumeric": "shui4 jiao4",
+   "theme": "dong_tu_sinh_hoat"
+  },
+  {
+   "simplified": "起床",
+   "pinyinNumeric": "qi3 chuang2",
+   "theme": "dong_tu_sinh_hoat"
+  },
+  {
+   "simplified": "玩",
+   "pinyinNumeric": "wan2",
+   "theme": "dong_tu_sinh_hoat"
+  },
+  {
+   "simplified": "唱",
+   "pinyinNumeric": "chang4",
+   "theme": "dong_tu_sinh_hoat"
+  },
+  {
+   "simplified": "读",
+   "pinyinNumeric": "du2",
+   "theme": "dong_tu_sinh_hoat"
+  },
+  {
+   "simplified": "读书",
+   "pinyinNumeric": "du2 shu1",
+   "theme": "dong_tu_sinh_hoat"
+  },
+  {
+   "simplified": "学",
+   "pinyinNumeric": "xue2",
+   "theme": "dong_tu_sinh_hoat"
+  },
+  {
+   "simplified": "学习",
+   "pinyinNumeric": "xue2 xi2",
+   "theme": "dong_tu_sinh_hoat"
+  },
+  {
+   "simplified": "说话",
+   "pinyinNumeric": "shuo1 hua4",
+   "theme": "dong_tu_sinh_hoat"
+  },
+  {
+   "simplified": "休息",
+   "pinyinNumeric": "xiu1 xi5",
+   "theme": "dong_tu_sinh_hoat"
+  },
+  {
+   "simplified": "好玩儿",
+   "pinyinNumeric": "hao3 wan2 r5",
+   "theme": "dong_tu_sinh_hoat"
+  },
+  {
+   "simplified": "来",
+   "pinyinNumeric": "lai2",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "去",
+   "pinyinNumeric": "qu4",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "到",
+   "pinyinNumeric": "dao4",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "做",
+   "pinyinNumeric": "zuo4",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "给",
+   "pinyinNumeric": "gei3",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "开",
+   "pinyinNumeric": "kai1",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "买",
+   "pinyinNumeric": "mai3",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "卖",
+   "pinyinNumeric": "mai4",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "住",
+   "pinyinNumeric": "zhu4",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "工作",
+   "pinyinNumeric": "gong1 zuo4",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "上班",
+   "pinyinNumeric": "shang4 ban1",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "下班",
+   "pinyinNumeric": "xia4 ban1",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "上课",
+   "pinyinNumeric": "shang4 ke4",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "下课",
+   "pinyinNumeric": "xia4 ke4",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "上学",
+   "pinyinNumeric": "shang4 xue2",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "生病",
+   "pinyinNumeric": "sheng1 bing4",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "看病",
+   "pinyinNumeric": "kan4 bing4",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "开车",
+   "pinyinNumeric": "kai1 che1",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "做饭",
+   "pinyinNumeric": "zuo4 fan4",
+   "theme": "dong_tu_di_lai_cong_viec"
+  },
+  {
+   "simplified": "病",
+   "pinyinNumeric": "bing4",
+   "theme": "dong_tu_di_lai_cong_viec"
+  }
+ ]
+}

@@ -24,9 +24,23 @@ import { mapPos } from './lib/pos-map';
 
 const RAW = join(__dirname, '..', '..', 'data', 'raw');
 const OUT = join(__dirname, '..', '..', 'data', 'processed');
-const CURATED = join(__dirname, '..', '..', 'data', 'curated', 'hsk1.json');
+const CURATED_DIR = join(__dirname, '..', '..', 'data', 'curated');
+const CURATED = join(CURATED_DIR, 'hsk1.json');
 const KRM = join(RAW, 'krmanik-hsk3');
 const CVDICT_FILE = join(RAW, 'cvdict', 'CVDICT.u8');
+
+interface LessonThemeFile {
+  themeOrder: string[];
+  themeNames: Record<string, string>;
+  wordThemes: { simplified: string; pinyinNumeric: string; theme: string }[];
+}
+
+/** Đọc file chủ đề bài học đã soạn tay cho 1 cấp, nếu có (data/curated/lesson-themes-hsk{level}.json). */
+function loadLessonThemes(level: number): LessonThemeFile | null {
+  const path = join(CURATED_DIR, `lesson-themes-hsk${level}.json`);
+  if (!existsSync(path)) return null;
+  return JSON.parse(readFileSync(path, 'utf8')) as LessonThemeFile;
+}
 
 function need(path: string, hint: string): void {
   if (!existsSync(path)) {
@@ -187,7 +201,11 @@ function main(): void {
   }
 
   // --- chia bài học: mỗi cấp gom ~LESSON_SIZE từ, sắp theo tần suất (thiếu -> cuối) ---
+  // Cấp có file data/curated/lesson-themes-hsk{level}.json thì nhóm theo CHỦ ĐỀ trước
+  // (thứ tự chủ đề soạn tay), trong mỗi chủ đề vẫn sắp theo tần suất; cấp chưa có file
+  // thì giữ cách chia đều theo tần suất như cũ (title rỗng, lessons.ts tự đặt "Bài N").
   const LESSON_SIZE = 15;
+  const MAX_THEME_LESSON = 16;
   const byLvl = new Map<number, Record<string, unknown>[]>();
   for (const r of records) {
     const lv = r.hskLevel as number;
@@ -195,18 +213,60 @@ function main(): void {
     byLvl.get(lv)!.push(r);
   }
   let lessonTotal = 0;
-  for (const [, list] of byLvl) {
+  for (const [lv, list] of byLvl) {
     list.sort((a, b) => {
       const fa = (a.frequencyRank as number | null) ?? Number.MAX_SAFE_INTEGER;
       const fb = (b.frequencyRank as number | null) ?? Number.MAX_SAFE_INTEGER;
       return fa - fb || (a.origIndex as number) - (b.origIndex as number);
     });
-    list.forEach((r, i) => {
-      r.lessonIndex = Math.floor(i / LESSON_SIZE) + 1;
-      r.lessonOrder = (i % LESSON_SIZE) + 1;
-      delete r.origIndex;
-    });
-    lessonTotal += Math.ceil(list.length / LESSON_SIZE);
+
+    const themeFile = loadLessonThemes(lv);
+    if (!themeFile) {
+      list.forEach((r, i) => {
+        r.lessonIndex = Math.floor(i / LESSON_SIZE) + 1;
+        r.lessonOrder = (i % LESSON_SIZE) + 1;
+        delete r.origIndex;
+      });
+      lessonTotal += Math.ceil(list.length / LESSON_SIZE);
+      continue;
+    }
+
+    const themeOf = new Map(
+      themeFile.wordThemes.map((w) => [`${w.simplified}|${w.pinyinNumeric}`, w.theme]),
+    );
+    const byTheme = new Map<string, Record<string, unknown>[]>();
+    for (const r of list) {
+      const key = `${r.simplified as string}|${r.pinyinNumeric as string}`;
+      const theme = themeOf.get(key);
+      if (!theme) {
+        throw new Error(
+          `Từ "${r.simplified as string}" (${key}) chưa có trong lesson-themes-hsk${lv}.json`,
+        );
+      }
+      if (!byTheme.has(theme)) byTheme.set(theme, []);
+      byTheme.get(theme)!.push(r);
+    }
+    let idx = 0;
+    for (const theme of themeFile.themeOrder) {
+      const words = byTheme.get(theme) ?? [];
+      const parts = Math.max(1, Math.ceil(words.length / MAX_THEME_LESSON));
+      const per = Math.ceil(words.length / parts);
+      for (let p = 0; p < parts; p += 1) {
+        idx += 1;
+        const chunk = words.slice(p * per, (p + 1) * per);
+        const title =
+          parts > 1
+            ? `${themeFile.themeNames[theme]} (${p + 1}/${parts})`
+            : themeFile.themeNames[theme];
+        chunk.forEach((r, i) => {
+          r.lessonIndex = idx;
+          r.lessonOrder = i + 1;
+          r.lessonTitle = title;
+          delete r.origIndex;
+        });
+      }
+    }
+    lessonTotal += idx;
   }
 
   writeFileSync(join(OUT, 'words.seed.json'), JSON.stringify(records, null, 1));

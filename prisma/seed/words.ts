@@ -26,6 +26,8 @@ export interface WordSeedRecord {
   source?: string;
   lessonIndex?: number;
   lessonOrder?: number;
+  /** Tên bài học thật (theo chủ đề) nếu cấp này đã soạn chủ đề; không có thì lessons.ts tự đặt "Bài N". */
+  lessonTitle?: string;
   examples?: {
     zh: string;
     pinyin?: string | null;

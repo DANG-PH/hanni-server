@@ -16,8 +16,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-爱.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 6,
-  "lessonOrder": 1
+  "lessonIndex": 23,
+  "lessonOrder": 5,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (2/2)"
  },
  {
   "simplified": "吧",
@@ -36,8 +37,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-吧.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 2,
-  "lessonOrder": 9
+  "lessonIndex": 7,
+  "lessonOrder": 7,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (1/2)"
  },
  {
   "simplified": "八",
@@ -56,8 +58,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-八.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 15,
-  "lessonOrder": 5
+  "lessonIndex": 4,
+  "lessonOrder": 5,
+  "lessonTitle": "Số đếm & số lượng (2/2)"
  },
  {
   "simplified": "爸爸",
@@ -76,8 +79,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-爸爸.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 7,
-  "lessonOrder": 8
+  "lessonIndex": 9,
+  "lessonOrder": 6,
+  "lessonTitle": "Gia đình & con người (1/2)"
  },
  {
   "simplified": "百",
@@ -96,8 +100,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-百.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 17,
-  "lessonOrder": 3
+  "lessonIndex": 4,
+  "lessonOrder": 10,
+  "lessonTitle": "Số đếm & số lượng (2/2)"
  },
  {
   "simplified": "白天",
@@ -116,8 +121,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-白天.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 18,
-  "lessonOrder": 7
+  "lessonIndex": 13,
+  "lessonOrder": 9,
+  "lessonTitle": "Thời gian & ngày tháng (3/3)"
  },
  {
   "simplified": "半",
@@ -137,8 +143,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-半.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 12,
-  "lessonOrder": 7
+  "lessonIndex": 3,
+  "lessonOrder": 14,
+  "lessonTitle": "Số đếm & số lượng (1/2)"
  },
  {
   "simplified": "包子",
@@ -157,8 +164,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-包子.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 20,
-  "lessonOrder": 4
+  "lessonIndex": 18,
+  "lessonOrder": 15,
+  "lessonTitle": "Đồ ăn & thức uống"
  },
  {
   "simplified": "杯子",
@@ -177,8 +185,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-杯子.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 18,
-  "lessonOrder": 10
+  "lessonIndex": 17,
+  "lessonOrder": 12,
+  "lessonTitle": "Đồ vật & phương tiện (2/2)"
  },
  {
   "simplified": "本",
@@ -199,8 +208,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-本.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 10,
-  "lessonOrder": 3
+  "lessonIndex": 3,
+  "lessonOrder": 10,
+  "lessonTitle": "Số đếm & số lượng (1/2)"
  },
  {
   "simplified": "边",
@@ -220,8 +230,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-边.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 14,
-  "lessonOrder": 2
+  "lessonIndex": 13,
+  "lessonOrder": 2,
+  "lessonTitle": "Thời gian & ngày tháng (3/3)"
  },
  {
   "simplified": "病",
@@ -241,8 +252,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-病.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 13,
-  "lessonOrder": 12
+  "lessonIndex": 27,
+  "lessonOrder": 1,
+  "lessonTitle": "Động từ đi lại & công việc (2/2)"
  },
  {
   "simplified": "不",
@@ -261,8 +273,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-不.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 1,
-  "lessonOrder": 6
+  "lessonIndex": 7,
+  "lessonOrder": 3,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (1/2)"
  },
  {
   "simplified": "不客气",
@@ -279,8 +292,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-不客气.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 4,
-  "lessonOrder": 5
+  "lessonIndex": 1,
+  "lessonOrder": 1,
+  "lessonTitle": "Chào hỏi & giao tiếp xã giao"
  },
  {
   "simplified": "不要",
@@ -299,8 +313,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-不要.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 7,
-  "lessonOrder": 11
+  "lessonIndex": 8,
+  "lessonOrder": 7,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (2/2)"
  },
  {
   "simplified": "菜",
@@ -319,8 +334,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-菜.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 15,
-  "lessonOrder": 8
+  "lessonIndex": 18,
+  "lessonOrder": 2,
+  "lessonTitle": "Đồ ăn & thức uống"
  },
  {
   "simplified": "茶",
@@ -339,8 +355,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-茶.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 16,
-  "lessonOrder": 9
+  "lessonIndex": 18,
+  "lessonOrder": 6,
+  "lessonTitle": "Đồ ăn & thức uống"
  },
  {
   "simplified": "唱",
@@ -359,8 +376,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-唱.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 12,
-  "lessonOrder": 1
+  "lessonIndex": 24,
+  "lessonOrder": 8,
+  "lessonTitle": "Động từ sinh hoạt cá nhân (1/2)"
  },
  {
   "simplified": "超市",
@@ -379,8 +397,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-超市.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 18,
-  "lessonOrder": 15
+  "lessonIndex": 15,
+  "lessonOrder": 4,
+  "lessonTitle": "Địa điểm & nơi chốn (2/2)"
  },
  {
   "simplified": "车",
@@ -399,8 +418,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-车.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 7,
-  "lessonOrder": 5
+  "lessonIndex": 16,
+  "lessonOrder": 4,
+  "lessonTitle": "Đồ vật & phương tiện (1/2)"
  },
  {
   "simplified": "吃",
@@ -427,8 +447,9 @@
     "orderIndex": 0
    }
   ],
-  "lessonIndex": 6,
-  "lessonOrder": 9
+  "lessonIndex": 24,
+  "lessonOrder": 1,
+  "lessonTitle": "Động từ sinh hoạt cá nhân (1/2)"
  },
  {
   "simplified": "穿",
@@ -447,8 +468,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-穿.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 9,
-  "lessonOrder": 2
+  "lessonIndex": 24,
+  "lessonOrder": 5,
+  "lessonTitle": "Động từ sinh hoạt cá nhân (1/2)"
  },
  {
   "simplified": "出租车",
@@ -467,8 +489,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-出租车.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 16,
-  "lessonOrder": 3
+  "lessonIndex": 17,
+  "lessonOrder": 10,
+  "lessonTitle": "Đồ vật & phương tiện (2/2)"
  },
  {
   "simplified": "大",
@@ -487,8 +510,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-大.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 5,
-  "lessonOrder": 7
+  "lessonIndex": 20,
+  "lessonOrder": 4,
+  "lessonTitle": "Tính từ mô tả (1/2)"
  },
  {
   "simplified": "打电话",
@@ -505,8 +529,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-打电话.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 9,
-  "lessonOrder": 11
+  "lessonIndex": 16,
+  "lessonOrder": 8,
+  "lessonTitle": "Đồ vật & phương tiện (1/2)"
  },
  {
   "simplified": "大家",
@@ -525,8 +550,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-大家.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 8,
-  "lessonOrder": 2
+  "lessonIndex": 2,
+  "lessonOrder": 9,
+  "lessonTitle": "Đại từ nhân xưng"
  },
  {
   "simplified": "到",
@@ -545,8 +571,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-到.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 3,
-  "lessonOrder": 3
+  "lessonIndex": 26,
+  "lessonOrder": 3,
+  "lessonTitle": "Động từ đi lại & công việc (1/2)"
  },
  {
   "simplified": "大学",
@@ -565,8 +592,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-大学.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 13,
-  "lessonOrder": 2
+  "lessonIndex": 14,
+  "lessonOrder": 8,
+  "lessonTitle": "Địa điểm & nơi chốn (1/2)"
  },
  {
   "simplified": "大学生",
@@ -585,8 +613,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-大学生.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 19,
-  "lessonOrder": 6
+  "lessonIndex": 10,
+  "lessonOrder": 10,
+  "lessonTitle": "Gia đình & con người (2/2)"
  },
  {
   "simplified": "的",
@@ -605,8 +634,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-的.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 1,
-  "lessonOrder": 1
+  "lessonIndex": 7,
+  "lessonOrder": 1,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (1/2)"
  },
  {
   "simplified": "第",
@@ -625,8 +655,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-第.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 11,
-  "lessonOrder": 12
+  "lessonIndex": 8,
+  "lessonOrder": 8,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (2/2)"
  },
  {
   "simplified": "店",
@@ -645,8 +676,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-店.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 13,
-  "lessonOrder": 3
+  "lessonIndex": 14,
+  "lessonOrder": 9,
+  "lessonTitle": "Địa điểm & nơi chốn (1/2)"
  },
  {
   "simplified": "点",
@@ -667,8 +699,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-点.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 4,
-  "lessonOrder": 2
+  "lessonIndex": 11,
+  "lessonOrder": 3,
+  "lessonTitle": "Thời gian & ngày tháng (1/3)"
  },
  {
   "simplified": "电话",
@@ -687,8 +720,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-电话.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 8,
-  "lessonOrder": 1
+  "lessonIndex": 16,
+  "lessonOrder": 5,
+  "lessonTitle": "Đồ vật & phương tiện (1/2)"
  },
  {
   "simplified": "电脑",
@@ -707,8 +741,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-电脑.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 14,
-  "lessonOrder": 5
+  "lessonIndex": 17,
+  "lessonOrder": 5,
+  "lessonTitle": "Đồ vật & phương tiện (2/2)"
  },
  {
   "simplified": "电视",
@@ -727,8 +762,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-电视.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 12,
-  "lessonOrder": 13
+  "lessonIndex": 17,
+  "lessonOrder": 1,
+  "lessonTitle": "Đồ vật & phương tiện (2/2)"
  },
  {
   "simplified": "电影",
@@ -747,8 +783,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-电影.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 11,
-  "lessonOrder": 8
+  "lessonIndex": 16,
+  "lessonOrder": 10,
+  "lessonTitle": "Đồ vật & phương tiện (1/2)"
  },
  {
   "simplified": "电影院",
@@ -767,8 +804,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-电影院.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 19,
-  "lessonOrder": 7
+  "lessonIndex": 15,
+  "lessonOrder": 8,
+  "lessonTitle": "Địa điểm & nơi chốn (2/2)"
  },
  {
   "simplified": "弟弟",
@@ -787,8 +825,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-弟弟.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 14,
-  "lessonOrder": 3
+  "lessonIndex": 10,
+  "lessonOrder": 1,
+  "lessonTitle": "Gia đình & con người (2/2)"
  },
  {
   "simplified": "东西",
@@ -807,8 +846,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-东西.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 5,
-  "lessonOrder": 9
+  "lessonIndex": 16,
+  "lessonOrder": 2,
+  "lessonTitle": "Đồ vật & phương tiện (1/2)"
  },
  {
   "simplified": "都",
@@ -827,8 +867,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-都.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 2,
-  "lessonOrder": 12
+  "lessonIndex": 7,
+  "lessonOrder": 8,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (1/2)"
  },
  {
   "simplified": "读",
@@ -847,8 +888,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-读.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 12,
-  "lessonOrder": 14
+  "lessonIndex": 25,
+  "lessonOrder": 1,
+  "lessonTitle": "Động từ sinh hoạt cá nhân (2/2)"
  },
  {
   "simplified": "对",
@@ -870,8 +912,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-对.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 3,
-  "lessonOrder": 4
+  "lessonIndex": 20,
+  "lessonOrder": 2,
+  "lessonTitle": "Tính từ mô tả (1/2)"
  },
  {
   "simplified": "对不起",
@@ -890,8 +933,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-对不起.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 7,
-  "lessonOrder": 12
+  "lessonIndex": 1,
+  "lessonOrder": 4,
+  "lessonTitle": "Chào hỏi & giao tiếp xã giao"
  },
  {
   "simplified": "多",
@@ -913,8 +957,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-多.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 4,
-  "lessonOrder": 12
+  "lessonIndex": 20,
+  "lessonOrder": 3,
+  "lessonTitle": "Tính từ mô tả (1/2)"
  },
  {
   "simplified": "多少",
@@ -933,8 +978,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-多少.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 10,
-  "lessonOrder": 7
+  "lessonIndex": 6,
+  "lessonOrder": 5,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (2/2)"
  },
  {
   "simplified": "读书",
@@ -953,8 +999,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-读书.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 18,
-  "lessonOrder": 4
+  "lessonIndex": 25,
+  "lessonOrder": 6,
+  "lessonTitle": "Động từ sinh hoạt cá nhân (2/2)"
  },
  {
   "simplified": "二",
@@ -973,8 +1020,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-二.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 12,
-  "lessonOrder": 12
+  "lessonIndex": 4,
+  "lessonOrder": 1,
+  "lessonTitle": "Số đếm & số lượng (2/2)"
  },
  {
   "simplified": "儿子",
@@ -994,7 +1042,8 @@
   "audioUrl": "/media/audio/cmn-儿子.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
   "lessonIndex": 9,
-  "lessonOrder": 13
+  "lessonOrder": 8,
+  "lessonTitle": "Gia đình & con người (1/2)"
  },
  {
   "simplified": "饭",
@@ -1013,8 +1062,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-饭.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 15,
-  "lessonOrder": 12
+  "lessonIndex": 18,
+  "lessonOrder": 3,
+  "lessonTitle": "Đồ ăn & thức uống"
  },
  {
   "simplified": "饭店",
@@ -1033,8 +1083,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-饭店.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 18,
-  "lessonOrder": 1
+  "lessonIndex": 15,
+  "lessonOrder": 3,
+  "lessonTitle": "Địa điểm & nơi chốn (2/2)"
  },
  {
   "simplified": "房间",
@@ -1053,8 +1104,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-房间.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 11,
-  "lessonOrder": 9
+  "lessonIndex": 14,
+  "lessonOrder": 6,
+  "lessonTitle": "Địa điểm & nơi chốn (1/2)"
  },
  {
   "simplified": "非常",
@@ -1073,8 +1125,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-非常.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 6,
-  "lessonOrder": 12
+  "lessonIndex": 8,
+  "lessonOrder": 6,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (2/2)"
  },
  {
   "simplified": "飞机",
@@ -1093,8 +1146,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-飞机.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 12,
-  "lessonOrder": 10
+  "lessonIndex": 16,
+  "lessonOrder": 13,
+  "lessonTitle": "Đồ vật & phương tiện (1/2)"
  },
  {
   "simplified": "分",
@@ -1116,7 +1170,8 @@
   "audioUrl": "/media/audio/cmn-分.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
   "lessonIndex": 12,
-  "lessonOrder": 5
+  "lessonOrder": 8,
+  "lessonTitle": "Thời gian & ngày tháng (2/3)"
  },
  {
   "simplified": "分钟",
@@ -1135,8 +1190,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-分钟.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 9,
-  "lessonOrder": 15
+  "lessonIndex": 12,
+  "lessonOrder": 5,
+  "lessonTitle": "Thời gian & ngày tháng (2/3)"
  },
  {
   "simplified": "高兴",
@@ -1155,8 +1211,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-高兴.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 8,
-  "lessonOrder": 8
+  "lessonIndex": 20,
+  "lessonOrder": 7,
+  "lessonTitle": "Tính từ mô tả (1/2)"
  },
  {
   "simplified": "个",
@@ -1175,8 +1232,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-个.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 2,
-  "lessonOrder": 13
+  "lessonIndex": 3,
+  "lessonOrder": 2,
+  "lessonTitle": "Số đếm & số lượng (1/2)"
  },
  {
   "simplified": "歌",
@@ -1195,8 +1253,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-歌.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 11,
-  "lessonOrder": 15
+  "lessonIndex": 16,
+  "lessonOrder": 12,
+  "lessonTitle": "Đồ vật & phương tiện (1/2)"
  },
  {
   "simplified": "哥哥",
@@ -1215,8 +1274,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-哥哥.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 13,
-  "lessonOrder": 13
+  "lessonIndex": 9,
+  "lessonOrder": 12,
+  "lessonTitle": "Gia đình & con người (1/2)"
  },
  {
   "simplified": "给",
@@ -1236,8 +1296,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-给.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 3,
-  "lessonOrder": 8
+  "lessonIndex": 26,
+  "lessonOrder": 5,
+  "lessonTitle": "Động từ đi lại & công việc (1/2)"
  },
  {
   "simplified": "公司",
@@ -1256,8 +1317,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-公司.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 10,
-  "lessonOrder": 6
+  "lessonIndex": 14,
+  "lessonOrder": 3,
+  "lessonTitle": "Địa điểm & nơi chốn (1/2)"
  },
  {
   "simplified": "工作",
@@ -1277,8 +1339,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-工作.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 6,
-  "lessonOrder": 6
+  "lessonIndex": 26,
+  "lessonOrder": 6,
+  "lessonTitle": "Động từ đi lại & công việc (1/2)"
  },
  {
   "simplified": "狗",
@@ -1297,8 +1360,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-狗.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 9,
-  "lessonOrder": 7
+  "lessonIndex": 16,
+  "lessonOrder": 7,
+  "lessonTitle": "Đồ vật & phương tiện (1/2)"
  },
  {
   "simplified": "贵",
@@ -1317,8 +1381,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-贵.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 17,
-  "lessonOrder": 5
+  "lessonIndex": 21,
+  "lessonOrder": 8,
+  "lessonTitle": "Tính từ mô tả (2/2)"
  },
  {
   "simplified": "国",
@@ -1337,8 +1402,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-国.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 17,
-  "lessonOrder": 8
+  "lessonIndex": 15,
+  "lessonOrder": 2,
+  "lessonTitle": "Địa điểm & nơi chốn (2/2)"
  },
  {
   "simplified": "还",
@@ -1357,8 +1423,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-还.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 3,
-  "lessonOrder": 6
+  "lessonIndex": 7,
+  "lessonOrder": 11,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (1/2)"
  },
  {
   "simplified": "孩子",
@@ -1377,8 +1444,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-孩子.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 5,
-  "lessonOrder": 10
+  "lessonIndex": 9,
+  "lessonOrder": 3,
+  "lessonTitle": "Gia đình & con người (1/2)"
  },
  {
   "simplified": "汉语",
@@ -1397,8 +1465,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-汉语.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 20,
-  "lessonOrder": 3
+  "lessonIndex": 15,
+  "lessonOrder": 11,
+  "lessonTitle": "Địa điểm & nơi chốn (2/2)"
  },
  {
   "simplified": "汉字",
@@ -1417,8 +1486,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-汉字.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 20,
-  "lessonOrder": 5
+  "lessonIndex": 17,
+  "lessonOrder": 13,
+  "lessonTitle": "Đồ vật & phương tiện (2/2)"
  },
  {
   "simplified": "号",
@@ -1438,8 +1508,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-号.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 9,
-  "lessonOrder": 6
+  "lessonIndex": 12,
+  "lessonOrder": 3,
+  "lessonTitle": "Thời gian & ngày tháng (2/3)"
  },
  {
   "simplified": "好",
@@ -1460,8 +1531,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-好.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 1,
-  "lessonOrder": 10
+  "lessonIndex": 20,
+  "lessonOrder": 1,
+  "lessonTitle": "Tính từ mô tả (1/2)"
  },
  {
   "simplified": "好吃",
@@ -1480,8 +1552,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-好吃.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 16,
-  "lessonOrder": 13
+  "lessonIndex": 21,
+  "lessonOrder": 7,
+  "lessonTitle": "Tính từ mô tả (2/2)"
  },
  {
   "simplified": "好看",
@@ -1500,8 +1573,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-好看.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 16,
-  "lessonOrder": 7
+  "lessonIndex": 21,
+  "lessonOrder": 6,
+  "lessonTitle": "Tính từ mô tả (2/2)"
  },
  {
   "simplified": "好听",
@@ -1520,8 +1594,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-好听.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 19,
-  "lessonOrder": 1
+  "lessonIndex": 21,
+  "lessonOrder": 10,
+  "lessonTitle": "Tính từ mô tả (2/2)"
  },
  {
   "simplified": "好玩儿",
@@ -1540,8 +1615,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-好玩儿.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 19,
-  "lessonOrder": 13
+  "lessonIndex": 25,
+  "lessonOrder": 7,
+  "lessonTitle": "Động từ sinh hoạt cá nhân (2/2)"
  },
  {
   "simplified": "和",
@@ -1562,8 +1638,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-和.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 3,
-  "lessonOrder": 1
+  "lessonIndex": 7,
+  "lessonOrder": 9,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (1/2)"
  },
  {
   "simplified": "喝",
@@ -1582,8 +1659,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-喝.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 8,
-  "lessonOrder": 15
+  "lessonIndex": 24,
+  "lessonOrder": 3,
+  "lessonTitle": "Động từ sinh hoạt cá nhân (1/2)"
  },
  {
   "simplified": "很",
@@ -1602,8 +1680,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-很.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 2,
-  "lessonOrder": 6
+  "lessonIndex": 7,
+  "lessonOrder": 6,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (1/2)"
  },
  {
   "simplified": "后",
@@ -1622,8 +1701,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-后.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 7,
-  "lessonOrder": 7
+  "lessonIndex": 12,
+  "lessonOrder": 1,
+  "lessonTitle": "Thời gian & ngày tháng (2/3)"
  },
  {
   "simplified": "回",
@@ -1643,8 +1723,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-回.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 6,
-  "lessonOrder": 5
+  "lessonIndex": 11,
+  "lessonOrder": 10,
+  "lessonTitle": "Thời gian & ngày tháng (1/3)"
  },
  {
   "simplified": "会",
@@ -1664,8 +1745,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-会.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 1,
-  "lessonOrder": 13
+  "lessonIndex": 22,
+  "lessonOrder": 3,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (1/2)"
  },
  {
   "simplified": "火车",
@@ -1684,8 +1766,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-火车.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 16,
-  "lessonOrder": 2
+  "lessonIndex": 17,
+  "lessonOrder": 9,
+  "lessonTitle": "Đồ vật & phương tiện (2/2)"
  },
  {
   "simplified": "几",
@@ -1705,8 +1788,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-几.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 7,
-  "lessonOrder": 6
+  "lessonIndex": 5,
+  "lessonOrder": 11,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (1/2)"
  },
  {
   "simplified": "家",
@@ -1727,8 +1811,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-家.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 6,
-  "lessonOrder": 11
+  "lessonIndex": 14,
+  "lessonOrder": 2,
+  "lessonTitle": "Địa điểm & nơi chốn (1/2)"
  },
  {
   "simplified": "见",
@@ -1747,8 +1832,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-见.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 6,
-  "lessonOrder": 7
+  "lessonIndex": 23,
+  "lessonOrder": 6,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (2/2)"
  },
  {
   "simplified": "件",
@@ -1767,8 +1853,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-件.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 7,
-  "lessonOrder": 15
+  "lessonIndex": 3,
+  "lessonOrder": 6,
+  "lessonTitle": "Số đếm & số lượng (1/2)"
  },
  {
   "simplified": "叫",
@@ -1788,8 +1875,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-叫.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 5,
-  "lessonOrder": 14
+  "lessonIndex": 23,
+  "lessonOrder": 4,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (2/2)"
  },
  {
   "simplified": "饺子",
@@ -1808,8 +1896,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-饺子.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 19,
-  "lessonOrder": 15
+  "lessonIndex": 18,
+  "lessonOrder": 14,
+  "lessonTitle": "Đồ ăn & thức uống"
  },
  {
   "simplified": "家人",
@@ -1828,8 +1917,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-家人.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 14,
-  "lessonOrder": 9
+  "lessonIndex": 10,
+  "lessonOrder": 4,
+  "lessonTitle": "Gia đình & con người (2/2)"
  },
  {
   "simplified": "鸡蛋",
@@ -1848,8 +1938,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-鸡蛋.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 17,
-  "lessonOrder": 15
+  "lessonIndex": 18,
+  "lessonOrder": 10,
+  "lessonTitle": "Đồ ăn & thức uống"
  },
  {
   "simplified": "姐姐",
@@ -1868,8 +1959,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-姐姐.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 14,
-  "lessonOrder": 10
+  "lessonIndex": 10,
+  "lessonOrder": 5,
+  "lessonTitle": "Gia đình & con người (2/2)"
  },
  {
   "simplified": "今年",
@@ -1888,8 +1980,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-今年.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 15,
-  "lessonOrder": 13
+  "lessonIndex": 13,
+  "lessonOrder": 5,
+  "lessonTitle": "Thời gian & ngày tháng (3/3)"
  },
  {
   "simplified": "今天",
@@ -1908,8 +2001,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-今天.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 7,
-  "lessonOrder": 4
+  "lessonIndex": 11,
+  "lessonOrder": 12,
+  "lessonTitle": "Thời gian & ngày tháng (1/3)"
  },
  {
   "simplified": "九",
@@ -1928,8 +2022,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-九.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 16,
-  "lessonOrder": 11
+  "lessonIndex": 4,
+  "lessonOrder": 9,
+  "lessonTitle": "Số đếm & số lượng (2/2)"
  },
  {
   "simplified": "觉得",
@@ -1948,8 +2043,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-觉得.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 5,
-  "lessonOrder": 1
+  "lessonIndex": 23,
+  "lessonOrder": 1,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (2/2)"
  },
  {
   "simplified": "开",
@@ -1968,8 +2064,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-开.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 6,
-  "lessonOrder": 10
+  "lessonIndex": 26,
+  "lessonOrder": 7,
+  "lessonTitle": "Động từ đi lại & công việc (1/2)"
  },
  {
   "simplified": "开车",
@@ -1988,8 +2085,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-开车.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 15,
-  "lessonOrder": 11
+  "lessonIndex": 27,
+  "lessonOrder": 3,
+  "lessonTitle": "Động từ đi lại & công việc (2/2)"
  },
  {
   "simplified": "看",
@@ -2008,8 +2106,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-看.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 3,
-  "lessonOrder": 11
+  "lessonIndex": 22,
+  "lessonOrder": 9,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (1/2)"
  },
  {
   "simplified": "看病",
@@ -2028,8 +2127,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-看病.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 19,
-  "lessonOrder": 9
+  "lessonIndex": 27,
+  "lessonOrder": 9,
+  "lessonTitle": "Động từ đi lại & công việc (2/2)"
  },
  {
   "simplified": "看见",
@@ -2048,8 +2148,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-看见.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 9,
-  "lessonOrder": 10
+  "lessonIndex": 23,
+  "lessonOrder": 9,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (2/2)"
  },
  {
   "simplified": "课",
@@ -2068,8 +2169,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-课.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 15,
-  "lessonOrder": 3
+  "lessonIndex": 17,
+  "lessonOrder": 7,
+  "lessonTitle": "Đồ vật & phương tiện (2/2)"
  },
  {
   "simplified": "可以",
@@ -2089,8 +2191,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-可以.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 4,
-  "lessonOrder": 1
+  "lessonIndex": 22,
+  "lessonOrder": 10,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (1/2)"
  },
  {
   "simplified": "口",
@@ -2110,8 +2213,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-口.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 13,
-  "lessonOrder": 4
+  "lessonIndex": 17,
+  "lessonOrder": 2,
+  "lessonTitle": "Đồ vật & phương tiện (2/2)"
  },
  {
   "simplified": "块",
@@ -2130,8 +2234,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-块.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 10,
-  "lessonOrder": 10
+  "lessonIndex": 14,
+  "lessonOrder": 4,
+  "lessonTitle": "Địa điểm & nơi chốn (1/2)"
  },
  {
   "simplified": "来",
@@ -2150,8 +2255,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-来.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 2,
-  "lessonOrder": 11
+  "lessonIndex": 26,
+  "lessonOrder": 1,
+  "lessonTitle": "Động từ đi lại & công việc (1/2)"
  },
  {
   "simplified": "老师",
@@ -2170,8 +2276,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-老师.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 13,
-  "lessonOrder": 10
+  "lessonIndex": 9,
+  "lessonOrder": 11,
+  "lessonTitle": "Gia đình & con người (1/2)"
  },
  {
   "simplified": "了",
@@ -2190,8 +2297,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-了.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 1,
-  "lessonOrder": 5
+  "lessonIndex": 7,
+  "lessonOrder": 2,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (1/2)"
  },
  {
   "simplified": "冷",
@@ -2210,8 +2318,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-冷.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 15,
-  "lessonOrder": 2
+  "lessonIndex": 21,
+  "lessonOrder": 5,
+  "lessonTitle": "Tính từ mô tả (2/2)"
  },
  {
   "simplified": "里",
@@ -2230,8 +2339,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-里.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 4,
-  "lessonOrder": 7
+  "lessonIndex": 11,
+  "lessonOrder": 4,
+  "lessonTitle": "Thời gian & ngày tháng (1/3)"
  },
  {
   "simplified": "两",
@@ -2251,8 +2361,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-两.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 5,
-  "lessonOrder": 12
+  "lessonIndex": 3,
+  "lessonOrder": 4,
+  "lessonTitle": "Số đếm & số lượng (1/2)"
  },
  {
   "simplified": "零",
@@ -2271,8 +2382,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-零.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 18,
-  "lessonOrder": 8
+  "lessonIndex": 4,
+  "lessonOrder": 12,
+  "lessonTitle": "Số đếm & số lượng (2/2)"
  },
  {
   "simplified": "六",
@@ -2291,8 +2403,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-六.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 13,
-  "lessonOrder": 9
+  "lessonIndex": 4,
+  "lessonOrder": 2,
+  "lessonTitle": "Số đếm & số lượng (2/2)"
  },
  {
   "simplified": "吗",
@@ -2311,8 +2424,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-吗.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 1,
-  "lessonOrder": 14
+  "lessonIndex": 7,
+  "lessonOrder": 5,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (1/2)"
  },
  {
   "simplified": "卖",
@@ -2331,8 +2445,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-卖.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 11,
-  "lessonOrder": 7
+  "lessonIndex": 26,
+  "lessonOrder": 10,
+  "lessonTitle": "Động từ đi lại & công việc (1/2)"
  },
  {
   "simplified": "买",
@@ -2351,8 +2466,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-买.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 8,
-  "lessonOrder": 9
+  "lessonIndex": 26,
+  "lessonOrder": 9,
+  "lessonTitle": "Động từ đi lại & công việc (1/2)"
  },
  {
   "simplified": "妈妈",
@@ -2371,8 +2487,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-妈妈.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 7,
-  "lessonOrder": 1
+  "lessonIndex": 9,
+  "lessonOrder": 5,
+  "lessonTitle": "Gia đình & con người (1/2)"
  },
  {
   "simplified": "忙",
@@ -2392,8 +2509,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-忙.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 11,
-  "lessonOrder": 1
+  "lessonIndex": 20,
+  "lessonOrder": 11,
+  "lessonTitle": "Tính từ mô tả (1/2)"
  },
  {
   "simplified": "猫",
@@ -2412,8 +2530,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-猫.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 14,
-  "lessonOrder": 1
+  "lessonIndex": 17,
+  "lessonOrder": 4,
+  "lessonTitle": "Đồ vật & phương tiện (2/2)"
  },
  {
   "simplified": "没关系",
@@ -2430,8 +2549,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-没关系.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 12,
-  "lessonOrder": 9
+  "lessonIndex": 1,
+  "lessonOrder": 7,
+  "lessonTitle": "Chào hỏi & giao tiếp xã giao"
  },
  {
   "simplified": "妹妹",
@@ -2450,8 +2570,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-妹妹.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 14,
-  "lessonOrder": 4
+  "lessonIndex": 10,
+  "lessonOrder": 2,
+  "lessonTitle": "Gia đình & con người (2/2)"
  },
  {
   "simplified": "没事",
@@ -2470,8 +2591,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-没事.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 20,
-  "lessonOrder": 7
+  "lessonIndex": 1,
+  "lessonOrder": 9,
+  "lessonTitle": "Chào hỏi & giao tiếp xã giao"
  },
  {
   "simplified": "没（有）",
@@ -2491,8 +2613,9 @@
   "needsReview": true,
   "audioUrl": null,
   "source": "krmanik/HSK-3.0@2025-11; vi:none",
-  "lessonIndex": 20,
-  "lessonOrder": 8
+  "lessonIndex": 8,
+  "lessonOrder": 10,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (2/2)"
  },
  {
   "simplified": "们",
@@ -2511,8 +2634,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-们.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 5,
-  "lessonOrder": 8
+  "lessonIndex": 8,
+  "lessonOrder": 5,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (2/2)"
  },
  {
   "simplified": "面包",
@@ -2531,8 +2655,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-面包.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 16,
-  "lessonOrder": 14
+  "lessonIndex": 18,
+  "lessonOrder": 7,
+  "lessonTitle": "Đồ ăn & thức uống"
  },
  {
   "simplified": "面条儿",
@@ -2551,8 +2676,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-面条儿.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 20,
-  "lessonOrder": 6
+  "lessonIndex": 18,
+  "lessonOrder": 16,
+  "lessonTitle": "Đồ ăn & thức uống"
  },
  {
   "simplified": "米饭",
@@ -2571,8 +2697,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-米饭.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 19,
-  "lessonOrder": 10
+  "lessonIndex": 18,
+  "lessonOrder": 13,
+  "lessonTitle": "Đồ ăn & thức uống"
  },
  {
   "simplified": "明年",
@@ -2591,8 +2718,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-明年.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 18,
-  "lessonOrder": 3
+  "lessonIndex": 13,
+  "lessonOrder": 7,
+  "lessonTitle": "Thời gian & ngày tháng (3/3)"
  },
  {
   "simplified": "明天",
@@ -2611,8 +2739,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-明天.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 10,
-  "lessonOrder": 5
+  "lessonIndex": 12,
+  "lessonOrder": 6,
+  "lessonTitle": "Thời gian & ngày tháng (2/3)"
  },
  {
   "simplified": "名字",
@@ -2631,8 +2760,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-名字.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 8,
-  "lessonOrder": 12
+  "lessonIndex": 16,
+  "lessonOrder": 6,
+  "lessonTitle": "Đồ vật & phương tiện (1/2)"
  },
  {
   "simplified": "那",
@@ -2652,8 +2782,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-那.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 2,
-  "lessonOrder": 10
+  "lessonIndex": 5,
+  "lessonOrder": 3,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (1/2)"
  },
  {
   "simplified": "哪",
@@ -2672,8 +2803,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-哪.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 6,
-  "lessonOrder": 14
+  "lessonIndex": 5,
+  "lessonOrder": 9,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (1/2)"
  },
  {
   "simplified": "那边",
@@ -2692,8 +2824,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-那边.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 11,
-  "lessonOrder": 14
+  "lessonIndex": 6,
+  "lessonOrder": 6,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (2/2)"
  },
  {
   "simplified": "那个",
@@ -2712,8 +2845,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-那个.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 20,
-  "lessonOrder": 9
+  "lessonIndex": 6,
+  "lessonOrder": 9,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (2/2)"
  },
  {
   "simplified": "哪个",
@@ -2732,8 +2866,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-哪个.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 20,
-  "lessonOrder": 10
+  "lessonIndex": 6,
+  "lessonOrder": 10,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (2/2)"
  },
  {
   "simplified": "那里",
@@ -2752,8 +2887,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-那里.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 8,
-  "lessonOrder": 7
+  "lessonIndex": 6,
+  "lessonOrder": 1,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (2/2)"
  },
  {
   "simplified": "哪里",
@@ -2772,8 +2908,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-哪里.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 9,
-  "lessonOrder": 3
+  "lessonIndex": 6,
+  "lessonOrder": 3,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (2/2)"
  },
  {
   "simplified": "男",
@@ -2792,8 +2929,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-男.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 12,
-  "lessonOrder": 4
+  "lessonIndex": 21,
+  "lessonOrder": 2,
+  "lessonTitle": "Tính từ mô tả (2/2)"
  },
  {
   "simplified": "男朋友",
@@ -2812,8 +2950,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-男朋友.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 14,
-  "lessonOrder": 15
+  "lessonIndex": 10,
+  "lessonOrder": 7,
+  "lessonTitle": "Gia đình & con người (2/2)"
  },
  {
   "simplified": "那儿",
@@ -2832,8 +2971,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-那儿.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 10,
-  "lessonOrder": 4
+  "lessonIndex": 6,
+  "lessonOrder": 4,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (2/2)"
  },
  {
   "simplified": "哪儿",
@@ -2852,8 +2992,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-哪儿.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 8,
-  "lessonOrder": 11
+  "lessonIndex": 6,
+  "lessonOrder": 2,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (2/2)"
  },
  {
   "simplified": "那些",
@@ -2872,8 +3013,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-那些.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 6,
-  "lessonOrder": 13
+  "lessonIndex": 5,
+  "lessonOrder": 8,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (1/2)"
  },
  {
   "simplified": "哪些",
@@ -2892,8 +3034,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-哪些.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 18,
-  "lessonOrder": 11
+  "lessonIndex": 6,
+  "lessonOrder": 8,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (2/2)"
  },
  {
   "simplified": "呢",
@@ -2912,8 +3055,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-呢.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 4,
-  "lessonOrder": 3
+  "lessonIndex": 8,
+  "lessonOrder": 2,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (2/2)"
  },
  {
   "simplified": "能",
@@ -2932,8 +3076,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-能.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 2,
-  "lessonOrder": 14
+  "lessonIndex": 22,
+  "lessonOrder": 8,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (1/2)"
  },
  {
   "simplified": "你",
@@ -2952,8 +3097,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-你.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 1,
-  "lessonOrder": 3
+  "lessonIndex": 2,
+  "lessonOrder": 2,
+  "lessonTitle": "Đại từ nhân xưng"
  },
  {
   "simplified": "你好",
@@ -2978,8 +3124,9 @@
     "orderIndex": 0
    }
   ],
-  "lessonIndex": 20,
-  "lessonOrder": 11
+  "lessonIndex": 1,
+  "lessonOrder": 10,
+  "lessonTitle": "Chào hỏi & giao tiếp xã giao"
  },
  {
   "simplified": "年",
@@ -2999,8 +3146,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-年.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 6,
-  "lessonOrder": 3
+  "lessonIndex": 11,
+  "lessonOrder": 9,
+  "lessonTitle": "Thời gian & ngày tháng (1/3)"
  },
  {
   "simplified": "你们",
@@ -3019,8 +3167,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-你们.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 3,
-  "lessonOrder": 10
+  "lessonIndex": 2,
+  "lessonOrder": 7,
+  "lessonTitle": "Đại từ nhân xưng"
  },
  {
   "simplified": "您",
@@ -3039,8 +3188,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-您.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 8,
-  "lessonOrder": 4
+  "lessonIndex": 2,
+  "lessonOrder": 10,
+  "lessonTitle": "Đại từ nhân xưng"
  },
  {
   "simplified": "牛奶",
@@ -3059,8 +3209,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-牛奶.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 17,
-  "lessonOrder": 9
+  "lessonIndex": 18,
+  "lessonOrder": 8,
+  "lessonTitle": "Đồ ăn & thức uống"
  },
  {
   "simplified": "女",
@@ -3079,8 +3230,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-女.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 10,
-  "lessonOrder": 15
+  "lessonIndex": 20,
+  "lessonOrder": 10,
+  "lessonTitle": "Tính từ mô tả (1/2)"
  },
  {
   "simplified": "女儿",
@@ -3099,8 +3251,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-女儿.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 10,
-  "lessonOrder": 14
+  "lessonIndex": 9,
+  "lessonOrder": 10,
+  "lessonTitle": "Gia đình & con người (1/2)"
  },
  {
   "simplified": "女朋友",
@@ -3119,8 +3272,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-女朋友.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 14,
-  "lessonOrder": 11
+  "lessonIndex": 10,
+  "lessonOrder": 6,
+  "lessonTitle": "Gia đình & con người (2/2)"
  },
  {
   "simplified": "女士",
@@ -3139,8 +3293,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-女士.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 10,
-  "lessonOrder": 2
+  "lessonIndex": 9,
+  "lessonOrder": 9,
+  "lessonTitle": "Gia đình & con người (1/2)"
  },
  {
   "simplified": "朋友",
@@ -3159,8 +3314,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-朋友.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 6,
-  "lessonOrder": 15
+  "lessonIndex": 9,
+  "lessonOrder": 4,
+  "lessonTitle": "Gia đình & con người (1/2)"
  },
  {
   "simplified": "便宜",
@@ -3179,8 +3335,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-便宜.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 17,
-  "lessonOrder": 10
+  "lessonIndex": 21,
+  "lessonOrder": 9,
+  "lessonTitle": "Tính từ mô tả (2/2)"
  },
  {
   "simplified": "漂亮",
@@ -3199,8 +3356,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-漂亮.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 9,
-  "lessonOrder": 14
+  "lessonIndex": 20,
+  "lessonOrder": 9,
+  "lessonTitle": "Tính từ mô tả (1/2)"
  },
  {
   "simplified": "苹果",
@@ -3219,8 +3377,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-苹果.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 17,
-  "lessonOrder": 14
+  "lessonIndex": 18,
+  "lessonOrder": 9,
+  "lessonTitle": "Đồ ăn & thức uống"
  },
  {
   "simplified": "七",
@@ -3239,8 +3398,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-七.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 15,
-  "lessonOrder": 7
+  "lessonIndex": 4,
+  "lessonOrder": 6,
+  "lessonTitle": "Số đếm & số lượng (2/2)"
  },
  {
   "simplified": "前",
@@ -3259,8 +3419,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-前.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 7,
-  "lessonOrder": 2
+  "lessonIndex": 11,
+  "lessonOrder": 11,
+  "lessonTitle": "Thời gian & ngày tháng (1/3)"
  },
  {
   "simplified": "钱",
@@ -3279,8 +3440,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-钱.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 6,
-  "lessonOrder": 8
+  "lessonIndex": 14,
+  "lessonOrder": 1,
+  "lessonTitle": "Địa điểm & nơi chốn (1/2)"
  },
  {
   "simplified": "千",
@@ -3299,8 +3461,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-千.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 16,
-  "lessonOrder": 1
+  "lessonIndex": 4,
+  "lessonOrder": 7,
+  "lessonTitle": "Số đếm & số lượng (2/2)"
  },
  {
   "simplified": "起床",
@@ -3319,8 +3482,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-起床.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 17,
-  "lessonOrder": 13
+  "lessonIndex": 25,
+  "lessonOrder": 5,
+  "lessonTitle": "Động từ sinh hoạt cá nhân (2/2)"
  },
  {
   "simplified": "请",
@@ -3339,8 +3503,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-请.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 6,
-  "lessonOrder": 4
+  "lessonIndex": 1,
+  "lessonOrder": 3,
+  "lessonTitle": "Chào hỏi & giao tiếp xã giao"
  },
  {
   "simplified": "请问",
@@ -3359,8 +3524,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-请问.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 17,
-  "lessonOrder": 2
+  "lessonIndex": 1,
+  "lessonOrder": 8,
+  "lessonTitle": "Chào hỏi & giao tiếp xã giao"
  },
  {
   "simplified": "去",
@@ -3379,8 +3545,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-去.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 2,
-  "lessonOrder": 15
+  "lessonIndex": 26,
+  "lessonOrder": 2,
+  "lessonTitle": "Động từ đi lại & công việc (1/2)"
  },
  {
   "simplified": "去年",
@@ -3399,8 +3566,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-去年.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 15,
-  "lessonOrder": 10
+  "lessonIndex": 13,
+  "lessonOrder": 4,
+  "lessonTitle": "Thời gian & ngày tháng (3/3)"
  },
  {
   "simplified": "热",
@@ -3419,8 +3587,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-热.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 14,
-  "lessonOrder": 6
+  "lessonIndex": 21,
+  "lessonOrder": 4,
+  "lessonTitle": "Tính từ mô tả (2/2)"
  },
  {
   "simplified": "人",
@@ -3439,8 +3608,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-人.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 2,
-  "lessonOrder": 8
+  "lessonIndex": 9,
+  "lessonOrder": 1,
+  "lessonTitle": "Gia đình & con người (1/2)"
  },
  {
   "simplified": "认识",
@@ -3459,8 +3629,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-认识.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 8,
-  "lessonOrder": 13
+  "lessonIndex": 23,
+  "lessonOrder": 8,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (2/2)"
  },
  {
   "simplified": "日",
@@ -3480,8 +3651,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-日.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 13,
-  "lessonOrder": 5
+  "lessonIndex": 12,
+  "lessonOrder": 11,
+  "lessonTitle": "Thời gian & ngày tháng (2/3)"
  },
  {
   "simplified": "三",
@@ -3500,8 +3672,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-三.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 8,
-  "lessonOrder": 6
+  "lessonIndex": 3,
+  "lessonOrder": 8,
+  "lessonTitle": "Số đếm & số lượng (1/2)"
  },
  {
   "simplified": "上",
@@ -3521,8 +3694,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-上.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 3,
-  "lessonOrder": 9
+  "lessonIndex": 11,
+  "lessonOrder": 1,
+  "lessonTitle": "Thời gian & ngày tháng (1/3)"
  },
  {
   "simplified": "上班",
@@ -3541,8 +3715,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-上班.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 15,
-  "lessonOrder": 4
+  "lessonIndex": 27,
+  "lessonOrder": 2,
+  "lessonTitle": "Động từ đi lại & công việc (2/2)"
  },
  {
   "simplified": "商店",
@@ -3561,8 +3736,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-商店.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 16,
-  "lessonOrder": 12
+  "lessonIndex": 15,
+  "lessonOrder": 1,
+  "lessonTitle": "Địa điểm & nơi chốn (2/2)"
  },
  {
   "simplified": "上课",
@@ -3581,8 +3757,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-上课.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 17,
-  "lessonOrder": 12
+  "lessonIndex": 27,
+  "lessonOrder": 7,
+  "lessonTitle": "Động từ đi lại & công việc (2/2)"
  },
  {
   "simplified": "上午",
@@ -3601,8 +3778,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-上午.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 18,
-  "lessonOrder": 5
+  "lessonIndex": 13,
+  "lessonOrder": 8,
+  "lessonTitle": "Thời gian & ngày tháng (3/3)"
  },
  {
   "simplified": "上学",
@@ -3621,8 +3799,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-上学.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 16,
-  "lessonOrder": 10
+  "lessonIndex": 27,
+  "lessonOrder": 4,
+  "lessonTitle": "Động từ đi lại & công việc (2/2)"
  },
  {
   "simplified": "少",
@@ -3642,8 +3821,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-少.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 12,
-  "lessonOrder": 8
+  "lessonIndex": 21,
+  "lessonOrder": 3,
+  "lessonTitle": "Tính từ mô tả (2/2)"
  },
  {
   "simplified": "谁",
@@ -3662,8 +3842,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-谁.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 4,
-  "lessonOrder": 11
+  "lessonIndex": 5,
+  "lessonOrder": 6,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (1/2)"
  },
  {
   "simplified": "生病",
@@ -3682,8 +3863,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-生病.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 17,
-  "lessonOrder": 7
+  "lessonIndex": 27,
+  "lessonOrder": 5,
+  "lessonTitle": "Động từ đi lại & công việc (2/2)"
  },
  {
   "simplified": "什么",
@@ -3702,8 +3884,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-什么.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 2,
-  "lessonOrder": 1
+  "lessonIndex": 5,
+  "lessonOrder": 2,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (1/2)"
  },
  {
   "simplified": "十",
@@ -3722,8 +3905,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-十.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 13,
-  "lessonOrder": 15
+  "lessonIndex": 4,
+  "lessonOrder": 3,
+  "lessonTitle": "Số đếm & số lượng (2/2)"
  },
  {
   "simplified": "事",
@@ -3742,8 +3926,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-事.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 3,
-  "lessonOrder": 13
+  "lessonIndex": 16,
+  "lessonOrder": 1,
+  "lessonTitle": "Đồ vật & phương tiện (1/2)"
  },
  {
   "simplified": "是",
@@ -3762,8 +3947,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-是.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 1,
-  "lessonOrder": 4
+  "lessonIndex": 22,
+  "lessonOrder": 1,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (1/2)"
  },
  {
   "simplified": "时候",
@@ -3782,8 +3968,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-时候.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 4,
-  "lessonOrder": 13
+  "lessonIndex": 11,
+  "lessonOrder": 5,
+  "lessonTitle": "Thời gian & ngày tháng (1/3)"
  },
  {
   "simplified": "时间",
@@ -3802,8 +3989,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-时间.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 6,
-  "lessonOrder": 2
+  "lessonIndex": 11,
+  "lessonOrder": 8,
+  "lessonTitle": "Thời gian & ngày tháng (1/3)"
  },
  {
   "simplified": "手机",
@@ -3822,8 +4010,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-手机.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 13,
-  "lessonOrder": 14
+  "lessonIndex": 17,
+  "lessonOrder": 3,
+  "lessonTitle": "Đồ vật & phương tiện (2/2)"
  },
  {
   "simplified": "书",
@@ -3842,8 +4031,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-书.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 11,
-  "lessonOrder": 10
+  "lessonIndex": 16,
+  "lessonOrder": 11,
+  "lessonTitle": "Đồ vật & phương tiện (1/2)"
  },
  {
   "simplified": "书店",
@@ -3862,8 +4052,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-书店.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 19,
-  "lessonOrder": 4
+  "lessonIndex": 15,
+  "lessonOrder": 7,
+  "lessonTitle": "Địa điểm & nơi chốn (2/2)"
  },
  {
   "simplified": "睡",
@@ -3882,8 +4073,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-睡.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 11,
-  "lessonOrder": 3
+  "lessonIndex": 24,
+  "lessonOrder": 7,
+  "lessonTitle": "Động từ sinh hoạt cá nhân (1/2)"
  },
  {
   "simplified": "水",
@@ -3902,8 +4094,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-水.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 11,
-  "lessonOrder": 5
+  "lessonIndex": 18,
+  "lessonOrder": 1,
+  "lessonTitle": "Đồ ăn & thức uống"
  },
  {
   "simplified": "水果",
@@ -3923,7 +4116,8 @@
   "audioUrl": "/media/audio/cmn-水果.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
   "lessonIndex": 18,
-  "lessonOrder": 6
+  "lessonOrder": 11,
+  "lessonTitle": "Đồ ăn & thức uống"
  },
  {
   "simplified": "睡觉",
@@ -3942,8 +4136,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-睡觉.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 13,
-  "lessonOrder": 8
+  "lessonIndex": 25,
+  "lessonOrder": 3,
+  "lessonTitle": "Động từ sinh hoạt cá nhân (2/2)"
  },
  {
   "simplified": "说",
@@ -3962,8 +4157,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-说.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 2,
-  "lessonOrder": 2
+  "lessonIndex": 22,
+  "lessonOrder": 5,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (1/2)"
  },
  {
   "simplified": "说话",
@@ -3982,8 +4178,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-说话.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 10,
-  "lessonOrder": 11
+  "lessonIndex": 24,
+  "lessonOrder": 6,
+  "lessonTitle": "Động từ sinh hoạt cá nhân (1/2)"
  },
  {
   "simplified": "四",
@@ -4002,8 +4199,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-四.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 11,
-  "lessonOrder": 11
+  "lessonIndex": 3,
+  "lessonOrder": 12,
+  "lessonTitle": "Số đếm & số lượng (1/2)"
  },
  {
   "simplified": "岁",
@@ -4022,8 +4220,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-岁.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 9,
-  "lessonOrder": 9
+  "lessonIndex": 3,
+  "lessonOrder": 9,
+  "lessonTitle": "Số đếm & số lượng (1/2)"
  },
  {
   "simplified": "他",
@@ -4042,8 +4241,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-他.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 1,
-  "lessonOrder": 8
+  "lessonIndex": 2,
+  "lessonOrder": 3,
+  "lessonTitle": "Đại từ nhân xưng"
  },
  {
   "simplified": "它",
@@ -4062,8 +4262,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-它.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 5,
-  "lessonOrder": 3
+  "lessonIndex": 2,
+  "lessonOrder": 8,
+  "lessonTitle": "Đại từ nhân xưng"
  },
  {
   "simplified": "她",
@@ -4083,7 +4284,8 @@
   "audioUrl": "/media/audio/cmn-她.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
   "lessonIndex": 2,
-  "lessonOrder": 3
+  "lessonOrder": 5,
+  "lessonTitle": "Đại từ nhân xưng"
  },
  {
   "simplified": "太",
@@ -4102,8 +4304,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-太.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 4,
-  "lessonOrder": 6
+  "lessonIndex": 8,
+  "lessonOrder": 3,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (2/2)"
  },
  {
   "simplified": "他们",
@@ -4122,8 +4325,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-他们.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 3,
-  "lessonOrder": 2
+  "lessonIndex": 2,
+  "lessonOrder": 6,
+  "lessonTitle": "Đại từ nhân xưng"
  },
  {
   "simplified": "它们",
@@ -4142,8 +4346,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-它们.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 10,
-  "lessonOrder": 8
+  "lessonIndex": 2,
+  "lessonOrder": 11,
+  "lessonTitle": "Đại từ nhân xưng"
  },
  {
   "simplified": "她们",
@@ -4162,8 +4367,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-她们.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 10,
-  "lessonOrder": 12
+  "lessonIndex": 2,
+  "lessonOrder": 12,
+  "lessonTitle": "Đại từ nhân xưng"
  },
  {
   "simplified": "天",
@@ -4183,8 +4389,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-天.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 5,
-  "lessonOrder": 2
+  "lessonIndex": 11,
+  "lessonOrder": 7,
+  "lessonTitle": "Thời gian & ngày tháng (1/3)"
  },
  {
   "simplified": "天气",
@@ -4203,8 +4410,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-天气.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 16,
-  "lessonOrder": 8
+  "lessonIndex": 19,
+  "lessonOrder": 2,
+  "lessonTitle": "Thời tiết"
  },
  {
   "simplified": "听",
@@ -4223,8 +4431,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-听.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 4,
-  "lessonOrder": 9
+  "lessonIndex": 22,
+  "lessonOrder": 11,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (1/2)"
  },
  {
   "simplified": "听见",
@@ -4243,8 +4452,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-听见.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 14,
-  "lessonOrder": 13
+  "lessonIndex": 23,
+  "lessonOrder": 10,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (2/2)"
  },
  {
   "simplified": "同学",
@@ -4263,8 +4473,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-同学.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 17,
-  "lessonOrder": 1
+  "lessonIndex": 10,
+  "lessonOrder": 8,
+  "lessonTitle": "Gia đình & con người (2/2)"
  },
  {
   "simplified": "外",
@@ -4283,8 +4494,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-外.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 13,
-  "lessonOrder": 7
+  "lessonIndex": 12,
+  "lessonOrder": 12,
+  "lessonTitle": "Thời gian & ngày tháng (2/3)"
  },
  {
   "simplified": "外边",
@@ -4303,8 +4515,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-外边.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 19,
-  "lessonOrder": 8
+  "lessonIndex": 15,
+  "lessonOrder": 9,
+  "lessonTitle": "Địa điểm & nơi chốn (2/2)"
  },
  {
   "simplified": "玩",
@@ -4323,8 +4536,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-玩.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 20,
-  "lessonOrder": 12
+  "lessonIndex": 25,
+  "lessonOrder": 8,
+  "lessonTitle": "Động từ sinh hoạt cá nhân (2/2)"
  },
  {
   "simplified": "晚",
@@ -4343,8 +4557,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-晚.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 11,
-  "lessonOrder": 4
+  "lessonIndex": 21,
+  "lessonOrder": 1,
+  "lessonTitle": "Tính từ mô tả (2/2)"
  },
  {
   "simplified": "晚饭",
@@ -4363,8 +4578,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-晚饭.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 15,
-  "lessonOrder": 15
+  "lessonIndex": 18,
+  "lessonOrder": 4,
+  "lessonTitle": "Đồ ăn & thức uống"
  },
  {
   "simplified": "晚上",
@@ -4383,8 +4599,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-晚上.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 10,
-  "lessonOrder": 9
+  "lessonIndex": 12,
+  "lessonOrder": 7,
+  "lessonTitle": "Thời gian & ngày tháng (2/3)"
  },
  {
   "simplified": "喂",
@@ -4404,8 +4621,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-喂.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 9,
-  "lessonOrder": 12
+  "lessonIndex": 1,
+  "lessonOrder": 5,
+  "lessonTitle": "Chào hỏi & giao tiếp xã giao"
  },
  {
   "simplified": "问",
@@ -4424,8 +4642,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-问.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 7,
-  "lessonOrder": 13
+  "lessonIndex": 23,
+  "lessonOrder": 7,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (2/2)"
  },
  {
   "simplified": "问题",
@@ -4444,8 +4663,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-问题.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 5,
-  "lessonOrder": 15
+  "lessonIndex": 16,
+  "lessonOrder": 3,
+  "lessonTitle": "Đồ vật & phương tiện (1/2)"
  },
  {
   "simplified": "我",
@@ -4472,8 +4692,9 @@
     "orderIndex": 0
    }
   ],
-  "lessonIndex": 1,
-  "lessonOrder": 2
+  "lessonIndex": 2,
+  "lessonOrder": 1,
+  "lessonTitle": "Đại từ nhân xưng"
  },
  {
   "simplified": "我们",
@@ -4492,8 +4713,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-我们.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 1,
-  "lessonOrder": 9
+  "lessonIndex": 2,
+  "lessonOrder": 4,
+  "lessonTitle": "Đại từ nhân xưng"
  },
  {
   "simplified": "五",
@@ -4512,8 +4734,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-五.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 12,
-  "lessonOrder": 3
+  "lessonIndex": 3,
+  "lessonOrder": 13,
+  "lessonTitle": "Số đếm & số lượng (1/2)"
  },
  {
   "simplified": "午饭",
@@ -4532,8 +4755,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-午饭.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 16,
-  "lessonOrder": 4
+  "lessonIndex": 18,
+  "lessonOrder": 5,
+  "lessonTitle": "Đồ ăn & thức uống"
  },
  {
   "simplified": "下",
@@ -4554,8 +4778,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-下.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 4,
-  "lessonOrder": 14
+  "lessonIndex": 11,
+  "lessonOrder": 6,
+  "lessonTitle": "Thời gian & ngày tháng (1/3)"
  },
  {
   "simplified": "下雨",
@@ -4573,7 +4798,8 @@
   "audioUrl": "/media/audio/cmn-下雨.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
   "lessonIndex": 19,
-  "lessonOrder": 5
+  "lessonOrder": 4,
+  "lessonTitle": "Thời tiết"
  },
  {
   "simplified": "下班",
@@ -4592,8 +4818,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-下班.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 17,
-  "lessonOrder": 11
+  "lessonIndex": 27,
+  "lessonOrder": 6,
+  "lessonTitle": "Động từ đi lại & công việc (2/2)"
  },
  {
   "simplified": "下课",
@@ -4612,8 +4839,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-下课.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 19,
-  "lessonOrder": 12
+  "lessonIndex": 27,
+  "lessonOrder": 10,
+  "lessonTitle": "Động từ đi lại & công việc (2/2)"
  },
  {
   "simplified": "想",
@@ -4632,8 +4860,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-想.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 2,
-  "lessonOrder": 4
+  "lessonIndex": 22,
+  "lessonOrder": 6,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (1/2)"
  },
  {
   "simplified": "先生",
@@ -4652,8 +4881,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-先生.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 5,
-  "lessonOrder": 4
+  "lessonIndex": 9,
+  "lessonOrder": 2,
+  "lessonTitle": "Gia đình & con người (1/2)"
  },
  {
   "simplified": "现在",
@@ -4672,8 +4902,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-现在.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 3,
-  "lessonOrder": 15
+  "lessonIndex": 11,
+  "lessonOrder": 2,
+  "lessonTitle": "Thời gian & ngày tháng (1/3)"
  },
  {
   "simplified": "小",
@@ -4693,8 +4924,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-小.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 5,
-  "lessonOrder": 13
+  "lessonIndex": 20,
+  "lessonOrder": 5,
+  "lessonTitle": "Tính từ mô tả (1/2)"
  },
  {
   "simplified": "小朋友",
@@ -4713,8 +4945,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-小朋友.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 18,
-  "lessonOrder": 14
+  "lessonIndex": 10,
+  "lessonOrder": 9,
+  "lessonTitle": "Gia đình & con người (2/2)"
  },
  {
   "simplified": "小时",
@@ -4733,8 +4966,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-小时.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 9,
-  "lessonOrder": 8
+  "lessonIndex": 12,
+  "lessonOrder": 4,
+  "lessonTitle": "Thời gian & ngày tháng (2/3)"
  },
  {
   "simplified": "小学",
@@ -4753,8 +4987,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-小学.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 19,
-  "lessonOrder": 3
+  "lessonIndex": 15,
+  "lessonOrder": 6,
+  "lessonTitle": "Địa điểm & nơi chốn (2/2)"
  },
  {
   "simplified": "小学生",
@@ -4773,8 +5008,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-小学生.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 20,
-  "lessonOrder": 1
+  "lessonIndex": 10,
+  "lessonOrder": 11,
+  "lessonTitle": "Gia đình & con người (2/2)"
  },
  {
   "simplified": "下午",
@@ -4793,8 +5029,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-下午.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 14,
-  "lessonOrder": 8
+  "lessonIndex": 13,
+  "lessonOrder": 3,
+  "lessonTitle": "Thời gian & ngày tháng (3/3)"
  },
  {
   "simplified": "写",
@@ -4813,8 +5050,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-写.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 9,
-  "lessonOrder": 1
+  "lessonIndex": 24,
+  "lessonOrder": 4,
+  "lessonTitle": "Động từ sinh hoạt cá nhân (1/2)"
  },
  {
   "simplified": "些",
@@ -4833,8 +5071,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-些.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 7,
-  "lessonOrder": 9
+  "lessonIndex": 3,
+  "lessonOrder": 5,
+  "lessonTitle": "Số đếm & số lượng (1/2)"
  },
  {
   "simplified": "谢谢",
@@ -4861,8 +5100,9 @@
     "orderIndex": 0
    }
   ],
-  "lessonIndex": 4,
-  "lessonOrder": 15
+  "lessonIndex": 1,
+  "lessonOrder": 2,
+  "lessonTitle": "Chào hỏi & giao tiếp xã giao"
  },
  {
   "simplified": "喜欢",
@@ -4889,8 +5129,9 @@
     "orderIndex": 0
    }
   ],
-  "lessonIndex": 5,
-  "lessonOrder": 6
+  "lessonIndex": 23,
+  "lessonOrder": 3,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (2/2)"
  },
  {
   "simplified": "新",
@@ -4909,8 +5150,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-新.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 8,
-  "lessonOrder": 3
+  "lessonIndex": 20,
+  "lessonOrder": 6,
+  "lessonTitle": "Tính từ mô tả (1/2)"
  },
  {
   "simplified": "星期",
@@ -4930,7 +5172,8 @@
   "audioUrl": "/media/audio/cmn-星期.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
   "lessonIndex": 13,
-  "lessonOrder": 11
+  "lessonOrder": 1,
+  "lessonTitle": "Thời gian & ngày tháng (3/3)"
  },
  {
   "simplified": "星期日",
@@ -4949,8 +5192,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-星期日.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 19,
-  "lessonOrder": 14
+  "lessonIndex": 13,
+  "lessonOrder": 11,
+  "lessonTitle": "Thời gian & ngày tháng (3/3)"
  },
  {
   "simplified": "星期天",
@@ -4969,8 +5213,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-星期天.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 18,
-  "lessonOrder": 13
+  "lessonIndex": 13,
+  "lessonOrder": 10,
+  "lessonTitle": "Thời gian & ngày tháng (3/3)"
  },
  {
   "simplified": "休息",
@@ -4989,8 +5234,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-休息.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 13,
-  "lessonOrder": 6
+  "lessonIndex": 25,
+  "lessonOrder": 2,
+  "lessonTitle": "Động từ sinh hoạt cá nhân (2/2)"
  },
  {
   "simplified": "学",
@@ -5009,8 +5255,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-学.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 12,
-  "lessonOrder": 2
+  "lessonIndex": 24,
+  "lessonOrder": 9,
+  "lessonTitle": "Động từ sinh hoạt cá nhân (1/2)"
  },
  {
   "simplified": "雪",
@@ -5029,8 +5276,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-雪.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 17,
-  "lessonOrder": 4
+  "lessonIndex": 19,
+  "lessonOrder": 3,
+  "lessonTitle": "Thời tiết"
  },
  {
   "simplified": "学生",
@@ -5049,8 +5297,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-学生.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 14,
-  "lessonOrder": 7
+  "lessonIndex": 10,
+  "lessonOrder": 3,
+  "lessonTitle": "Gia đình & con người (2/2)"
  },
  {
   "simplified": "学习",
@@ -5077,8 +5326,9 @@
     "orderIndex": 0
    }
   ],
-  "lessonIndex": 15,
-  "lessonOrder": 1
+  "lessonIndex": 25,
+  "lessonOrder": 4,
+  "lessonTitle": "Động từ sinh hoạt cá nhân (2/2)"
  },
  {
   "simplified": "学校",
@@ -5097,8 +5347,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-学校.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 11,
-  "lessonOrder": 6
+  "lessonIndex": 14,
+  "lessonOrder": 5,
+  "lessonTitle": "Địa điểm & nơi chốn (1/2)"
  },
  {
   "simplified": "要",
@@ -5117,8 +5368,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-要.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 1,
-  "lessonOrder": 15
+  "lessonIndex": 22,
+  "lessonOrder": 4,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (1/2)"
  },
  {
   "simplified": "也",
@@ -5137,8 +5389,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-也.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 3,
-  "lessonOrder": 5
+  "lessonIndex": 7,
+  "lessonOrder": 10,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (1/2)"
  },
  {
   "simplified": "一",
@@ -5157,8 +5410,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-一.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 2,
-  "lessonOrder": 5
+  "lessonIndex": 3,
+  "lessonOrder": 1,
+  "lessonTitle": "Số đếm & số lượng (1/2)"
  },
  {
   "simplified": "一半",
@@ -5177,8 +5431,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-一半.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 14,
-  "lessonOrder": 12
+  "lessonIndex": 4,
+  "lessonOrder": 4,
+  "lessonTitle": "Số đếm & số lượng (2/2)"
  },
  {
   "simplified": "一点儿",
@@ -5197,8 +5452,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-一点儿.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 17,
-  "lessonOrder": 6
+  "lessonIndex": 4,
+  "lessonOrder": 11,
+  "lessonTitle": "Số đếm & số lượng (2/2)"
  },
  {
   "simplified": "衣服",
@@ -5217,8 +5473,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-衣服.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 11,
-  "lessonOrder": 2
+  "lessonIndex": 16,
+  "lessonOrder": 9,
+  "lessonTitle": "Đồ vật & phương tiện (1/2)"
  },
  {
   "simplified": "医生",
@@ -5237,8 +5494,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-医生.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 8,
-  "lessonOrder": 10
+  "lessonIndex": 9,
+  "lessonOrder": 7,
+  "lessonTitle": "Gia đình & con người (1/2)"
  },
  {
   "simplified": "一下",
@@ -5258,8 +5516,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-一下.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 20,
-  "lessonOrder": 13
+  "lessonIndex": 8,
+  "lessonOrder": 11,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (2/2)"
  },
  {
   "simplified": "一些",
@@ -5278,8 +5537,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-一些.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 8,
-  "lessonOrder": 5
+  "lessonIndex": 3,
+  "lessonOrder": 7,
+  "lessonTitle": "Số đếm & số lượng (1/2)"
  },
  {
   "simplified": "医院",
@@ -5298,8 +5558,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-医院.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 12,
-  "lessonOrder": 6
+  "lessonIndex": 14,
+  "lessonOrder": 7,
+  "lessonTitle": "Địa điểm & nơi chốn (1/2)"
  },
  {
   "simplified": "椅子",
@@ -5318,8 +5579,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-椅子.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 16,
-  "lessonOrder": 15
+  "lessonIndex": 17,
+  "lessonOrder": 11,
+  "lessonTitle": "Đồ vật & phương tiện (2/2)"
  },
  {
   "simplified": "有",
@@ -5338,8 +5600,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-有.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 1,
-  "lessonOrder": 11
+  "lessonIndex": 22,
+  "lessonOrder": 2,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (1/2)"
  },
  {
   "simplified": "有的",
@@ -5358,8 +5621,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-有的.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 16,
-  "lessonOrder": 5
+  "lessonIndex": 4,
+  "lessonOrder": 8,
+  "lessonTitle": "Số đếm & số lượng (2/2)"
  },
  {
   "simplified": "有些",
@@ -5379,8 +5643,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-有些.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 10,
-  "lessonOrder": 13
+  "lessonIndex": 3,
+  "lessonOrder": 11,
+  "lessonTitle": "Số đếm & số lượng (1/2)"
  },
  {
   "simplified": "有（一）点儿",
@@ -5399,8 +5664,9 @@
   "needsReview": true,
   "audioUrl": null,
   "source": "krmanik/HSK-3.0@2025-11; vi:none",
-  "lessonIndex": 20,
-  "lessonOrder": 14
+  "lessonIndex": 4,
+  "lessonOrder": 13,
+  "lessonTitle": "Số đếm & số lượng (2/2)"
  },
  {
   "simplified": "雨",
@@ -5419,8 +5685,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-雨.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 16,
-  "lessonOrder": 6
+  "lessonIndex": 19,
+  "lessonOrder": 1,
+  "lessonTitle": "Thời tiết"
  },
  {
   "simplified": "元",
@@ -5439,8 +5706,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-元.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 15,
-  "lessonOrder": 9
+  "lessonIndex": 14,
+  "lessonOrder": 11,
+  "lessonTitle": "Địa điểm & nơi chốn (1/2)"
  },
  {
   "simplified": "月",
@@ -5459,8 +5727,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-月.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 9,
-  "lessonOrder": 4
+  "lessonIndex": 12,
+  "lessonOrder": 2,
+  "lessonTitle": "Thời gian & ngày tháng (2/3)"
  },
  {
   "simplified": "再",
@@ -5479,8 +5748,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-再.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 4,
-  "lessonOrder": 8
+  "lessonIndex": 8,
+  "lessonOrder": 4,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (2/2)"
  },
  {
   "simplified": "在",
@@ -5501,8 +5771,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-在.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 1,
-  "lessonOrder": 7
+  "lessonIndex": 7,
+  "lessonOrder": 4,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (1/2)"
  },
  {
   "simplified": "再见",
@@ -5521,8 +5792,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-再见.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 10,
-  "lessonOrder": 1
+  "lessonIndex": 1,
+  "lessonOrder": 6,
+  "lessonTitle": "Chào hỏi & giao tiếp xã giao"
  },
  {
   "simplified": "早",
@@ -5541,8 +5813,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-早.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 9,
-  "lessonOrder": 5
+  "lessonIndex": 20,
+  "lessonOrder": 8,
+  "lessonTitle": "Tính từ mô tả (1/2)"
  },
  {
   "simplified": "早饭",
@@ -5562,7 +5835,8 @@
   "audioUrl": "/media/audio/cmn-早饭.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
   "lessonIndex": 18,
-  "lessonOrder": 12
+  "lessonOrder": 12,
+  "lessonTitle": "Đồ ăn & thức uống"
  },
  {
   "simplified": "早上",
@@ -5582,7 +5856,8 @@
   "audioUrl": "/media/audio/cmn-早上.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
   "lessonIndex": 12,
-  "lessonOrder": 11
+  "lessonOrder": 9,
+  "lessonTitle": "Thời gian & ngày tháng (2/3)"
  },
  {
   "simplified": "怎么",
@@ -5601,8 +5876,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-怎么.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 3,
-  "lessonOrder": 14
+  "lessonIndex": 5,
+  "lessonOrder": 4,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (1/2)"
  },
  {
   "simplified": "怎么样",
@@ -5621,8 +5897,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-怎么样.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 7,
-  "lessonOrder": 10
+  "lessonIndex": 5,
+  "lessonOrder": 12,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (1/2)"
  },
  {
   "simplified": "找",
@@ -5641,8 +5918,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-找.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 5,
-  "lessonOrder": 5
+  "lessonIndex": 23,
+  "lessonOrder": 2,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (2/2)"
  },
  {
   "simplified": "这",
@@ -5661,8 +5939,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-这.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 1,
-  "lessonOrder": 12
+  "lessonIndex": 5,
+  "lessonOrder": 1,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (1/2)"
  },
  {
   "simplified": "这边",
@@ -5681,8 +5960,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-这边.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 12,
-  "lessonOrder": 15
+  "lessonIndex": 6,
+  "lessonOrder": 7,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (2/2)"
  },
  {
   "simplified": "这个",
@@ -5701,8 +5981,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-这个.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 20,
-  "lessonOrder": 15
+  "lessonIndex": 6,
+  "lessonOrder": 11,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (2/2)"
  },
  {
   "simplified": "这里",
@@ -5721,8 +6002,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-这里.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 4,
-  "lessonOrder": 10
+  "lessonIndex": 5,
+  "lessonOrder": 5,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (1/2)"
  },
  {
   "simplified": "真",
@@ -5742,8 +6024,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-真.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 3,
-  "lessonOrder": 12
+  "lessonIndex": 8,
+  "lessonOrder": 1,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (2/2)"
  },
  {
   "simplified": "正在",
@@ -5762,8 +6045,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-正在.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 11,
-  "lessonOrder": 13
+  "lessonIndex": 8,
+  "lessonOrder": 9,
+  "lessonTitle": "Trợ từ & phó từ ngữ pháp cơ bản (2/2)"
  },
  {
   "simplified": "这儿",
@@ -5782,8 +6066,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-这儿.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 7,
-  "lessonOrder": 3
+  "lessonIndex": 5,
+  "lessonOrder": 10,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (1/2)"
  },
  {
   "simplified": "这些",
@@ -5803,7 +6088,8 @@
   "audioUrl": "/media/audio/cmn-这些.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
   "lessonIndex": 5,
-  "lessonOrder": 11
+  "lessonOrder": 7,
+  "lessonTitle": "Đại từ chỉ định & câu hỏi (1/2)"
  },
  {
   "simplified": "只",
@@ -5823,8 +6109,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-只.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 4,
-  "lessonOrder": 4
+  "lessonIndex": 3,
+  "lessonOrder": 3,
+  "lessonTitle": "Số đếm & số lượng (1/2)"
  },
  {
   "simplified": "知道",
@@ -5843,8 +6130,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-知道.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 2,
-  "lessonOrder": 7
+  "lessonIndex": 22,
+  "lessonOrder": 7,
+  "lessonTitle": "Động từ nói, nghĩ, biết, thích (1/2)"
  },
  {
   "simplified": "中国",
@@ -5863,8 +6151,9 @@
   "needsReview": false,
   "audioUrl": "/media/audio/cmn-中国.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
-  "lessonIndex": 15,
-  "lessonOrder": 6
+  "lessonIndex": 14,
+  "lessonOrder": 10,
+  "lessonTitle": "Địa điểm & nơi chốn (1/2)"
  },
  {
   "simplified": "中文",
@@ -5883,8 +6172,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-中文.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 19,
-  "lessonOrder": 11
+  "lessonIndex": 15,
+  "lessonOrder": 10,
+  "lessonTitle": "Địa điểm & nơi chốn (2/2)"
  },
  {
   "simplified": "中午",
@@ -5903,8 +6193,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-中午.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 18,
-  "lessonOrder": 2
+  "lessonIndex": 13,
+  "lessonOrder": 6,
+  "lessonTitle": "Thời gian & ngày tháng (3/3)"
  },
  {
   "simplified": "中学",
@@ -5923,8 +6214,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-中学.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 19,
-  "lessonOrder": 2
+  "lessonIndex": 15,
+  "lessonOrder": 5,
+  "lessonTitle": "Địa điểm & nơi chốn (2/2)"
  },
  {
   "simplified": "中学生",
@@ -5943,8 +6235,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-中学生.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 20,
-  "lessonOrder": 2
+  "lessonIndex": 10,
+  "lessonOrder": 12,
+  "lessonTitle": "Gia đình & con người (2/2)"
  },
  {
   "simplified": "住",
@@ -5963,8 +6256,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-住.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 7,
-  "lessonOrder": 14
+  "lessonIndex": 26,
+  "lessonOrder": 8,
+  "lessonTitle": "Động từ đi lại & công việc (1/2)"
  },
  {
   "simplified": "桌子",
@@ -5983,8 +6277,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-桌子.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 15,
-  "lessonOrder": 14
+  "lessonIndex": 17,
+  "lessonOrder": 8,
+  "lessonTitle": "Đồ vật & phương tiện (2/2)"
  },
  {
   "simplified": "字",
@@ -6003,8 +6298,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-字.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 14,
-  "lessonOrder": 14
+  "lessonIndex": 17,
+  "lessonOrder": 6,
+  "lessonTitle": "Đồ vật & phương tiện (2/2)"
  },
  {
   "simplified": "坐",
@@ -6023,8 +6319,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-坐.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 8,
-  "lessonOrder": 14
+  "lessonIndex": 24,
+  "lessonOrder": 2,
+  "lessonTitle": "Động từ sinh hoạt cá nhân (1/2)"
  },
  {
   "simplified": "做",
@@ -6043,8 +6340,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-做.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 3,
-  "lessonOrder": 7
+  "lessonIndex": 26,
+  "lessonOrder": 4,
+  "lessonTitle": "Động từ đi lại & công việc (1/2)"
  },
  {
   "simplified": "做饭",
@@ -6061,8 +6359,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-做饭.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 18,
-  "lessonOrder": 9
+  "lessonIndex": 27,
+  "lessonOrder": 8,
+  "lessonTitle": "Động từ đi lại & công việc (2/2)"
  },
  {
   "simplified": "昨天",
@@ -6081,8 +6380,9 @@
   "needsReview": true,
   "audioUrl": "/media/audio/cmn-昨天.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
-  "lessonIndex": 13,
-  "lessonOrder": 1
+  "lessonIndex": 12,
+  "lessonOrder": 10,
+  "lessonTitle": "Thời gian & ngày tháng (2/3)"
  },
  {
   "simplified": "啊",
