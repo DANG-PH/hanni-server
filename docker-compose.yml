@@ -11,6 +11,10 @@ services:
       - "127.0.0.1:2222:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - default
+      # Mạng chung với pgAdmin (MICROSERVICE_NGINX_SERVICE) để quản lý DB qua pgAdmin.
+      - shared_admin
 
   redis:
     image: redis:7-alpine
@@ -24,3 +28,9 @@ services:
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  default:
+  shared_admin:
+    name: microservice_nginx_service_default
+    external: true
