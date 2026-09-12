@@ -20,6 +20,7 @@ import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
 import { LearnModule } from './modules/learn/learn.module';
 import { VideosModule } from './modules/videos/videos.module';
 import { MailModule } from './modules/mail/mail.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ProgressModule } from './modules/progress/progress.module';
 import { PushModule } from './modules/push/push.module';
 import { SrsModule } from './modules/srs/srs.module';
@@ -72,6 +73,7 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
     ExamsModule,
     LeaderboardModule,
     PushModule,
+    NotificationsModule,
     HealthModule,
   ],
   providers: [

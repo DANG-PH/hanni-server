@@ -10,6 +10,8 @@ export const AppEvent = {
   LevelCompleted: 'level.completed',
   StreakUpdated: 'streak.updated',
   QuizCompleted: 'quiz.completed',
+  CommentCreated: 'comment.created',
+  VideoLiked: 'video.liked',
 } as const;
 
 export interface WordReviewedPayload {
@@ -45,4 +47,17 @@ export interface QuizCompletedPayload {
   userId: string;
   quizAttemptId: string;
   scorePct: number;
+}
+
+export interface CommentCreatedPayload {
+  commentId: string;
+  videoId: string;
+  authorId: string;
+  /** null = bình luận gốc (không phải trả lời) */
+  parentId: string | null;
+}
+
+export interface VideoLikedPayload {
+  videoId: string;
+  likerId: string;
 }

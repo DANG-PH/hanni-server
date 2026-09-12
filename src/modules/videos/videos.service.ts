@@ -52,7 +52,7 @@ export class VideosService {
     if (q.kind) where.kind = q.kind;
     if (q.mine === 'true') where.createdById = userId;
 
-    const [videos, progress] = await Promise.all([
+    const [videos, progress, likeCounts, myLikes] = await Promise.all([
       this.prisma.video.findMany({
         where,
         orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
@@ -75,8 +75,20 @@ export class VideosService {
         where: { userId },
         select: { videoId: true, linesRead: true, completedAt: true },
       }),
+      this.prisma.videoLike.groupBy({
+        by: ['videoId'],
+        _count: { videoId: true },
+      }),
+      this.prisma.videoLike.findMany({
+        where: { userId },
+        select: { videoId: true },
+      }),
     ]);
     const pBy = new Map(progress.map((p) => [p.videoId, p]));
+    const likeBy = new Map(
+      likeCounts.map((l) => [l.videoId, l._count.videoId]),
+    );
+    const likedSet = new Set(myLikes.map((l) => l.videoId));
     return videos.map((v) => ({
       ...v,
       isOwner: v.createdById === userId,
@@ -84,6 +96,8 @@ export class VideosService {
         ? Math.round(((pBy.get(v.id)?.linesRead ?? 0) / v.sentenceCount) * 100)
         : 0,
       completed: Boolean(pBy.get(v.id)?.completedAt),
+      likeCount: likeBy.get(v.id) ?? 0,
+      likedByMe: likedSet.has(v.id),
     }));
   }
 
@@ -93,13 +107,23 @@ export class VideosService {
       include: { lines: { orderBy: { index: 'asc' } } },
     });
     if (!video) throw new NotFoundException('Không tìm thấy video');
-    const progress = await this.prisma.userVideoProgress.findUnique({
-      where: { userId_videoId: { userId, videoId: id } },
-    });
+    const [progress, likeCount, myLike, commentCount] = await Promise.all([
+      this.prisma.userVideoProgress.findUnique({
+        where: { userId_videoId: { userId, videoId: id } },
+      }),
+      this.prisma.videoLike.count({ where: { videoId: id } }),
+      this.prisma.videoLike.findUnique({
+        where: { userId_videoId: { userId, videoId: id } },
+      }),
+      this.prisma.videoComment.count({ where: { videoId: id } }),
+    ]);
     const { createdById, ...safe } = video;
     return {
       ...safe,
       isOwner: createdById === userId,
+      likeCount,
+      likedByMe: Boolean(myLike),
+      commentCount,
       progress: progress
         ? {
             lastLineIndex: progress.lastLineIndex,

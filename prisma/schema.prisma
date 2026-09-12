@@ -137,22 +137,26 @@ model User {
   updatedAt       DateTime  @updatedAt
   lastActiveAt    DateTime?
 
-  accounts          Account[]
-  refreshTokens     RefreshToken[]
-  settings          UserSettings?
-  wordProgress      UserWordProgress[]
-  reviewLogs        ReviewLog[]
-  studySessions     StudySession[]
-  dailyActivity     UserDailyActivity[]
-  streak            UserStreak?
-  achievements      UserAchievement[]
-  levelProgress     UserLevelProgress[]
-  lessonProgress    UserLessonProgress[]
-  quizAttempts      QuizAttempt[]
-  videos            Video[]
-  videoProgress     UserVideoProgress[]
-  examAttempts      ExamAttempt[]
-  pushSubscriptions PushSubscription[]
+  accounts            Account[]
+  refreshTokens       RefreshToken[]
+  settings            UserSettings?
+  wordProgress        UserWordProgress[]
+  reviewLogs          ReviewLog[]
+  studySessions       StudySession[]
+  dailyActivity       UserDailyActivity[]
+  streak              UserStreak?
+  achievements        UserAchievement[]
+  levelProgress       UserLevelProgress[]
+  lessonProgress      UserLessonProgress[]
+  quizAttempts        QuizAttempt[]
+  videos              Video[]
+  videoProgress       UserVideoProgress[]
+  videoComments       VideoComment[]
+  videoLikes          VideoLike[]
+  examAttempts        ExamAttempt[]
+  pushSubscriptions   PushSubscription[]
+  notifications       Notification[]       @relation("NotificationRecipient")
+  notificationsCaused Notification[]       @relation("NotificationActor")
 
   @@index([lastActiveAt])
 }
@@ -566,8 +570,11 @@ model Video {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  lines    VideoLine[]
-  progress UserVideoProgress[]
+  lines         VideoLine[]
+  progress      UserVideoProgress[]
+  comments      VideoComment[]
+  likes         VideoLike[]
+  notifications Notification[]
 
   @@index([hskLevel])
   @@index([sortOrder, createdAt])
@@ -603,6 +610,40 @@ model UserVideoProgress {
 
   @@unique([userId, videoId])
   @@index([userId])
+}
+
+/// Bình luận ở trang xem video. `parentId` null = bình luận gốc; có giá trị =
+/// trả lời (chỉ 1 cấp, không cho trả lời của trả lời — giữ giao diện đơn giản).
+model VideoComment {
+  id        String         @id @default(uuid()) @db.Uuid
+  videoId   String         @db.Uuid
+  video     Video          @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  userId    String         @db.Uuid
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String         @db.VarChar(2000)
+  parentId  String?        @db.Uuid
+  parent    VideoComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   VideoComment[] @relation("CommentReplies")
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  notifications Notification[]
+
+  @@index([videoId, parentId, createdAt])
+  @@index([userId])
+}
+
+/// Lượt thích video — 1 user thích 1 video tối đa 1 lần.
+model VideoLike {
+  id        String   @id @default(uuid()) @db.Uuid
+  videoId   String   @db.Uuid
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, videoId])
+  @@index([videoId])
 }
 
 // ===================================================================
@@ -662,4 +703,34 @@ model PushSubscription {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// ===================================================================
+//  THÔNG BÁO TRONG APP (realtime qua WebSocket + lưu DB)
+// ===================================================================
+
+enum NotificationType {
+  COMMENT_REPLY // ai đó trả lời bình luận của mình
+  VIDEO_COMMENT // ai đó bình luận vào video mình đã thêm
+  VIDEO_LIKE // ai đó thích video mình đã thêm
+}
+
+/// Thông báo trong app, lưu DB để xem lại lịch sử; đẩy realtime qua
+/// NotificationsGateway (Socket.IO) ngay khi tạo. Không xoá khi đã đọc — chỉ đánh dấu `readAt`.
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @db.Uuid
+  user      User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  actorId   String?          @db.Uuid
+  actor     User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  videoId   String?          @db.Uuid
+  video     Video?           @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  commentId String?          @db.Uuid
+  comment   VideoComment?    @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, readAt])
 }

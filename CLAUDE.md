@@ -7,6 +7,7 @@ API học tiếng Trung theo chuẩn **HSK 3.0** (9 cấp). Xem `README.md` cho 
 - PostgreSQL qua **Prisma 6** (`prisma/schema.prisma`)
 - Redis (ioredis) — state OAuth, cache
 - `@nestjs/event-emitter` (in-process) cho luồng sự kiện; handler phải **idempotent**
+- `@nestjs/websockets` + `socket.io` (namespace `/notifications`) — đẩy thông báo realtime
 
 ## Cấu trúc thư mục
 ```
@@ -16,7 +17,8 @@ src/
 ├── common/        decorators (CurrentUser, Public, Roles), filters, time.util
 ├── events/        events.ts — hằng tên + kiểu payload
 ├── modules/<domain>/   auth · users · mail · vocabulary · srs · progress · gamification
-│                        · learn · videos · grammar · exams · leaderboard
+│                        · learn · videos (+ videos/comments, videos/likes) · grammar
+│                        · exams · leaderboard · push · notifications (WebSocket gateway)
 └── health/
 prisma/  schema.prisma + seed/ (hsk-levels, achievements, words)
 scripts/import/  ETL nguồn mở → data/processed/words.seed.json
@@ -43,6 +45,21 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   trong env, sinh bằng `npx web-push generate-vapid-keys`). Để trống 2 khóa thì API trả 503 rõ ràng,
   không chặn app khởi động. `PushSubscription` xoá tự động khi gửi gặp lỗi 404/410 (thiết bị đã gỡ
   đăng ký). Chỉ có gửi thủ công (`POST /push/test`) — CHƯA có scheduler nhắc học tự động.
+- **Bình luận + thích video + thông báo (`src/modules/videos/comments`, `.../likes`,
+  `src/modules/notifications`)**: bình luận 1 cấp trả lời (trả lời của trả lời tự gộp vào bình
+  luận gốc — xem `CommentsService.create`), thích video kiểu upsert (idempotent). Tạo bình
+  luận/thích phát `AppEvent.CommentCreated` / `AppEvent.VideoLiked` (xem `src/events/events.ts`)
+  → `NotificationsListener` tạo dòng `Notification` (bỏ qua nếu người gây ra chính là người
+  nhận, xem `NotificationsService.create`) → đẩy realtime qua `NotificationsGateway`
+  (Socket.IO, namespace `/notifications`, mỗi user 1 "room" `user:<id>`). Gateway xác thực bằng
+  cách tự đọc + verify cookie `hanni_access` trong handshake (không qua `JwtAuthGuard` vì đó là
+  guard HTTP) — cookie `SameSite=Lax` khiến origin lạ không gửi kèm được nên CORS gateway để
+  `origin: true` (phản chiếu origin) vẫn an toàn. `main.ts` gắn tường minh
+  `app.useWebSocketAdapter(new IoAdapter(app))`, chạy chung cổng HTTP (không cần cổng riêng,
+  nhưng Nginx production phải proxy đúng header `Upgrade`/`Connection` cho path
+  `/notifications/socket.io/`). 3 loại thông báo: `COMMENT_REPLY`, `VIDEO_COMMENT` (bình luận
+  vào video mình thêm), `VIDEO_LIKE` (thích video mình thêm) — video hệ thống seed sẵn có
+  `createdById = null` nên không phát 2 loại sau cho video đó.
 
 ## Lệnh
 `npm run start:dev` · `npm run build` · `npm run prisma:migrate` · `npm run db:seed` ·
@@ -51,9 +68,11 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 ## Trạng thái hiện tại
 Core đã dựng: auth (email + Google), vocabulary, SRS (SM-2 + FSRS), progress, gamification
 (streak/achievements/quiz), learn (744 bài — TOÀN BỘ HSK1-9 đã có chủ đề thật, xem bên dưới),
-videos (học qua video), grammar (40 điểm HSK 1–3 + 195 điểm HSK 4–9 có giải thích thật, xem
-bên dưới), exams (lịch sử kiểm tra), leaderboard (xếp theo từ đã thuộc), push (thông báo đẩy
-Web Push, VAPID), health, Swagger.
+videos (học qua video, kèm bình luận 1 cấp trả lời + thích video), grammar (40 điểm HSK 1–3 +
+195 điểm HSK 4–9 có giải thích thật, xem bên dưới), exams (lịch sử kiểm tra), leaderboard (xếp
+theo từ đã thuộc), push (thông báo đẩy Web Push, VAPID), notifications (thông báo trong app —
+lưu DB + đẩy realtime qua WebSocket khi có người trả lời bình luận/bình luận hoặc thích video
+mình thêm), health, Swagger.
 Seed đầy đủ để deploy: 9 cấp HSK · huy hiệu · 10.9k từ (`data/processed/words.seed.json`) ·
 744 bài, TOÀN BỘ 9 cấp đều chia theo chủ đề thật (xem bên dưới) — không còn cấp nào chia đều
 15 từ/bài theo tần suất · 40 điểm ngữ pháp HSK 1–3 + 349 mục HSK 4–9 (đại cương,
@@ -100,4 +119,5 @@ theo từng câu, client tự quyết định ẩn/hiện Hán tự.
 
 Chưa làm (roadmap, chừa chỗ): câu ví dụ cho từ vựng, cấu trúc đề thi HSK
 thật đầy đủ (nhiều phần nghe/đọc/viết đúng số câu + thời gian từng cấp — hiện mới có câu
-nghe/đọc trộn vào quiz từ vựng, chưa đúng cấu trúc thật), RAG chatbot, minigame, social/bạn bè.
+nghe/đọc trộn vào quiz từ vựng, chưa đúng cấu trúc thật), RAG chatbot, minigame, kết bạn/theo
+dõi (mới có bình luận + thích video + thông báo, chưa có khái niệm bạn bè/follow).
