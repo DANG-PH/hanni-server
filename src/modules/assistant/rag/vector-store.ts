@@ -1,5 +1,7 @@
 export type EmbeddedChunk = {
-  grammarPointId: string;
+  /** vd "grammar:<uuid>" hoặc "faq:0" — định danh nguồn, dùng để đối chiếu
+   * resume index (xem AssistantService.buildIndex), không phải khoá hiển thị. */
+  sourceId: string;
   title: string;
   text: string;
   embedding: number[];

@@ -86,12 +86,21 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   thể làm lại khảo sát bất cứ lúc nào (upsert, ghi đè `completedAt`).
 - **Trợ lý AI Hanni (`src/modules/assistant`)**: RAG qua Gemini (`@google/genai`), kiến trúc
   tham khảo từ project `tech-books-backend` cá nhân (in-memory vector store, model fallback
-  chain `CHAT_MODELS`, cache index xuống `.cache/assistant-index.json` — KHÔNG commit). Nguồn
-  RAG là các `GrammarPoint` ĐÃ CÓ giải thích thật (`explanationVi != ''`, ~235 điểm) — mỗi điểm
-  = 1 chunk (không cần chia nhỏ như PDF vì đã ngắn gọn sẵn), KHÔNG dùng phần đại cương thô chưa
-  giải thích. `POST /assistant/ask` (throttle 20/60s) ground thêm bằng dữ kiện cá nhân người hỏi
-  (streak, số từ đã thuộc, số từ đến hạn, đề xuất từ `OnboardingProfile` nếu có) để trả lời tự
-  nhiên hơn "hôm nay nên học gì". Nhiều `ChatSession` song song như ChatGPT/Claude (`title` tự
+  chain `CHAT_MODELS`, cache index xuống `.cache/assistant-index.json` — KHÔNG commit). Có
+  lịch sử hội thoại thật: mỗi lần hỏi, `HISTORY_LIMIT=16` tin nhắn gần nhất của ĐÚNG session đó
+  được gửi kèm cho Gemini (`buildContents()`), nên câu hỏi nối tiếp ("từ đó viết Hán tự sao?")
+  hiểu đúng ngữ cảnh câu trước — không phải mỗi câu hỏi là 1 lượt độc lập. Nguồn RAG (embedding,
+  đánh index lúc boot qua `collectIndexSources()`) gồm 2 phần TĨNH: `GrammarPoint` ĐÃ CÓ giải
+  thích thật (`explanationVi != ''`, ~235 điểm — KHÔNG dùng phần đại cương thô chưa giải thích)
+  và `FAQ_ENTRIES` (6 câu hỏi thường gặp, chép tay khớp với FAQ trang chủ client) — mỗi mục = 1
+  chunk (không cần chia nhỏ như PDF vì đã ngắn gọn sẵn), so theo `sourceId` (`grammar:<uuid>` /
+  `faq:<i>`) để RESUME đánh index đúng phần còn thiếu, không làm lại từ đầu khi hết quota giữa
+  chừng. Cộng thêm 1 nguồn ĐỘNG không tốn quota: `searchWordsByChineseTerms()` bắt Hán tự xuất
+  hiện trong câu hỏi rồi tra thẳng `Word` (contains, không cần embed) — cho ground truth chính
+  xác tuyệt đối về cấp HSK/nghĩa của ĐÚNG từ đang hỏi thay vì để model đoán. `POST /assistant/ask`
+  (throttle 20/60s) ground thêm bằng dữ kiện cá nhân người hỏi (streak, số từ đã thuộc, số từ
+  đến hạn, đề xuất từ `OnboardingProfile` nếu có) để trả lời tự nhiên hơn "hôm nay nên học gì".
+  Nhiều `ChatSession` song song như ChatGPT/Claude (`title` tự
   đặt từ tin nhắn đầu, không đổi lại sau) — `GET/POST /assistant/sessions`,
   `GET /assistant/sessions/:id/messages`, `DELETE /assistant/sessions/:id`. `POST /assistant/ask`
   nhận `sessionId` tuỳ chọn — bỏ trống thì tự tiếp tục phiên gần nhất (tự tạo nếu chưa có).

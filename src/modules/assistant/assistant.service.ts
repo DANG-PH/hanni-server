@@ -32,6 +32,41 @@ interface PersistedIndex {
   chunks: EmbeddedChunk[];
 }
 
+interface IndexSourceItem {
+  sourceId: string;
+  title: string;
+  text: string;
+}
+
+/** Khớp với FAQ hiển thị ở trang chủ (`app/(site)/page.tsx` bên client) —
+ * chép tay vì đây là nội dung tĩnh nhỏ, không đáng để 2 repo phụ thuộc nhau. */
+const FAQ_ENTRIES: [question: string, answer: string][] = [
+  [
+    'Mới bắt đầu học tiếng Trung, mình nên học từ đâu?',
+    'Bạn có thể bắt đầu với lộ trình HSK 1. Làm quen với Hán tự và pinyin trong từng bài, nghe phát âm rồi dùng flashcard để ôn lại những từ đã học.',
+  ],
+  [
+    'Hanni giúp mình ghi nhớ từ vựng như thế nào?',
+    'Sau mỗi thẻ, bạn đánh giá mức độ ghi nhớ. Lịch ôn được điều chỉnh để bạn gặp lại từ vựng đúng lúc. Bạn có thể chọn cách ôn và số từ mới mỗi ngày trong cài đặt.',
+  ],
+  [
+    'Mình có thể chọn cấp HSK phù hợp không?',
+    'Có. Lộ trình và thư viện từ vựng có bộ lọc cấp HSK. Chọn cấp phù hợp với kiến thức hiện tại, sau đó theo dõi những từ đang học và đã thuộc trong trang tiến độ.',
+  ],
+  [
+    'Có cần biết tiếng Anh để sử dụng Hanni không?',
+    'Giao diện được viết bằng tiếng Việt. Từ vựng hiển thị nghĩa tiếng Việt khi đã có bản dịch; những mục chưa có sẽ ghi rõ nghĩa tiếng Anh hoặc trạng thái đang cập nhật.',
+  ],
+  [
+    'Mình có thể luyện tập trên điện thoại không?',
+    'Có. Bạn có thể mở Hanni bằng trình duyệt trên điện thoại, dùng flashcard, nghe âm thanh và tiếp tục học với cùng tài khoản. Tính năng ghi âm cần quyền truy cập micro của trình duyệt.',
+  ],
+  [
+    'Tiến độ học có được lưu lại không?',
+    'Các lượt ôn đã gửi thành công được lưu vào tài khoản. Trang tổng quan, tiến độ và huy hiệu sẽ giúp bạn theo dõi hành trình học. Phần ghi âm luyện nói dùng để nghe lại trên thiết bị trong buổi luyện hiện tại.',
+  ],
+];
+
 // Trợ lý AI Hanni: RAG trên các điểm ngữ pháp ĐÃ CÓ giải thích thật (không
 // phải toàn bộ đại cương — phần chỉ liệt kê từ loại/kiểu câu không có nội
 // dung để ground), cộng với vài thông tin cá nhân hoá (streak, số từ đã
@@ -116,13 +151,9 @@ export class AssistantService implements OnModuleInit {
     await fs.writeFile(this.indexPath, JSON.stringify(payload));
   }
 
-  // Chỉ embed những điểm ngữ pháp CHƯA có trong index cũ (so theo
-  // grammarPointId, không phải đếm tổng số) — free tier Gemini giới hạn
-  // ~100 lượt embed/ngày, không đủ đánh hết ~235 điểm trong 1 lần, nên nếu
-  // dừng giữa chừng (hết quota/app restart) thì lần sau CHỈ đánh tiếp phần
-  // còn thiếu thay vì embed lại từ đầu — tốn gấp đôi/ba quota một cách vô ích.
-  private async buildIndex(): Promise<void> {
-    if (!this.genAI) return;
+  /** Nguồn ngữ pháp (từ DB) + FAQ Hanni (tĩnh, khớp với trang chủ) gộp
+   * chung 1 danh sách để đánh index cùng cơ chế resume bên dưới. */
+  private async collectIndexSources(): Promise<IndexSourceItem[]> {
     const points = await this.prisma.grammarPoint.findMany({
       where: { explanationVi: { not: '' } },
       select: {
@@ -136,47 +167,66 @@ export class AssistantService implements OnModuleInit {
       },
       orderBy: [{ hskLevel: 'asc' }, { orderIndex: 'asc' }],
     });
+    const grammarItems: IndexSourceItem[] = points.map((p) => ({
+      sourceId: `grammar:${p.id}`,
+      title: p.titleVi,
+      text: [
+        `[Ngữ pháp HSK ${p.hskLevel} - "${p.titleVi}" (${p.titleZh})]`,
+        p.summaryVi,
+        p.explanationVi,
+        p.patterns.length ? `Mẫu câu: ${p.patterns.join('; ')}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    }));
+    const faqItems: IndexSourceItem[] = FAQ_ENTRIES.map(([q, a], i) => ({
+      sourceId: `faq:${i}`,
+      title: q,
+      text: `[Câu hỏi thường gặp Hanni - "${q}"]\n${a}`,
+    }));
+    return [...grammarItems, ...faqItems];
+  }
+
+  // Chỉ embed những đoạn CHƯA có trong index cũ (so theo sourceId, không
+  // phải đếm tổng số) — free tier Gemini giới hạn ~100 lượt embed/ngày,
+  // không đủ đánh hết ~240 đoạn trong 1 lần, nên nếu dừng giữa chừng (hết
+  // quota/app restart) thì lần sau CHỈ đánh tiếp phần còn thiếu thay vì
+  // embed lại từ đầu — tốn gấp đôi/ba quota một cách vô ích.
+  private async buildIndex(): Promise<void> {
+    if (!this.genAI) return;
+    const sources = await this.collectIndexSources();
 
     const cached = (await this.loadPersistedIndex()) ?? [];
-    const pointIds = new Set(points.map((p) => p.id));
-    // bỏ chunk của điểm ngữ pháp đã xoá/không còn giải thích thật nữa
-    const stillValid = cached.filter((c) => pointIds.has(c.grammarPointId));
-    const cachedIds = new Set(stillValid.map((c) => c.grammarPointId));
-    const missing = points.filter((p) => !cachedIds.has(p.id));
+    const sourceIds = new Set(sources.map((s) => s.sourceId));
+    // bỏ chunk của nguồn đã xoá/không còn hợp lệ nữa
+    const stillValid = cached.filter((c) => sourceIds.has(c.sourceId));
+    const cachedIds = new Set(stillValid.map((c) => c.sourceId));
+    const missing = sources.filter((s) => !cachedIds.has(s.sourceId));
 
     if (missing.length === 0) {
       this.vectorStore.load(stillValid);
       this.lastSyncAt = new Date();
       this.logger.log(
-        `[Assistant] Nạp ${stillValid.length} đoạn ngữ pháp từ index có sẵn`,
+        `[Assistant] Nạp ${stillValid.length} đoạn từ index có sẵn`,
       );
       if (stillValid.length !== cached.length) await this.persistIndex();
       return;
     }
 
     this.logger.log(
-      `[Assistant] ${missing.length}/${points.length} điểm ngữ pháp chưa đánh index — bắt đầu…`,
+      `[Assistant] ${missing.length}/${sources.length} đoạn chưa đánh index — bắt đầu…`,
     );
     const embedded: EmbeddedChunk[] = [...stillValid];
     let quotaExceeded = false;
     for (let i = 0; i < missing.length; i += this.EMBED_BATCH_SIZE) {
       const batch = missing.slice(i, i + this.EMBED_BATCH_SIZE);
-      const texts = batch.map((p) =>
-        [
-          `[Ngữ pháp HSK ${p.hskLevel} - "${p.titleVi}" (${p.titleZh})]`,
-          p.summaryVi,
-          p.explanationVi,
-          p.patterns.length ? `Mẫu câu: ${p.patterns.join('; ')}` : '',
-        ]
-          .filter(Boolean)
-          .join('\n'),
-      );
+      const texts = batch.map((s) => s.text);
       try {
         const vectors = await this.embedBatch(texts);
-        batch.forEach((p, idx) =>
+        batch.forEach((s, idx) =>
           embedded.push({
-            grammarPointId: p.id,
-            title: p.titleVi,
+            sourceId: s.sourceId,
+            title: s.title,
             text: texts[idx],
             embedding: vectors[idx],
           }),
@@ -191,7 +241,7 @@ export class AssistantService implements OnModuleInit {
         }
         this.lastError = (err as Error).message;
         this.logger.warn(
-          `[Assistant] Bỏ qua 1 nhóm điểm ngữ pháp khi đánh index: ${(err as Error).message}`,
+          `[Assistant] Bỏ qua 1 nhóm đoạn khi đánh index: ${(err as Error).message}`,
         );
       }
       await new Promise((r) => setTimeout(r, EMBED_DELAY_MS));
@@ -201,7 +251,7 @@ export class AssistantService implements OnModuleInit {
     this.lastSyncAt = new Date();
     await this.persistIndex();
     this.logger.log(
-      `[Assistant] Đã đánh index ${embedded.length}/${points.length} điểm ngữ pháp${quotaExceeded ? ' (dở dang, hết quota — tự tiếp ở lần chạy sau)' : ''}`,
+      `[Assistant] Đã đánh index ${embedded.length}/${sources.length} đoạn${quotaExceeded ? ' (dở dang, hết quota — tự tiếp ở lần chạy sau)' : ''}`,
     );
   }
 
@@ -332,8 +382,20 @@ export class AssistantService implements OnModuleInit {
           `[Assistant] embed câu hỏi thất bại: ${(err as Error).message}`,
         );
       }
-      const context = relevant
-        .map((c) => `[Ngữ pháp Hanni - "${c.title}"]\n${c.text}`)
+      // `c.text` đã tự mang nhãn nguồn riêng (vd "[Ngữ pháp HSK..." hoặc
+      // "[Câu hỏi thường gặp Hanni...") lúc đánh index, không cần bọc thêm.
+      const ragContext = relevant.map((c) => c.text).join('\n\n---\n\n');
+
+      // Tra từ điển thẳng theo Hán tự có trong câu hỏi — không tốn quota
+      // embedding (chỉ query DB), nhưng cho ground truth chính xác tuyệt đối
+      // về cấp HSK/nghĩa của TỪ CỤ THỂ đang được hỏi, thay vì để model đoán.
+      const words = await this.searchWordsByChineseTerms(message);
+      const wordContext = words
+        .map((w) => this.wordMetadataBlock(w))
+        .join('\n');
+
+      const context = [ragContext, wordContext]
+        .filter(Boolean)
         .join('\n\n---\n\n');
 
       const systemPrompt =
@@ -355,8 +417,9 @@ Câu hỏi: ${message}
 
 Hướng dẫn trả lời:
 - Trả lời câu hỏi tự nhiên, đầy đủ bằng kiến thức tiếng Trung của bạn — không cần bó buộc trong các đoạn trích ở trên.
-- Nếu có điểm ngữ pháp Hanni liên quan (xem phần trên), có thể nhắc khéo tới bài đó trong app như gợi ý đọc thêm.
-- QUAN TRỌNG: chỉ nói một điểm ngữ pháp "có trong Hanni" nếu nó thực sự xuất hiện ở phần trích trên — nếu dùng kiến thức chung ngoài phần đó, đừng ngụ ý là đã có sẵn trong app.
+- Nếu có điểm ngữ pháp/từ vựng Hanni liên quan (xem phần trên), có thể nhắc khéo tới trong app như gợi ý đọc thêm.
+- QUAN TRỌNG: nếu phần trên có mục "Từ vựng Hanni" cho đúng chữ Hán đang được hỏi, PHẢI dùng đúng cấp HSK/nghĩa ở đó — tuyệt đối không tự đoán cấp HSK hay nghĩa khác cho từ đó.
+- Chỉ nói một điểm ngữ pháp/từ vựng "có trong Hanni" nếu nó thực sự xuất hiện ở phần trích trên — nếu dùng kiến thức chung ngoài phần đó, đừng ngụ ý là đã có sẵn trong app.
 - Dùng thông tin học tập cá nhân ở trên khi câu hỏi liên quan tới tiến độ/streak/nên học gì hôm nay của chính người dùng.
 - Trả lời ngắn gọn, có thể dùng gạch đầu dòng và **in đậm** cho từ khoá quan trọng.
       `.trim();
@@ -419,6 +482,48 @@ Hướng dẫn trả lời:
       );
     }
     return lines.join('\n');
+  }
+
+  // Tra thẳng theo Hán tự xuất hiện trong câu hỏi — không cần embedding, chỉ
+  // 1 query DB — cho ground truth chính xác tuyệt đối (cấp HSK/nghĩa) cho
+  // đúng từ đang được hỏi, tránh model đoán bừa như đã từng xảy ra ở
+  // tech-books-backend khi không có bước tra cứu trực tiếp này.
+  private async searchWordsByChineseTerms(message: string, limit = 6) {
+    const terms = [...new Set(message.match(/[一-鿿]+/g) ?? [])].slice(0, 5);
+    if (!terms.length) return [];
+    return this.prisma.word.findMany({
+      where: {
+        OR: terms.flatMap((t) => [
+          { simplified: { contains: t } },
+          { traditional: { contains: t } },
+        ]),
+      },
+      select: {
+        simplified: true,
+        traditional: true,
+        pinyin: true,
+        hskLevel: true,
+        meaningVi: true,
+        meaningEn: true,
+      },
+      take: limit,
+    });
+  }
+
+  private wordMetadataBlock(w: {
+    simplified: string;
+    traditional: string | null;
+    pinyin: string;
+    hskLevel: number;
+    meaningVi: string | null;
+    meaningEn: string | null;
+  }): string {
+    const hanzi =
+      w.traditional && w.traditional !== w.simplified
+        ? `${w.simplified}/${w.traditional}`
+        : w.simplified;
+    const meaning = w.meaningVi ?? w.meaningEn ?? '(nghĩa đang cập nhật)';
+    return `[Từ vựng Hanni - "${hanzi}"] pinyin: ${w.pinyin}, cấp HSK: ${w.hskLevel}, nghĩa: ${meaning}`;
   }
 
   private readonly OVERLOADED_REPLIES = [
