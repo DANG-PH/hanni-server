@@ -67,11 +67,17 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   nhau), `POST`/`DELETE /users/:id/follow` kiểu upsert/delete idempotent giống thích video, tự
   chặn tự theo dõi chính mình (400). Phát `AppEvent.UserFollowed` → `NotificationsListener` tạo
   `NEW_FOLLOWER`. `LeaderboardService.top()` trả thêm `isFollowing` mỗi dòng (so với người đang
-  gọi API) để FE hiện nút theo dõi ngay trong bảng xếp hạng — hiện CHƯA có trang hồ sơ công khai
-  hay danh sách người theo dõi/đang theo dõi, chỉ mới có nút bật/tắt. `GET /leaderboard` nhận
+  gọi API) để FE hiện nút theo dõi ngay trong bảng xếp hạng. `GET /leaderboard` nhận
   thêm `scope=friends` (mặc định `global`) — lọc `rankedPairs()` còn (chính mình + người đang
   theo dõi) TRƯỚC khi tính hạng, cho FE làm thẻ "So với bạn bè" ở dashboard — theo dõi ai đó giờ
   có tác dụng cụ thể (so tiến độ) thay vì chỉ tăng follower count.
+- **Hồ sơ công khai (`GET /users/:id/profile`, `UsersService.getPublicProfile()`)**: field an
+  toàn để lộ công khai (KHÔNG email/settings/oauth như `getProfile()` của chính mình) — tên,
+  avatar, ngày tham gia, streak, số từ đã thuộc (dùng lại luật LEARNED_WHERE giống
+  leaderboard/progress, đã lặp lại theo đúng style repo thay vì trích thành helper dùng chung),
+  số bài đã xong, huy hiệu ĐÃ MỞ KHOÁ (không phải toàn bộ catalog như `/achievements` của chính
+  mình), số người theo dõi/đang theo dõi + danh sách rút gọn tối đa 30 mỗi bên, và `isFollowing`
+  tương đối với người đang xem (`viewerId`).
 - **Luyện nghe/phát âm (`src/modules/practice`)**: `POST /practice/attempts` ghi 1 lượt luyện
   (`wordId`, `skill: LISTENING|PRONUNCIATION`, `isCorrect?` — chỉ dùng cho LISTENING vì
   PRONUNCIATION chưa có chấm điểm tự động, luôn lưu `null`). `GET /practice/stats?skill=` trả
