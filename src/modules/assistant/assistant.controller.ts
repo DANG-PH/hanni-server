@@ -11,7 +11,6 @@ import {
   Sse,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
 import type { Observable } from 'rxjs';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../../common/types';
@@ -50,9 +49,10 @@ export class AssistantController {
     return this.assistant.deleteSession(user.id, sessionId);
   }
 
-  // Throttle chỉ chặn spam từ 1 user — CHƯA giới hạn tổng quota Gemini free
-  // tier khi nhiều user cùng dùng, xem TODO(scale) ở assistant.service.ts.
-  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  // Đã bỏ @Throttle theo yêu cầu (chặn cả lúc test lẫn dùng thật) — giới hạn
+  // thực tế hiện chỉ còn tới từ quota Gemini free tier dùng chung, XEM
+  // TODO(scale) ở assistant.service.ts. Cân nhắc thêm lại throttle riêng nếu
+  // sau này thấy có spam/lạm dụng thật.
   @Post('ask')
   ask(@CurrentUser() user: AuthUser, @Body() dto: AskAssistantDto) {
     return this.assistant.ask(user.id, dto.message, dto.sessionId);
@@ -60,7 +60,6 @@ export class AssistantController {
 
   // SSE (EventSource) chỉ hỗ trợ GET nên nhận message/sessionId qua query
   // thay vì body — message tối đa 1000 ký tự nên URL không quá dài.
-  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Sse('ask/stream')
   askStream(
     @CurrentUser() user: AuthUser,

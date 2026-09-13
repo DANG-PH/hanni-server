@@ -195,14 +195,15 @@ export class AssistantService implements OnModuleInit {
 
   // TODO(scale): GEMINI_API_KEY hiện dùng chung 1 key free tier (quota rất
   // thấp — đã từng hết quota embed_content chỉ vì vài chục lượt hỏi/đánh
-  // index trong lúc test, xem README lịch sử buildIndex()). Throttle hiện
-  // tại (`@Throttle 20/60s` ở assistant.controller.ts) chỉ chặn 1 user spam
-  // nhanh — KHÔNG bảo vệ quota chung khi có nhiều user thật cùng dùng cùng
-  // lúc. Trước khi ra mắt rộng cần: (1) nâng lên gói Gemini trả phí (bỏ giới
-  // hạn free tier) hoặc (2) thêm giới hạn số lượt hỏi/ngày mỗi user (DB đếm
-  // theo ChatMessage.createdAt, kiểu quota giống PracticeAttempt) — có thể
-  // gắn với tính năng nạp tiền/gói trả phí sau này (chưa làm, để dành bàn
-  // riêng khi cần) để user trả phí có hạn mức cao hơn user miễn phí.
+  // index trong lúc test, xem README lịch sử buildIndex()). Đã BỎ
+  // `@Throttle` ở assistant.controller.ts (chặn cả lúc test lẫn dùng thật,
+  // trong khi vẫn KHÔNG bảo vệ được quota chung khi nhiều user thật cùng
+  // dùng) — giới hạn thực tế bây giờ chỉ còn tới từ quota Gemini free tier
+  // dùng chung. Trước khi ra mắt rộng cần: (1) nâng lên gói Gemini trả phí
+  // (bỏ giới hạn free tier) hoặc (2) thêm giới hạn số lượt hỏi/ngày mỗi user
+  // (DB đếm theo ChatMessage.createdAt, kiểu quota giống PracticeAttempt) —
+  // có thể gắn với tính năng nạp tiền/gói trả phí sau này (chưa làm, để
+  // dành bàn riêng khi cần) để user trả phí có hạn mức cao hơn user miễn phí.
 
   constructor(
     private readonly config: ConfigService<Env, true>,
