@@ -62,6 +62,11 @@ export class OnboardingService {
    * ước tính số từ mới còn thiếu (`HskLevel.cumulative2025`) chia cho nhịp
    * học hiện tại (`UserSettings.dailyGoalValue`) ra số ngày cần học, rồi so
    * với hạn thi nếu có đặt.
+   *
+   * Ghi rõ từng mục (trình độ hiện tại / mục tiêu / lộ trình đề xuất) trên
+   * dòng riêng thay vì gộp thành 1 câu văn xuôi — trước đây "Bạn nên bắt đầu
+   * từ HSK 1... thi HSK 5" dễ đọc nhầm HSK1/HSK5 là 2 số liệu bị lẫn lộn,
+   * không rõ số nào là hiện tại/số nào là mục tiêu.
    */
   private async buildRecommendation(
     userId: string,
@@ -69,15 +74,30 @@ export class OnboardingService {
     recommendedLevel: number,
   ): Promise<string> {
     const goalText = GOAL_VI[dto.goal];
-    let text = dto.hasStudiedBefore
-      ? `Bạn nên ôn lại và củng cố chắc HSK ${recommendedLevel} trước khi lên cấp mới, hướng tới mục tiêu ${goalText}.`
-      : `Bạn nên bắt đầu từ HSK ${recommendedLevel}, hướng tới mục tiêu ${goalText}.`;
+    const currentLevelText = dto.hasStudiedBefore
+      ? `đã học tới khoảng HSK ${dto.selfAssessedLevel}`
+      : 'chưa học tiếng Trung trước đây';
 
-    if (!dto.plansToTakeExam || !dto.targetLevel) return text;
+    const lines = [
+      `📋 Trình độ hiện tại: ${currentLevelText}.`,
+      `🎯 Mục tiêu: ${goalText}${
+        dto.plansToTakeExam && dto.targetLevel
+          ? `, dự định thi HSK ${dto.targetLevel}`
+          : ''
+      }.`,
+      '',
+      `👉 Lộ trình đề xuất: ${
+        dto.hasStudiedBefore ? 'ôn lại, củng cố chắc' : 'bắt đầu học'
+      } từ HSK ${recommendedLevel}.`,
+    ];
+
+    if (!dto.plansToTakeExam || !dto.targetLevel) return lines.join('\n');
 
     if (dto.targetLevel <= recommendedLevel) {
-      text += ` Bạn đã ở cấp tương đương hoặc cao hơn mục tiêu thi HSK ${dto.targetLevel} rồi — tập trung ôn chắc để tự tin đi thi.`;
-      return text;
+      lines.push(
+        `Bạn đã ở cấp tương đương hoặc cao hơn mục tiêu thi HSK ${dto.targetLevel} rồi — tập trung ôn chắc để tự tin đi thi.`,
+      );
+      return lines.join('\n');
     }
 
     const [targetInfo, baseInfo, settings] = await Promise.all([
@@ -96,14 +116,16 @@ export class OnboardingService {
         select: { dailyGoalValue: true },
       }),
     ]);
-    if (!targetInfo) return text;
+    if (!targetInfo) return lines.join('\n');
 
     const wordGap = targetInfo.cumulative2025 - (baseInfo?.cumulative2025 ?? 0);
     const perDay = settings?.dailyGoalValue ?? 20;
     const estDays = Math.max(1, Math.ceil(wordGap / perDay));
     const estWeeks = Math.ceil(estDays / 7);
 
-    text += ` Từ HSK ${recommendedLevel} lên HSK ${dto.targetLevel} còn khoảng ${wordGap} từ mới — với nhịp ${perDay} từ/ngày, ước tính cần khoảng ${estDays} ngày (~${estWeeks} tuần) học đều mỗi ngày.`;
+    lines.push(
+      `Từ điểm bắt đầu HSK ${recommendedLevel} lên tới mục tiêu thi HSK ${dto.targetLevel} còn khoảng ${wordGap} từ mới — với nhịp ${perDay} từ/ngày, ước tính cần khoảng ${estDays} ngày (~${estWeeks} tuần) học đều mỗi ngày.`,
+    );
 
     if (dto.targetDate) {
       const daysUntil = Math.ceil(
@@ -116,13 +138,16 @@ export class OnboardingService {
             : daysUntil >= estDays
               ? 'vừa đủ — nên học đều mỗi ngày, đừng bỏ ngày nào'
               : 'khá gấp — có thể cần tăng nhịp học mỗi ngày trong phần Cài đặt';
-        text += ` Còn ${daysUntil} ngày tới hạn thi bạn đặt, nhịp học hiện tại là ${pace}.`;
+        lines.push(
+          `Còn ${daysUntil} ngày tới hạn thi bạn đặt, nhịp học hiện tại là ${pace}.`,
+        );
       } else {
-        text +=
-          ' Hạn thi bạn đặt đã qua rồi — cân nhắc đặt lại mục tiêu mới nhé.';
+        lines.push(
+          'Hạn thi bạn đặt đã qua rồi — cân nhắc đặt lại mục tiêu mới nhé.',
+        );
       }
     }
 
-    return text;
+    return lines.join('\n');
   }
 }

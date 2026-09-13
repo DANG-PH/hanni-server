@@ -6,7 +6,8 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
+import type { Content, FunctionCall, Tool } from '@google/genai';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { ChatRole, SrsState } from '@prisma/client';
@@ -15,7 +16,92 @@ import { PrismaService } from '../../infra/prisma/prisma.service';
 import type { Env } from '../../config/env.validation';
 import { EmbeddedChunk, InMemoryVectorStore } from './rag/vector-store';
 
-type GeminiContent = { role: 'user' | 'model'; parts: { text: string }[] };
+/** Hành động phía client thực hiện được sau khi model gọi 1 tool điều
+ * hướng — trợ lý chỉ ĐƯA RA đường dẫn, người dùng tự bấm mở (xem
+ * executeTool()), không tự ý chuyển trang thay người dùng. */
+export interface AssistantAction {
+  type: 'navigate';
+  path: string;
+  label: string;
+}
+
+/** Trang tĩnh trợ lý có thể gợi ý mở — khớp route thật ở client. */
+const PAGE_PATHS: Record<string, string> = {
+  dashboard: '/dashboard',
+  learn: '/learn',
+  vocabulary: '/vocabulary',
+  grammar: '/grammar',
+  listening: '/listening',
+  pronunciation: '/pronunciation',
+  writing: '/writing',
+  exams: '/exams',
+  leaderboard: '/leaderboard',
+  progress: '/progress',
+  watch: '/watch',
+  onboarding: '/onboarding',
+  settings: '/settings',
+};
+const PAGE_LABELS_VI: Record<string, string> = {
+  dashboard: 'Trang chủ',
+  learn: 'Lộ trình học',
+  vocabulary: 'Từ vựng',
+  grammar: 'Ngữ pháp',
+  listening: 'Luyện nghe',
+  pronunciation: 'Luyện phát âm',
+  writing: 'Luyện viết Hán tự',
+  exams: 'Kiểm tra HSK',
+  leaderboard: 'Bảng xếp hạng',
+  progress: 'Tiến độ học tập',
+  watch: 'Học qua video',
+  onboarding: 'Khảo sát lộ trình',
+  settings: 'Cài đặt',
+};
+
+/** 2 tool duy nhất trợ lý được gọi — cả 2 đều chỉ TRẢ VỀ đường dẫn cho
+ * client hiện nút bấm, không có tool nào thật sự "thay đổi dữ liệu" nên
+ * không cần xác nhận trước khi gọi. */
+const TOOLS: Tool[] = [
+  {
+    functionDeclarations: [
+      {
+        name: 'navigate_to_page',
+        description:
+          'Lấy đường dẫn tới 1 trang trong app Hanni khi người dùng muốn mở/vào 1 mục cụ thể (lộ trình, từ vựng, ngữ pháp, luyện nghe, luyện phát âm, luyện viết, kiểm tra HSK, bảng xếp hạng, tiến độ...). KHÔNG dùng cho video — video dùng open_video.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            page: {
+              type: Type.STRING,
+              description: 'Tên trang cần mở',
+              enum: Object.keys(PAGE_PATHS),
+            },
+            level: {
+              type: Type.INTEGER,
+              description:
+                'Cấp HSK (1-9) muốn lọc/xem — chỉ áp dụng cho trang learn hoặc vocabulary, bỏ trống nếu không có.',
+            },
+          },
+          required: ['page'],
+        },
+      },
+      {
+        name: 'open_video',
+        description:
+          'Tìm và lấy đường dẫn tới 1 video học tiếng Trung trong thư viện Hanni theo tên hoặc chủ đề người dùng nhắc tới.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            query: {
+              type: Type.STRING,
+              description: 'Từ khoá tên hoặc chủ đề video cần tìm',
+            },
+          },
+          required: ['query'],
+        },
+      },
+    ],
+  },
+];
 
 const LEARNED_INTERVAL_DAYS = 21;
 const HISTORY_LIMIT = 16;
@@ -330,7 +416,7 @@ export class AssistantService implements OnModuleInit {
     userId: string,
     message: string,
     sessionId?: string,
-  ): Promise<{ message: string; sessionId: string }> {
+  ): Promise<{ message: string; sessionId: string; action?: AssistantAction }> {
     const session = sessionId
       ? await this.requireOwnSession(userId, sessionId)
       : await this.getOrCreateLatestSession(userId);
@@ -338,7 +424,11 @@ export class AssistantService implements OnModuleInit {
     const priorCount = await this.prisma.chatMessage.count({
       where: { sessionId: session.id },
     });
-    const replyText = await this.generateReply(userId, message, session.id);
+    const { text: replyText, action } = await this.generateReply(
+      userId,
+      message,
+      session.id,
+    );
     await this.persistTurn(
       session.id,
       session.title,
@@ -347,7 +437,7 @@ export class AssistantService implements OnModuleInit {
       priorCount,
     );
 
-    return { message: replyText, sessionId: session.id };
+    return { message: replyText, sessionId: session.id, action };
   }
 
   /**
@@ -384,23 +474,56 @@ export class AssistantService implements OnModuleInit {
           const priorCount = await this.prisma.chatMessage.count({
             where: { sessionId: session.id },
           });
-          const contents = await this.buildPromptContents(
+          let contents = await this.buildPromptContents(
             userId,
             message,
             session.id,
           );
 
           let fullText = '';
+          let action: AssistantAction | undefined;
           try {
-            const stream = await this.genAI.models.generateContentStream({
-              model: this.CHAT_MODELS[0],
-              contents,
-            });
-            for await (const chunk of stream) {
-              const delta = chunk.text ?? '';
-              if (!delta) continue;
-              fullText += delta;
-              subscriber.next({ data: JSON.stringify({ delta }) });
+            // Tối đa 2 lượt: lượt 1 có tool (model có thể chọn gọi tool thay vì
+            // trả lời ngay), lượt 2 (chỉ chạy nếu lượt 1 gọi tool) KHÔNG đưa
+            // tool nữa để ép model trả lời bằng text dựa trên kết quả tool —
+            // tránh vòng lặp gọi tool vô hạn.
+            for (let round = 0; round < 2; round++) {
+              const stream = await this.genAI.models.generateContentStream({
+                model: this.CHAT_MODELS[0],
+                contents,
+                config: round === 0 ? { tools: TOOLS } : undefined,
+              });
+              let calledTool: FunctionCall | null = null;
+              for await (const chunk of stream) {
+                const calls = chunk.functionCalls;
+                if (calls && calls.length > 0 && !calledTool) {
+                  calledTool = calls[0];
+                  continue;
+                }
+                const delta = chunk.text ?? '';
+                if (!delta) continue;
+                fullText += delta;
+                subscriber.next({ data: JSON.stringify({ delta }) });
+              }
+              if (!calledTool) break;
+              const { resultForModel, action: toolAction } =
+                await this.executeTool(calledTool);
+              if (toolAction) action = toolAction;
+              contents = [
+                ...contents,
+                { role: 'model', parts: [{ functionCall: calledTool }] },
+                {
+                  role: 'user',
+                  parts: [
+                    {
+                      functionResponse: {
+                        name: calledTool.name,
+                        response: { result: resultForModel },
+                      },
+                    },
+                  ],
+                },
+              ];
             }
           } catch (err) {
             this.logger.warn(
@@ -421,7 +544,7 @@ export class AssistantService implements OnModuleInit {
             priorCount,
           );
           subscriber.next({
-            data: JSON.stringify({ done: true, sessionId: session.id }),
+            data: JSON.stringify({ done: true, sessionId: session.id, action }),
           });
           subscriber.complete();
         } catch (err) {
@@ -477,23 +600,64 @@ export class AssistantService implements OnModuleInit {
     userId: string,
     message: string,
     sessionId: string,
-  ): Promise<string> {
+  ): Promise<{ text: string; action?: AssistantAction }> {
     if (!this.genAI) {
-      return 'Trợ lý AI chưa được bật — cần cấu hình GEMINI_API_KEY trước đã.';
+      return {
+        text: 'Trợ lý AI chưa được bật — cần cấu hình GEMINI_API_KEY trước đã.',
+      };
     }
+
+    let contents: Content[];
     try {
-      const contents = await this.buildPromptContents(
-        userId,
-        message,
-        sessionId,
-      );
-      const reply = await this.generateWithFallback(contents);
-      return reply ?? this.pickRandom(this.OVERLOADED_REPLIES);
+      contents = await this.buildPromptContents(userId, message, sessionId);
     } catch (err) {
       this.lastError = (err as Error).message;
       this.logger.error(`[Assistant] ask lỗi: ${(err as Error).message}`);
-      return 'Có lỗi xảy ra, thử lại nhé.';
+      return { text: 'Có lỗi xảy ra, thử lại nhé.' };
     }
+
+    try {
+      const first = await this.genAI.models.generateContent({
+        model: this.CHAT_MODELS[0],
+        contents,
+        config: { tools: TOOLS },
+      });
+      const call = first.functionCalls?.[0];
+      if (call) {
+        const { resultForModel, action } = await this.executeTool(call);
+        const followUpContents: Content[] = [
+          ...contents,
+          { role: 'model', parts: [{ functionCall: call }] },
+          {
+            role: 'user',
+            parts: [
+              {
+                functionResponse: {
+                  name: call.name,
+                  response: { result: resultForModel },
+                },
+              },
+            ],
+          },
+        ];
+        const second = await this.genAI.models.generateContent({
+          model: this.CHAT_MODELS[0],
+          contents: followUpContents,
+        });
+        return {
+          text: second.text ?? this.pickRandom(this.OVERLOADED_REPLIES),
+          action,
+        };
+      }
+      if (first.text) return { text: first.text };
+    } catch (err) {
+      this.logger.warn(
+        `[Assistant] model chính lỗi, rơi về generateWithFallback: ${(err as Error).message}`,
+      );
+    }
+
+    const reply = await this.generateWithFallback(contents);
+    return { text: reply ?? this.pickRandom(this.OVERLOADED_REPLIES) };
   }
 
   /** Ghép lịch sử hội thoại + RAG (ngữ pháp/FAQ) + tra từ vựng theo Hán tự +
@@ -503,7 +667,7 @@ export class AssistantService implements OnModuleInit {
     userId: string,
     message: string,
     sessionId: string,
-  ): Promise<GeminiContent[]> {
+  ): Promise<Content[]> {
     const history = await this.prisma.chatMessage.findMany({
       where: { sessionId },
       orderBy: { createdAt: 'desc' },
@@ -562,6 +726,7 @@ Hướng dẫn trả lời:
 - Dùng thông tin học tập cá nhân ở trên khi câu hỏi liên quan tới tiến độ/streak/nên học gì hôm nay của chính người dùng.
 - Nếu người dùng đang học dở 1 bài hoặc xem dở 1 video (xem phần trên), chủ động nhắc tên bài/video đó khi trả lời các câu hỏi kiểu "hôm nay học gì", "tiếp theo nên làm gì", "gợi ý cho tôi" — thay vì chỉ nói chung chung.
 - Nếu thấy xu hướng luyện tập 7 ngày qua lệch hẳn về 1 kỹ năng (chỉ nghe hoặc chỉ phát âm, không ôn từ vựng...), có thể khéo léo gợi ý cân bằng thêm kỹ năng còn thiếu khi phù hợp với câu hỏi.
+- Nếu người dùng muốn MỞ/XEM/VÀO 1 trang hay 1 video cụ thể, hãy gọi tool tương ứng (navigate_to_page hoặc open_video) thay vì chỉ mô tả bằng lời — nhưng bạn KHÔNG tự chuyển trang được, chỉ đưa ra đường dẫn để hệ thống hiện nút bấm. Sau khi gọi tool, mời người dùng bấm nút đó ("bấm vào đây để..."), TUYỆT ĐỐI không nói là bạn đã mở/chuyển trang giúp họ rồi.
 - Trả lời ngắn gọn, có thể dùng gạch đầu dòng và **in đậm** cho từ khoá quan trọng.
       `.trim();
 
@@ -749,16 +914,79 @@ Hướng dẫn trả lời:
   private buildContents(
     prompt: string,
     history: { role: ChatRole; text: string }[],
-  ): GeminiContent[] {
-    const historyContents: GeminiContent[] = history.map((h) => ({
+  ): Content[] {
+    const historyContents: Content[] = history.map((h) => ({
       role: h.role === ChatRole.USER ? 'user' : 'model',
       parts: [{ text: h.text }],
     }));
     return [...historyContents, { role: 'user', parts: [{ text: prompt }] }];
   }
 
+  /** Tra cứu/tính đường dẫn cho 1 lệnh gọi tool của model — cả 2 tool đều
+   * chỉ ĐỌC dữ liệu, không đổi gì trong DB, nên gọi thẳng không cần xác
+   * nhận trước. `resultForModel` luôn nhắc model đừng tự nhận là đã mở
+   * trang/video giúp người dùng — chỉ hệ thống hiện nút bấm, người dùng
+   * tự bấm mới thật sự điều hướng (tránh lặp lại lỗi "nói đã mở nhưng
+   * chưa mở" mà chatbot thuần text hay mắc phải). */
+  private async executeTool(
+    call: FunctionCall,
+  ): Promise<{ resultForModel: string; action?: AssistantAction }> {
+    const args = call.args ?? {};
+
+    if (call.name === 'navigate_to_page') {
+      const page = typeof args.page === 'string' ? args.page : '';
+      const path = PAGE_PATHS[page];
+      if (!path) {
+        return { resultForModel: `Không có trang "${page}" trong app Hanni.` };
+      }
+      const level = typeof args.level === 'number' ? args.level : undefined;
+      const finalPath =
+        level && (page === 'learn' || page === 'vocabulary')
+          ? `${path}?level=${level}`
+          : path;
+      return {
+        resultForModel: `Đã có đường dẫn tới trang "${PAGE_LABELS_VI[page]}" — hệ thống sẽ hiện nút bấm ngay dưới câu trả lời để người dùng tự mở. Mời người dùng bấm nút đó, ĐỪNG nói là bạn đã tự mở/chuyển trang giúp họ.`,
+        action: {
+          type: 'navigate',
+          path: finalPath,
+          label: PAGE_LABELS_VI[page],
+        },
+      };
+    }
+
+    if (call.name === 'open_video') {
+      const query = typeof args.query === 'string' ? args.query.trim() : '';
+      if (!query)
+        return { resultForModel: 'Chưa rõ tên/chủ đề video cần tìm.' };
+      const video = await this.prisma.video.findFirst({
+        where: {
+          OR: [
+            { title: { contains: query, mode: 'insensitive' } },
+            { titleZh: { contains: query } },
+          ],
+        },
+        select: { id: true, title: true },
+      });
+      if (!video) {
+        return {
+          resultForModel: `Không tìm thấy video nào khớp với "${query}" trong thư viện Hanni — trả lời thật là chưa tìm thấy, đừng nói là đã mở video nào.`,
+        };
+      }
+      return {
+        resultForModel: `Đã tìm thấy video "${video.title}" — hệ thống sẽ hiện nút bấm ngay dưới câu trả lời để người dùng tự mở. Mời người dùng bấm nút đó, ĐỪNG nói là bạn đã tự mở video giúp họ.`,
+        action: {
+          type: 'navigate',
+          path: `/watch/${video.id}`,
+          label: video.title,
+        },
+      };
+    }
+
+    return { resultForModel: 'Không rõ hành động được yêu cầu.' };
+  }
+
   private async generateWithFallback(
-    contents: GeminiContent[],
+    contents: Content[],
   ): Promise<string | null> {
     for (const modelName of this.CHAT_MODELS) {
       try {
