@@ -66,7 +66,7 @@ const TOOLS: Tool[] = [
       {
         name: 'navigate_to_page',
         description:
-          'Lấy đường dẫn tới 1 trang trong app Hanni khi người dùng muốn mở/vào 1 mục cụ thể (lộ trình, từ vựng, ngữ pháp, luyện nghe, luyện phát âm, luyện viết, kiểm tra HSK, bảng xếp hạng, tiến độ...). KHÔNG dùng cho video — video dùng open_video.',
+          'Lấy đường dẫn tới 1 trang trong app Hanni khi người dùng muốn mở/vào 1 mục cụ thể (lộ trình, từ vựng, ngữ pháp, luyện nghe, luyện phát âm, luyện viết, kiểm tra HSK, bảng xếp hạng, tiến độ...). KHÔNG dùng cho video — video dùng open_video. GỌI NGAY khi thấy ý định này, kể cả khi người dùng không nói rõ cấp HSK — `level` là tuỳ chọn, cứ để trống nếu không rõ, ĐỪNG hỏi lại người dùng trước khi gọi tool.',
         parameters: {
           type: Type.OBJECT,
           properties: {
@@ -87,7 +87,7 @@ const TOOLS: Tool[] = [
       {
         name: 'open_video',
         description:
-          'Tìm và lấy đường dẫn tới 1 video học tiếng Trung trong thư viện Hanni theo tên hoặc chủ đề người dùng nhắc tới.',
+          'Tìm và lấy đường dẫn tới 1 video học tiếng Trung trong thư viện Hanni theo tên hoặc chủ đề người dùng nhắc tới. GỌI NGAY khi người dùng muốn xem/mở 1 video (kể cả khi chỉ nói chung chung như "video bất kỳ", "video gì cũng được") — dùng từ khoá tốt nhất có được, ĐỪNG hỏi lại người dùng trước khi gọi tool.',
         parameters: {
           type: Type.OBJECT,
           properties: {
@@ -719,6 +719,7 @@ ${
 Câu hỏi: ${message}
 
 Hướng dẫn trả lời:
+- Nếu người dùng muốn MỞ/XEM/VÀO 1 trang hay 1 video cụ thể (kể cả khi nói chung chung, không rõ chi tiết), PHẢI gọi tool tương ứng (navigate_to_page hoặc open_video) NGAY LẬP TỨC trong lượt này — TUYỆT ĐỐI không hỏi lại để làm rõ trước, không chỉ mô tả bằng lời. Bạn KHÔNG tự chuyển trang được, chỉ đưa ra đường dẫn để hệ thống hiện nút bấm — sau khi gọi tool, mời người dùng bấm nút đó ("bấm vào đây để..."), TUYỆT ĐỐI không nói là bạn đã mở/chuyển trang giúp họ rồi.
 - Trả lời câu hỏi tự nhiên, đầy đủ bằng kiến thức tiếng Trung của bạn — không cần bó buộc trong các đoạn trích ở trên.
 - Nếu có điểm ngữ pháp/từ vựng Hanni liên quan (xem phần trên), có thể nhắc khéo tới trong app như gợi ý đọc thêm.
 - QUAN TRỌNG: nếu phần trên có mục "Từ vựng Hanni" cho đúng chữ Hán đang được hỏi, PHẢI dùng đúng cấp HSK/nghĩa ở đó — tuyệt đối không tự đoán cấp HSK hay nghĩa khác cho từ đó.
@@ -726,7 +727,6 @@ Hướng dẫn trả lời:
 - Dùng thông tin học tập cá nhân ở trên khi câu hỏi liên quan tới tiến độ/streak/nên học gì hôm nay của chính người dùng.
 - Nếu người dùng đang học dở 1 bài hoặc xem dở 1 video (xem phần trên), chủ động nhắc tên bài/video đó khi trả lời các câu hỏi kiểu "hôm nay học gì", "tiếp theo nên làm gì", "gợi ý cho tôi" — thay vì chỉ nói chung chung.
 - Nếu thấy xu hướng luyện tập 7 ngày qua lệch hẳn về 1 kỹ năng (chỉ nghe hoặc chỉ phát âm, không ôn từ vựng...), có thể khéo léo gợi ý cân bằng thêm kỹ năng còn thiếu khi phù hợp với câu hỏi.
-- Nếu người dùng muốn MỞ/XEM/VÀO 1 trang hay 1 video cụ thể, hãy gọi tool tương ứng (navigate_to_page hoặc open_video) thay vì chỉ mô tả bằng lời — nhưng bạn KHÔNG tự chuyển trang được, chỉ đưa ra đường dẫn để hệ thống hiện nút bấm. Sau khi gọi tool, mời người dùng bấm nút đó ("bấm vào đây để..."), TUYỆT ĐỐI không nói là bạn đã mở/chuyển trang giúp họ rồi.
 - Trả lời ngắn gọn, có thể dùng gạch đầu dòng và **in đậm** cho từ khoá quan trọng.
       `.trim();
 
