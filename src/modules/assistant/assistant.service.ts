@@ -116,9 +116,11 @@ export class AssistantService implements OnModuleInit {
     await fs.writeFile(this.indexPath, JSON.stringify(payload));
   }
 
-  // Chỉ đánh index lại khi số điểm ngữ pháp có giải thích thật đã thay đổi
-  // so với lần trước (đơn giản hoá so với đối chiếu từng dòng) — tránh đốt
-  // quota embedding mỗi lần restart app khi nội dung ngữ pháp không đổi.
+  // Chỉ embed những điểm ngữ pháp CHƯA có trong index cũ (so theo
+  // grammarPointId, không phải đếm tổng số) — free tier Gemini giới hạn
+  // ~100 lượt embed/ngày, không đủ đánh hết ~235 điểm trong 1 lần, nên nếu
+  // dừng giữa chừng (hết quota/app restart) thì lần sau CHỈ đánh tiếp phần
+  // còn thiếu thay vì embed lại từ đầu — tốn gấp đôi/ba quota một cách vô ích.
   private async buildIndex(): Promise<void> {
     if (!this.genAI) return;
     const points = await this.prisma.grammarPoint.findMany({
@@ -135,19 +137,30 @@ export class AssistantService implements OnModuleInit {
       orderBy: [{ hskLevel: 'asc' }, { orderIndex: 'asc' }],
     });
 
-    const cached = await this.loadPersistedIndex();
-    if (cached && cached.length === points.length) {
-      this.vectorStore.load(cached);
+    const cached = (await this.loadPersistedIndex()) ?? [];
+    const pointIds = new Set(points.map((p) => p.id));
+    // bỏ chunk của điểm ngữ pháp đã xoá/không còn giải thích thật nữa
+    const stillValid = cached.filter((c) => pointIds.has(c.grammarPointId));
+    const cachedIds = new Set(stillValid.map((c) => c.grammarPointId));
+    const missing = points.filter((p) => !cachedIds.has(p.id));
+
+    if (missing.length === 0) {
+      this.vectorStore.load(stillValid);
       this.lastSyncAt = new Date();
       this.logger.log(
-        `[Assistant] Nạp ${cached.length} đoạn ngữ pháp từ index có sẵn`,
+        `[Assistant] Nạp ${stillValid.length} đoạn ngữ pháp từ index có sẵn`,
       );
+      if (stillValid.length !== cached.length) await this.persistIndex();
       return;
     }
 
-    const embedded: EmbeddedChunk[] = [];
-    for (let i = 0; i < points.length; i += this.EMBED_BATCH_SIZE) {
-      const batch = points.slice(i, i + this.EMBED_BATCH_SIZE);
+    this.logger.log(
+      `[Assistant] ${missing.length}/${points.length} điểm ngữ pháp chưa đánh index — bắt đầu…`,
+    );
+    const embedded: EmbeddedChunk[] = [...stillValid];
+    let quotaExceeded = false;
+    for (let i = 0; i < missing.length; i += this.EMBED_BATCH_SIZE) {
+      const batch = missing.slice(i, i + this.EMBED_BATCH_SIZE);
       const texts = batch.map((p) =>
         [
           `[Ngữ pháp HSK ${p.hskLevel} - "${p.titleVi}" (${p.titleZh})]`,
@@ -169,6 +182,13 @@ export class AssistantService implements OnModuleInit {
           }),
         );
       } catch (err) {
+        if (this.isQuotaExceededError(err)) {
+          this.lastError =
+            'Hết quota embedding Gemini miễn phí trong ngày — sẽ tự đánh index tiếp ở lần chạy sau.';
+          this.logger.warn(`[Assistant] ${this.lastError}`);
+          quotaExceeded = true;
+          break;
+        }
         this.lastError = (err as Error).message;
         this.logger.warn(
           `[Assistant] Bỏ qua 1 nhóm điểm ngữ pháp khi đánh index: ${(err as Error).message}`,
@@ -181,8 +201,13 @@ export class AssistantService implements OnModuleInit {
     this.lastSyncAt = new Date();
     await this.persistIndex();
     this.logger.log(
-      `[Assistant] Đã đánh index ${embedded.length} điểm ngữ pháp`,
+      `[Assistant] Đã đánh index ${embedded.length}/${points.length} điểm ngữ pháp${quotaExceeded ? ' (dở dang, hết quota — tự tiếp ở lần chạy sau)' : ''}`,
     );
+  }
+
+  private isQuotaExceededError(err: unknown): boolean {
+    const msg = err instanceof Error ? err.message : String(err);
+    return msg.includes('RESOURCE_EXHAUSTED') || msg.includes('"code":429');
   }
 
   private readonly TITLE_MAX_LEN = 80;
