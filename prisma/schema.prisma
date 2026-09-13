@@ -158,6 +158,8 @@ model User {
   notifications       Notification[]       @relation("NotificationRecipient")
   notificationsCaused Notification[]       @relation("NotificationActor")
   practiceAttempts    PracticeAttempt[]
+  following           Follow[]             @relation("Follower")
+  followers           Follow[]             @relation("Following")
 
   @@index([lastActiveAt])
 }
@@ -715,6 +717,7 @@ enum NotificationType {
   COMMENT_REPLY // ai đó trả lời bình luận của mình
   VIDEO_COMMENT // ai đó bình luận vào video mình đã thêm
   VIDEO_LIKE // ai đó thích video mình đã thêm
+  NEW_FOLLOWER // ai đó theo dõi mình
 }
 
 /// Thông báo trong app, lưu DB để xem lại lịch sử; đẩy realtime qua
@@ -761,4 +764,21 @@ model PracticeAttempt {
 
   @@index([userId, skill, createdAt])
   @@index([wordId])
+}
+
+// ===================================================================
+//  KẾT BẠN / THEO DÕI
+// ===================================================================
+
+/// 1 user theo dõi 1 user khác (không cần theo dõi lại nhau — 1 chiều).
+model Follow {
+  id          String   @id @default(uuid()) @db.Uuid
+  followerId  String   @db.Uuid
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String   @db.Uuid
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followingId])
 }

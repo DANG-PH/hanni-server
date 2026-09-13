@@ -4,6 +4,7 @@ import { NotificationType } from '@prisma/client';
 import {
   AppEvent,
   type CommentCreatedPayload,
+  type UserFollowedPayload,
   type VideoLikedPayload,
 } from '../../events/events';
 import { PrismaService } from '../../infra/prisma/prisma.service';
@@ -73,6 +74,19 @@ export class NotificationsListener {
       }
     } catch (err) {
       this.logger.error(`onVideoLiked: ${(err as Error).message}`);
+    }
+  }
+
+  @OnEvent(AppEvent.UserFollowed, { async: true })
+  async onUserFollowed(p: UserFollowedPayload): Promise<void> {
+    try {
+      await this.notifications.create({
+        userId: p.followingId,
+        type: NotificationType.NEW_FOLLOWER,
+        actorId: p.followerId,
+      });
+    } catch (err) {
+      this.logger.error(`onUserFollowed: ${(err as Error).message}`);
     }
   }
 }

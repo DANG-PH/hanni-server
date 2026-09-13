@@ -13,6 +13,7 @@ export const AppEvent = {
   CommentCreated: 'comment.created',
   VideoLiked: 'video.liked',
   PracticeAttempted: 'practice.attempted',
+  UserFollowed: 'user.followed',
 } as const;
 
 export interface WordReviewedPayload {
@@ -69,4 +70,9 @@ export interface PracticeAttemptedPayload {
   skill: 'LISTENING' | 'PRONUNCIATION';
   isCorrect: boolean | null;
   at: string; // ISO
+}
+
+export interface UserFollowedPayload {
+  followerId: string;
+  followingId: string;
 }

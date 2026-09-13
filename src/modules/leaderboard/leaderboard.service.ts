@@ -29,6 +29,7 @@ export interface LeaderboardRow {
   value: number;
   currentStreak: number;
   isMe: boolean;
+  isFollowing: boolean;
 }
 
 @Injectable()
@@ -57,7 +58,7 @@ export class LeaderboardService {
 
     const top = ranked.slice(0, limit);
     const ids = top.map((r) => r.userId);
-    const [users, streaks] = await Promise.all([
+    const [users, streaks, myFollows] = await Promise.all([
       this.prisma.user.findMany({
         where: { id: { in: ids } },
         select: { id: true, displayName: true, avatarUrl: true },
@@ -66,9 +67,14 @@ export class LeaderboardService {
         where: { userId: { in: ids } },
         select: { userId: true, currentStreak: true },
       }),
+      this.prisma.follow.findMany({
+        where: { followerId: userId, followingId: { in: ids } },
+        select: { followingId: true },
+      }),
     ]);
     const uMap = new Map(users.map((u) => [u.id, u]));
     const sMap = new Map(streaks.map((s) => [s.userId, s.currentStreak]));
+    const followingSet = new Set(myFollows.map((f) => f.followingId));
 
     const rows: LeaderboardRow[] = top.map((r, i) => ({
       rank: i + 1,
@@ -78,6 +84,7 @@ export class LeaderboardService {
       value: r.value,
       currentStreak: sMap.get(r.userId) ?? 0,
       isMe: r.userId === userId,
+      isFollowing: followingSet.has(r.userId),
     }));
 
     return { metric, ...METRICS[metric], rows, me };

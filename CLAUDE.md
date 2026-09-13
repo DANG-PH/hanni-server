@@ -16,9 +16,9 @@ src/
 ├── infra/         prisma/  redis/   (đều @Global)
 ├── common/        decorators (CurrentUser, Public, Roles), filters, time.util
 ├── events/        events.ts — hằng tên + kiểu payload
-├── modules/<domain>/   auth · users · mail · vocabulary · srs · progress · gamification
-│                        · learn · videos (+ videos/comments, videos/likes) · grammar
-│                        · exams · leaderboard · push · notifications (WebSocket gateway)
+├── modules/<domain>/   auth · users (+ users/follows) · mail · vocabulary · srs · progress
+│                        · gamification · learn · videos (+ videos/comments, videos/likes)
+│                        · grammar · exams · leaderboard · push · notifications (WebSocket gateway)
 │                        · practice (lưu kết quả luyện nghe/phát âm)
 └── health/
 prisma/  schema.prisma + seed/ (hsk-levels, achievements, words)
@@ -58,9 +58,15 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `origin: true` (phản chiếu origin) vẫn an toàn. `main.ts` gắn tường minh
   `app.useWebSocketAdapter(new IoAdapter(app))`, chạy chung cổng HTTP (không cần cổng riêng,
   nhưng Nginx production phải proxy đúng header `Upgrade`/`Connection` cho path
-  `/notifications/socket.io/`). 3 loại thông báo: `COMMENT_REPLY`, `VIDEO_COMMENT` (bình luận
+  `/notifications/socket.io/`). 4 loại thông báo: `COMMENT_REPLY`, `VIDEO_COMMENT` (bình luận
   vào video mình thêm), `VIDEO_LIKE` (thích video mình thêm) — video hệ thống seed sẵn có
-  `createdById = null` nên không phát 2 loại sau cho video đó.
+  `createdById = null` nên không phát 2 loại sau cho video đó — và `NEW_FOLLOWER` (xem dưới).
+- **Theo dõi (`src/modules/users/follows`, model `Follow`)**: 1 chiều (không cần theo dõi lại
+  nhau), `POST`/`DELETE /users/:id/follow` kiểu upsert/delete idempotent giống thích video, tự
+  chặn tự theo dõi chính mình (400). Phát `AppEvent.UserFollowed` → `NotificationsListener` tạo
+  `NEW_FOLLOWER`. `LeaderboardService.top()` trả thêm `isFollowing` mỗi dòng (so với người đang
+  gọi API) để FE hiện nút theo dõi ngay trong bảng xếp hạng — hiện CHƯA có trang hồ sơ công khai
+  hay danh sách người theo dõi/đang theo dõi, chỉ mới có nút bật/tắt.
 - **Luyện nghe/phát âm (`src/modules/practice`)**: `POST /practice/attempts` ghi 1 lượt luyện
   (`wordId`, `skill: LISTENING|PRONUNCIATION`, `isCorrect?` — chỉ dùng cho LISTENING vì
   PRONUNCIATION chưa có chấm điểm tự động, luôn lưu `null`). `GET /practice/stats?skill=` trả
@@ -80,7 +86,8 @@ videos (học qua video, kèm bình luận 1 cấp trả lời + thích video), 
 195 điểm HSK 4–9 có giải thích thật, xem bên dưới), exams (lịch sử kiểm tra), leaderboard (xếp
 theo từ đã thuộc), push (thông báo đẩy Web Push, VAPID), notifications (thông báo trong app —
 lưu DB + đẩy realtime qua WebSocket khi có người trả lời bình luận/bình luận hoặc thích video
-mình thêm), practice (lưu kết quả luyện nghe/phát âm lên server, xem bên dưới), health, Swagger.
+mình thêm/theo dõi mình), practice (lưu kết quả luyện nghe/phát âm lên server, xem bên dưới),
+follows (theo dõi 1 chiều giữa người dùng, xem bên dưới), health, Swagger.
 Seed đầy đủ để deploy: 9 cấp HSK · huy hiệu · 10.9k từ (`data/processed/words.seed.json`) ·
 744 bài, TOÀN BỘ 9 cấp đều chia theo chủ đề thật (xem bên dưới) — không còn cấp nào chia đều
 15 từ/bài theo tần suất · 40 điểm ngữ pháp HSK 1–3 + 349 mục HSK 4–9 (đại cương,
