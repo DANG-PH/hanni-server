@@ -60,9 +60,12 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `origin: true` (phản chiếu origin) vẫn an toàn. `main.ts` gắn tường minh
   `app.useWebSocketAdapter(new IoAdapter(app))`, chạy chung cổng HTTP (không cần cổng riêng,
   nhưng Nginx production phải proxy đúng header `Upgrade`/`Connection` cho path
-  `/notifications/socket.io/`). 4 loại thông báo: `COMMENT_REPLY`, `VIDEO_COMMENT` (bình luận
+  `/notifications/socket.io/`). 5 loại thông báo: `COMMENT_REPLY`, `VIDEO_COMMENT` (bình luận
   vào video mình thêm), `VIDEO_LIKE` (thích video mình thêm) — video hệ thống seed sẵn có
-  `createdById = null` nên không phát 2 loại sau cho video đó — và `NEW_FOLLOWER` (xem dưới).
+  `createdById = null` nên không phát 2 loại sau cho video đó —, `NEW_FOLLOWER` (xem dưới), và
+  `ACHIEVEMENT_UNLOCKED` (mở khoá huy hiệu mới — KHÔNG có `actorId` vì tự đạt được, không phải
+  do người khác tác động; `AchievementsService.unlock()` phát `AppEvent.AchievementUnlocked`
+  chỉ khi thật sự unlock lần đầu, nhờ bắt lỗi unique constraint có sẵn).
 - **Theo dõi (`src/modules/users/follows`, model `Follow`)**: 1 chiều (không cần theo dõi lại
   nhau), `POST`/`DELETE /users/:id/follow` kiểu upsert/delete idempotent giống thích video, tự
   chặn tự theo dõi chính mình (400). Phát `AppEvent.UserFollowed` → `NotificationsListener` tạo
