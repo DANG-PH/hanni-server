@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import {
   IsInt,
   IsOptional,
@@ -16,6 +17,7 @@ export class SendMessageDto {
 
 export class MessagesPageQuery {
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   page?: number;
