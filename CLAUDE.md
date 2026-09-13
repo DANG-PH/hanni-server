@@ -83,7 +83,11 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   thi, ước tính số từ mới còn thiếu qua `HskLevel.cumulative2025` (cấp đích trừ cấp hiện tại),
   chia cho nhịp học `UserSettings.dailyGoalValue` ra số ngày cần học, so với hạn thi nếu có đặt
   để nhận xét nhịp độ (thoải mái/vừa đủ/gấp) — toàn bộ `recommendationVi` là text ghép luật, có
-  thể làm lại khảo sát bất cứ lúc nào (upsert, ghi đè `completedAt`).
+  thể làm lại khảo sát bất cứ lúc nào (upsert, ghi đè `completedAt`). `buildRecommendation()` in
+  ra từng dòng có NHÃN RÕ RÀNG (📋 trình độ hiện tại / 🎯 mục tiêu / 👉 lộ trình đề xuất) thay vì
+  gộp thành 1 câu văn xuôi — tránh đọc nhầm 2 số HSK khác nhau (vd tự đánh giá HSK5 nhưng đề xuất
+  ghi "bắt đầu từ HSK1" từng bị hiểu lầm là lỗi vì không phân biệt được số nào là hiện tại/số nào
+  là mục tiêu).
 - **Trợ lý AI Hanni (`src/modules/assistant`)**: RAG qua Gemini (`@google/genai`), kiến trúc
   tham khảo từ project `tech-books-backend` cá nhân (in-memory vector store, model fallback
   chain `CHAT_MODELS`, cache index xuống `.cache/assistant-index.json` — KHÔNG commit). Có
@@ -122,6 +126,17 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `GEMINI_API_KEY` thì toàn bộ tự
   báo "chưa bật", không chặn app khởi động** — cần thêm `GEMINI_API_KEY` (+ `AI_SYSTEM_PROMPT`
   tuỳ chọn) vào `.env`/`.env.production.local` (đã có sẵn ở máy dev, cần copy tay lên VPS).
+  **"AI Agent" — tool-calling (`TOOLS`, `executeTool()`)**: trợ lý gọi được 2 tool Gemini
+  function-calling — `navigate_to_page` (13 trang tĩnh, `PAGE_PATHS`/`PAGE_LABELS_VI`, tuỳ chọn
+  `level` cho `learn`/`vocabulary`) và `open_video` (tìm `Video` theo `title`/`titleZh` chứa từ
+  khoá). Cả 2 tool đều CHỈ ĐỌC dữ liệu và trả về 1 đường dẫn — không có tool nào tự đổi dữ liệu
+  hay tự điều hướng thay người dùng (`resultForModel` luôn nhắc model mời người dùng tự bấm nút,
+  KHÔNG được nói là đã tự mở/chuyển trang giúp — sửa đúng lỗi trợ lý hay bịa "đã mở video cho bạn
+  rồi" mà thực ra không mở được gì). `askStream()`/`generateReply()` chạy tối đa 2 lượt gọi model
+  (lượt 1 có `config.tools`, lượt 2 bỏ tool để ép trả lời bằng text dựa trên
+  `functionResponse`), field `action?: AssistantAction` (`{type:'navigate', path, label}`) trả
+  về trong event `done` của SSE stream (và trong response `POST /assistant/ask`) — FE hiện nút
+  bấm, không tự chuyển trang.
 
 ## Lệnh
 `npm run start:dev` · `npm run build` · `npm run prisma:migrate` · `npm run db:seed` ·
@@ -190,5 +205,5 @@ thích video + thông báo" phía trên.
 
 Chưa làm (roadmap, chừa chỗ): câu ví dụ cho từ vựng, cấu trúc đề thi HSK
 thật đầy đủ (nhiều phần nghe/đọc/viết đúng số câu + thời gian từng cấp — hiện mới có câu
-nghe/đọc trộn vào quiz từ vựng, chưa đúng cấu trúc thật), RAG chatbot, minigame, kết bạn/theo
+nghe/đọc trộn vào quiz từ vựng, chưa đúng cấu trúc thật), minigame, kết bạn/theo
 dõi (mới có bình luận + thích video + thông báo, chưa có khái niệm bạn bè/follow).
