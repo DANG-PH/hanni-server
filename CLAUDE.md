@@ -45,7 +45,13 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   cập nhật **lười** (xem `StreakService`). Không dùng cron reset. Có "lá chắn"
   (`UserStreak.streakFreezeCount`) giữ nguyên chuỗi nếu lỡ nghỉ ĐÚNG 1 ngày — thưởng 1 lá chắn
   mỗi mốc 7 ngày liên tục, tối đa 2 cái cùng lúc (`FREEZE_MILESTONE_DAYS`/`MAX_STREAK_FREEZE`
-  trong `streak.service.ts`).
+  trong `streak.service.ts`). `GET /streak/history?days=` (mặc định 30, `StreakService.history()`)
+  trả về lịch sử `UserDailyActivity` — chỉ có bản ghi cho NGÀY CÓ hoạt động (không tự điền ngày
+  nghỉ) — FE tự dựng đủ chuỗi ngày rồi khớp theo ISO date (`components/activity-calendar.tsx`).
+- **Huy hiệu** (`GET /achievements`, `AchievementsService.list()`): mỗi mục trả kèm
+  `progressCurrent`/`progressTarget` — streak hiện tại (nhóm STREAK), số từ đã thuộc (VOLUME),
+  hoặc `learnedWords`/`totalWords` lấy từ `UserLevelProgress` (LEVEL — `threshold` ở nhóm này là
+  SỐ CẤP HSK 1-9, không phải số từ, nên không dùng thẳng làm mẫu số).
 - **Index quan trọng cho queue SRS**: `UserWordProgress (userId, dueAt)` và `(userId, hskLevel, dueAt)`.
 - **Push (`src/modules/push`)**: dùng `web-push` + khóa VAPID (`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`
   trong env, sinh bằng `npx web-push generate-vapid-keys`). Để trống 2 khóa thì API trả 503 rõ ràng,
