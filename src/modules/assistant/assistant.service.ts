@@ -538,7 +538,9 @@ export class AssistantService implements OnModuleInit {
           }
           if (!fullText) {
             const fallback = await this.generateWithFallback(contents);
-            fullText = fallback ?? this.pickRandom(this.OVERLOADED_REPLIES);
+            fullText =
+              fallback?.text ?? this.pickRandom(this.OVERLOADED_REPLIES);
+            if (fallback?.action) action = fallback.action;
             subscriber.next({ data: JSON.stringify({ delta: fullText }) });
           }
 
@@ -678,8 +680,11 @@ export class AssistantService implements OnModuleInit {
       );
     }
 
-    const reply = await this.generateWithFallback(contents);
-    return { text: reply ?? this.pickRandom(this.OVERLOADED_REPLIES) };
+    const fallback = await this.generateWithFallback(contents);
+    return {
+      text: fallback?.text ?? this.pickRandom(this.OVERLOADED_REPLIES),
+      action: fallback?.action,
+    };
   }
 
   /** Ghép lịch sử hội thoại + RAG (ngữ pháp/FAQ) + tra từ vựng theo Hán tự +
@@ -1007,16 +1012,48 @@ Hướng dẫn trả lời:
     return { resultForModel: 'Không rõ hành động được yêu cầu.' };
   }
 
+  /** Fallback khi model chính lỗi giữa chừng — PHẢI truyền `tools` giống
+   * đường chính, nếu không hệ thống prompt (đang ép "PHẢI gọi tool NGAY")
+   * khiến model tự bịa cú pháp gọi tool giả dạng text (vd
+   * `<function_calls>[navigate_to_page(...)]`) thay vì gọi tool thật —
+   * lỗi này đã gặp thật trên production. */
   private async generateWithFallback(
     contents: Content[],
-  ): Promise<string | null> {
+  ): Promise<{ text: string; action?: AssistantAction } | null> {
     for (const modelName of this.CHAT_MODELS) {
       try {
         const response = await this.genAI!.models.generateContent({
           model: modelName,
           contents,
+          config: { tools: TOOLS },
         });
-        if (response.text) return response.text;
+        const call = response.functionCalls?.[0];
+        if (call) {
+          const { resultForModel, action } = await this.executeTool(call);
+          const followUp = await this.genAI!.models.generateContent({
+            model: modelName,
+            contents: [
+              ...contents,
+              { role: 'model', parts: [{ functionCall: call }] },
+              {
+                role: 'user',
+                parts: [
+                  {
+                    functionResponse: {
+                      name: call.name,
+                      response: { result: resultForModel },
+                    },
+                  },
+                ],
+              },
+            ],
+          });
+          return {
+            text: followUp.text ?? this.pickRandom(this.OVERLOADED_REPLIES),
+            action,
+          };
+        }
+        if (response.text) return { text: response.text };
       } catch (err) {
         const status =
           (err as { status?: number }).status ?? (err as Error).message;
