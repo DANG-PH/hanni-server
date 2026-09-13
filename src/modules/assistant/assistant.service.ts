@@ -571,12 +571,28 @@ export class AssistantService implements OnModuleInit {
     replyText: string,
     priorCount: number,
   ): Promise<void> {
+    // 2 lượt tạo cùng lúc trong 1 transaction có thể trùng `createdAt` tới
+    // từng mili-giây -> `orderBy: createdAt asc` không còn phân biệt được,
+    // có lúc trả model lên TRƯỚC user (đã thấy thật trên production). Ghim
+    // tay 1ms lệch nhau để đảm bảo đúng thứ tự hiển thị.
+    const userCreatedAt = new Date();
+    const modelCreatedAt = new Date(userCreatedAt.getTime() + 1);
     await this.prisma.$transaction([
       this.prisma.chatMessage.create({
-        data: { sessionId, role: ChatRole.USER, text: userMessage },
+        data: {
+          sessionId,
+          role: ChatRole.USER,
+          text: userMessage,
+          createdAt: userCreatedAt,
+        },
       }),
       this.prisma.chatMessage.create({
-        data: { sessionId, role: ChatRole.MODEL, text: replyText },
+        data: {
+          sessionId,
+          role: ChatRole.MODEL,
+          text: replyText,
+          createdAt: modelCreatedAt,
+        },
       }),
       this.prisma.chatSession.update({
         where: { id: sessionId },
