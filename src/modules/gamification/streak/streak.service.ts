@@ -15,6 +15,11 @@ function toIso(d: Date | null | undefined): string | null {
   return d ? d.toISOString().slice(0, 10) : null;
 }
 
+/** Cứ đủ 7 ngày liên tục lại được thưởng 1 "lá chắn" — dùng để giữ nguyên
+ * chuỗi nếu lỡ nghỉ đúng 1 ngày (xem nhánh gap>1 trong advanceStreak()). */
+const FREEZE_MILESTONE_DAYS = 7;
+const MAX_STREAK_FREEZE = 2;
+
 interface ActivityDelta {
   wordsReviewed?: number;
   wordsLearned?: number;
@@ -132,6 +137,18 @@ export class StreakService {
       } else {
         return; // gap <= 0: lệch đồng hồ / đổi timezone — bỏ qua
       }
+    }
+
+    // Thưởng 1 "lá chắn" (streak freeze) mỗi mốc 7 ngày liên tục, tối đa
+    // MAX_STREAK_FREEZE cái tồn cùng lúc — trước đây streakFreezeCount chỉ
+    // có logic TIÊU (ở nhánh gap>1 phía trên) mà không bao giờ được CẤP, nên
+    // luôn kẹt ở 0 và không có tác dụng thật.
+    if (
+      current > 0 &&
+      current % FREEZE_MILESTONE_DAYS === 0 &&
+      freeze < MAX_STREAK_FREEZE
+    ) {
+      freeze += 1;
     }
 
     const longest = Math.max(streak.longestStreak, current);
