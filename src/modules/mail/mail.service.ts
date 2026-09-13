@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createTransport, type Transporter } from 'nodemailer';
 import type { Env } from '../../config/env.validation';
+import { passwordResetHtml, verifyEmailHtml } from './templates';
 
 /**
  * Để trống MAIL_HOST (mặc định) -> chỉ log nội dung mail ra console (đủ để
@@ -40,7 +41,12 @@ export class MailService implements OnModuleInit {
 
   async sendVerifyEmail(to: string, token: string): Promise<void> {
     const link = `${this.frontendUrl}/auth/verify-email?token=${token}`;
-    await this.deliver(to, 'Xác minh email Hanni', `Nhấn để xác minh: ${link}`);
+    await this.deliver(
+      to,
+      'Xác minh email Hanni',
+      `Nhấn để xác minh: ${link}`,
+      verifyEmailHtml(link),
+    );
   }
 
   async sendPasswordReset(to: string, token: string): Promise<void> {
@@ -49,16 +55,18 @@ export class MailService implements OnModuleInit {
       to,
       'Đặt lại mật khẩu Hanni',
       `Nhấn để đặt lại: ${link}`,
+      passwordResetHtml(link),
     );
   }
 
   private async deliver(
     to: string,
     subject: string,
-    body: string,
+    text: string,
+    html: string,
   ): Promise<void> {
     if (!this.transporter) {
-      this.logger.log(`[MAIL:dev] tới=${to} | ${subject}\n${body}`);
+      this.logger.log(`[MAIL:dev] tới=${to} | ${subject}\n${text}`);
       return;
     }
     try {
@@ -66,7 +74,8 @@ export class MailService implements OnModuleInit {
         from: this.config.get('MAIL_FROM', { infer: true }),
         to,
         subject,
-        text: body,
+        text,
+        html,
       });
       this.logger.log(`[MAIL] đã gửi tới ${to}: ${subject}`);
     } catch (err) {
