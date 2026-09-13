@@ -42,7 +42,10 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `UserSettings.srsScheduler`. `UserWordProgress` có cả trường SM-2 (easeFactor/intervalDays)
   lẫn FSRS (stability/difficulty) → đổi thuật toán không cần migration.
 - **Streak** tính theo **timezone IANA của user** + giờ cắt ngày `STREAK_DAY_CUTOFF_HOUR`,
-  cập nhật **lười** (xem `StreakService`). Không dùng cron reset.
+  cập nhật **lười** (xem `StreakService`). Không dùng cron reset. Có "lá chắn"
+  (`UserStreak.streakFreezeCount`) giữ nguyên chuỗi nếu lỡ nghỉ ĐÚNG 1 ngày — thưởng 1 lá chắn
+  mỗi mốc 7 ngày liên tục, tối đa 2 cái cùng lúc (`FREEZE_MILESTONE_DAYS`/`MAX_STREAK_FREEZE`
+  trong `streak.service.ts`).
 - **Index quan trọng cho queue SRS**: `UserWordProgress (userId, dueAt)` và `(userId, hskLevel, dueAt)`.
 - **Push (`src/modules/push`)**: dùng `web-push` + khóa VAPID (`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`
   trong env, sinh bằng `npx web-push generate-vapid-keys`). Để trống 2 khóa thì API trả 503 rõ ràng,
