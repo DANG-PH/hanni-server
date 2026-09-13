@@ -40,6 +40,9 @@ const PAGE_PATHS: Record<string, string> = {
   watch: '/watch',
   onboarding: '/onboarding',
   settings: '/settings',
+  study: '/study',
+  account: '/account',
+  achievements: '/achievements',
 };
 const PAGE_LABELS_VI: Record<string, string> = {
   dashboard: 'Trang chủ',
@@ -55,6 +58,9 @@ const PAGE_LABELS_VI: Record<string, string> = {
   watch: 'Học qua video',
   onboarding: 'Khảo sát lộ trình',
   settings: 'Cài đặt',
+  study: 'Ôn tập flashcard',
+  account: 'Tài khoản',
+  achievements: 'Huy hiệu',
 };
 
 /** 2 tool duy nhất trợ lý được gọi — cả 2 đều chỉ TRẢ VỀ đường dẫn cho
@@ -66,7 +72,7 @@ const TOOLS: Tool[] = [
       {
         name: 'navigate_to_page',
         description:
-          'Lấy đường dẫn tới 1 trang trong app Hanni khi người dùng muốn mở/vào 1 mục cụ thể (lộ trình, từ vựng, ngữ pháp, luyện nghe, luyện phát âm, luyện viết, kiểm tra HSK, bảng xếp hạng, tiến độ...). KHÔNG dùng cho video — video dùng open_video. GỌI NGAY khi thấy ý định này, kể cả khi người dùng không nói rõ cấp HSK — `level` là tuỳ chọn, cứ để trống nếu không rõ, ĐỪNG hỏi lại người dùng trước khi gọi tool.',
+          'Lấy đường dẫn tới 1 trang trong app Hanni khi người dùng muốn mở/vào 1 mục cụ thể, HOẶC khi câu hỏi của họ thật ra chính là 1 thao tác làm được ngay trên 1 trang cụ thể — ví dụ hỏi "ôn từ vựng/flashcard ở đâu", "sao lâu rồi chưa ôn bài" -> page=study; "đổi mật khẩu ở đâu", "sao đổi email/tài khoản" -> page=account; ngoài ra còn có lộ trình (learn), từ vựng, ngữ pháp, luyện nghe, luyện phát âm, luyện viết, kiểm tra HSK, bảng xếp hạng, tiến độ, huy hiệu (achievements), cài đặt (settings). KHÔNG dùng cho video — video dùng open_video. GỌI NGAY khi thấy ý định này, kể cả khi người dùng không nói rõ cấp HSK — `level` là tuỳ chọn, cứ để trống nếu không rõ, ĐỪNG hỏi lại người dùng trước khi gọi tool.',
         parameters: {
           type: Type.OBJECT,
           properties: {
@@ -735,7 +741,7 @@ ${
 Câu hỏi: ${message}
 
 Hướng dẫn trả lời:
-- Nếu người dùng muốn MỞ/XEM/VÀO 1 trang hay 1 video cụ thể (kể cả khi nói chung chung, không rõ chi tiết), PHẢI gọi tool tương ứng (navigate_to_page hoặc open_video) NGAY LẬP TỨC trong lượt này — TUYỆT ĐỐI không hỏi lại để làm rõ trước, không chỉ mô tả bằng lời. Bạn KHÔNG tự chuyển trang được, chỉ đưa ra đường dẫn để hệ thống hiện nút bấm — sau khi gọi tool, mời người dùng bấm nút đó ("bấm vào đây để..."), TUYỆT ĐỐI không nói là bạn đã mở/chuyển trang giúp họ rồi.
+- Nếu người dùng muốn MỞ/XEM/VÀO 1 trang hay 1 video cụ thể (kể cả khi nói chung chung, không rõ chi tiết), HOẶC câu hỏi của họ thực chất là 1 việc làm được ngay trên 1 trang trong app (vd hỏi "ôn từ vựng/flashcard ở đâu", "đổi mật khẩu ở đâu"), PHẢI gọi tool tương ứng (navigate_to_page hoặc open_video) NGAY LẬP TỨC trong lượt này — TUYỆT ĐỐI không hỏi lại để làm rõ trước, không chỉ mô tả bằng lời hay chỉ dẫn chung chung kiểu "bạn vào mục cài đặt nhé". Bạn KHÔNG tự chuyển trang được, chỉ đưa ra đường dẫn để hệ thống hiện nút bấm — sau khi gọi tool, mời người dùng bấm nút đó ("bấm vào đây để..."), TUYỆT ĐỐI không nói là bạn đã mở/chuyển trang giúp họ rồi.
 - Trả lời câu hỏi tự nhiên, đầy đủ bằng kiến thức tiếng Trung của bạn — không cần bó buộc trong các đoạn trích ở trên.
 - Nếu có điểm ngữ pháp/từ vựng Hanni liên quan (xem phần trên), có thể nhắc khéo tới trong app như gợi ý đọc thêm.
 - QUAN TRỌNG: nếu phần trên có mục "Từ vựng Hanni" cho đúng chữ Hán đang được hỏi, PHẢI dùng đúng cấp HSK/nghĩa ở đó — tuyệt đối không tự đoán cấp HSK hay nghĩa khác cho từ đó.

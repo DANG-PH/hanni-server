@@ -12,6 +12,10 @@ class LeaderboardQuery {
   @IsOptional()
   @IsIn(['learned', 'streak', 'longest', 'lessons'])
   metric?: LeaderboardMetric;
+
+  @IsOptional()
+  @IsIn(['global', 'friends'])
+  scope?: 'global' | 'friends';
 }
 
 @ApiTags('leaderboard')
@@ -27,6 +31,11 @@ export class LeaderboardController {
 
   @Get()
   top(@CurrentUser() user: AuthUser, @Query() q: LeaderboardQuery) {
-    return this.leaderboard.top(user.id, q.metric ?? 'learned');
+    return this.leaderboard.top(
+      user.id,
+      q.metric ?? 'learned',
+      q.scope === 'friends' ? 10 : 50,
+      q.scope ?? 'global',
+    );
   }
 }

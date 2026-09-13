@@ -43,12 +43,28 @@ export class LeaderboardService {
     }));
   }
 
-  /** Bảng xếp hạng theo `metric`. Kèm hạng của user hiện tại. */
-  async top(userId: string, metric: LeaderboardMetric, limit = 50) {
+  /** Bảng xếp hạng theo `metric`. Kèm hạng của user hiện tại.
+   * `scope: 'friends'` chỉ xếp hạng trong nhóm (chính mình + người đang
+   * theo dõi) — dùng cho thẻ "So với bạn bè" ở dashboard, cho lý do cụ thể
+   * để theo dõi ai đó thay vì theo dõi xong không thấy tác dụng gì. */
+  async top(
+    userId: string,
+    metric: LeaderboardMetric,
+    limit = 50,
+    scope: 'global' | 'friends' = 'global',
+  ) {
     if (!METRICS[metric])
       throw new BadRequestException('Tiêu chí không hợp lệ');
 
-    const ranked = await this.rankedPairs(metric);
+    let ranked = await this.rankedPairs(metric);
+    if (scope === 'friends') {
+      const follows = await this.prisma.follow.findMany({
+        where: { followerId: userId },
+        select: { followingId: true },
+      });
+      const friendIds = new Set([userId, ...follows.map((f) => f.followingId)]);
+      ranked = ranked.filter((r) => friendIds.has(r.userId));
+    }
     const myIndex = ranked.findIndex((r) => r.userId === userId);
     const me = {
       rank: myIndex >= 0 ? myIndex + 1 : null,
