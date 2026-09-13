@@ -37,6 +37,12 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 - Prisma: bắt `PrismaClientKnownRequestError` (P2002/P2025) — đã có `AllExceptionsFilter` map sẵn.
 
 ## Điểm quan trọng
+- **Mail (`src/modules/mail`)**: `MailService` gửi SMTP thật qua `nodemailer` khi có
+  `MAIL_HOST` (dùng `MAIL_PORT`/`MAIL_USER`/`MAIL_PASSWORD`/`MAIL_FROM`) — để trống `MAIL_HOST`
+  thì chỉ log ra console (dev). Lỗi gửi mail chỉ log, KHÔNG throw, để giữ đúng bảo mật của
+  `forgotPassword()` (luôn trả lời như nhau dù email có tồn tại hay không) và tránh 500 vì SMTP
+  trục trặc. Trước đây dù điền `MAIL_HOST` vẫn chỉ log suông (chưa từng gọi SMTP thật) — nghĩa
+  là xác minh email/đặt lại mật khẩu quên KHÔNG hoạt động được trên production cho tới khi sửa.
 - **Phân cấp HSK dùng số bản 11/2025** (không phải bản nháp 2021). `HskLevel` giữ cả 2 bộ số.
 - **SRS**: `SchedulerRegistry.get(name)` chọn `Sm2Scheduler` | `FsrsScheduler` theo
   `UserSettings.srsScheduler`. `UserWordProgress` có cả trường SM-2 (easeFactor/intervalDays)
