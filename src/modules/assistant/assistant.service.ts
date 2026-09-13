@@ -421,6 +421,8 @@ Hướng dẫn trả lời:
 - QUAN TRỌNG: nếu phần trên có mục "Từ vựng Hanni" cho đúng chữ Hán đang được hỏi, PHẢI dùng đúng cấp HSK/nghĩa ở đó — tuyệt đối không tự đoán cấp HSK hay nghĩa khác cho từ đó.
 - Chỉ nói một điểm ngữ pháp/từ vựng "có trong Hanni" nếu nó thực sự xuất hiện ở phần trích trên — nếu dùng kiến thức chung ngoài phần đó, đừng ngụ ý là đã có sẵn trong app.
 - Dùng thông tin học tập cá nhân ở trên khi câu hỏi liên quan tới tiến độ/streak/nên học gì hôm nay của chính người dùng.
+- Nếu người dùng đang học dở 1 bài hoặc xem dở 1 video (xem phần trên), chủ động nhắc tên bài/video đó khi trả lời các câu hỏi kiểu "hôm nay học gì", "tiếp theo nên làm gì", "gợi ý cho tôi" — thay vì chỉ nói chung chung.
+- Nếu thấy xu hướng luyện tập 7 ngày qua lệch hẳn về 1 kỹ năng (chỉ nghe hoặc chỉ phát âm, không ôn từ vựng...), có thể khéo léo gợi ý cân bằng thêm kỹ năng còn thiếu khi phù hợp với câu hỏi.
 - Trả lời ngắn gọn, có thể dùng gạch đầu dòng và **in đậm** cho từ khoá quan trọng.
       `.trim();
 
@@ -435,9 +437,22 @@ Hướng dẫn trả lời:
     }
   }
 
-  /** Ground truth về tiến độ CHÍNH người đang hỏi — tránh AI đoán bừa streak/số từ. */
+  /** Ground truth về tiến độ CHÍNH người đang hỏi — tránh AI đoán bừa streak/số từ.
+   * Gồm cả bài/video đang học dở + xu hướng luyện tập gần đây, để AI chủ động
+   * dẫn dắt đúng ("tiếp tục bài X", "video Y đang xem dở") thay vì trả lời
+   * chung chung — đây là điểm khác biệt so với chatbot tra cứu thuần. */
   private async buildUserFactsBlock(userId: string): Promise<string> {
-    const [streak, learnedCount, dueCount, onboarding] = await Promise.all([
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000);
+    const [
+      streak,
+      learnedCount,
+      dueCount,
+      onboarding,
+      currentLesson,
+      currentVideo,
+      recentReviewCount,
+      practiceBySkill,
+    ] = await Promise.all([
       this.prisma.userStreak.findUnique({
         where: { userId },
         select: { currentStreak: true, longestStreak: true },
@@ -466,6 +481,28 @@ Hướng dẫn trả lời:
         where: { userId },
         select: { recommendedLevel: true, targetLevel: true },
       }),
+      this.prisma.userLessonProgress.findFirst({
+        where: { userId, completedAt: null, startedAt: { not: null } },
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          learnedWords: true,
+          totalWords: true,
+          lesson: { select: { title: true, hskLevel: true } },
+        },
+      }),
+      this.prisma.userVideoProgress.findFirst({
+        where: { userId, completedAt: null, linesRead: { gt: 0 } },
+        orderBy: { updatedAt: 'desc' },
+        select: { video: { select: { title: true } } },
+      }),
+      this.prisma.reviewLog.count({
+        where: { userId, reviewedAt: { gte: sevenDaysAgo } },
+      }),
+      this.prisma.practiceAttempt.groupBy({
+        by: ['skill'],
+        where: { userId, createdAt: { gte: sevenDaysAgo } },
+        _count: true,
+      }),
     ]);
 
     const lines = [
@@ -473,6 +510,24 @@ Hướng dẫn trả lời:
       `Số từ đã thuộc (ôn đều, chu kỳ ≥ ${LEARNED_INTERVAL_DAYS} ngày): ${learnedCount} từ.`,
       `Số từ đang đến hạn ôn: ${dueCount} từ.`,
     ];
+    if (currentLesson) {
+      lines.push(
+        `Đang học dở bài "${currentLesson.lesson.title}" (HSK ${currentLesson.lesson.hskLevel}) — đã học ${currentLesson.learnedWords}/${currentLesson.totalWords} từ trong bài.`,
+      );
+    }
+    if (currentVideo) {
+      lines.push(`Đang xem dở video "${currentVideo.video.title}".`);
+    }
+    const trend = [
+      recentReviewCount > 0 ? `${recentReviewCount} lượt ôn từ vựng` : null,
+      ...practiceBySkill.map(
+        (p) =>
+          `${p._count} lượt luyện ${p.skill === 'LISTENING' ? 'nghe' : 'phát âm'}`,
+      ),
+    ].filter(Boolean);
+    if (trend.length) {
+      lines.push(`Trong 7 ngày qua: ${trend.join(', ')}.`);
+    }
     if (onboarding) {
       lines.push(
         `Cấp HSK Hanni đề xuất theo khảo sát đầu vào: HSK ${onboarding.recommendedLevel}` +

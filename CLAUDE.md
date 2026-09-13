@@ -98,8 +98,13 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   chừng. Cộng thêm 1 nguồn ĐỘNG không tốn quota: `searchWordsByChineseTerms()` bắt Hán tự xuất
   hiện trong câu hỏi rồi tra thẳng `Word` (contains, không cần embed) — cho ground truth chính
   xác tuyệt đối về cấp HSK/nghĩa của ĐÚNG từ đang hỏi thay vì để model đoán. `POST /assistant/ask`
-  (throttle 20/60s) ground thêm bằng dữ kiện cá nhân người hỏi (streak, số từ đã thuộc, số từ
-  đến hạn, đề xuất từ `OnboardingProfile` nếu có) để trả lời tự nhiên hơn "hôm nay nên học gì".
+  (throttle 20/60s) ground thêm bằng dữ kiện cá nhân người hỏi qua `buildUserFactsBlock()`:
+  streak, số từ đã thuộc/đến hạn, đề xuất từ `OnboardingProfile`, **bài học đang học dở**
+  (`UserLessonProgress` mới nhất chưa `completedAt`), **video đang xem dở**
+  (`UserVideoProgress` tương tự), và **xu hướng luyện tập 7 ngày qua** (số lượt ôn từ vựng qua
+  `ReviewLog` + số lượt luyện nghe/phát âm qua `PracticeAttempt` theo `skill`) — prompt yêu cầu
+  model CHỦ ĐỘNG nhắc tên bài/video đang dở khi trả lời kiểu "hôm nay học gì", không chỉ trả lời
+  chung chung, để cảm giác thật sự hiểu người dùng chứ không phải chatbot tra cứu.
   Nhiều `ChatSession` song song như ChatGPT/Claude (`title` tự
   đặt từ tin nhắn đầu, không đổi lại sau) — `GET/POST /assistant/sessions`,
   `GET /assistant/sessions/:id/messages`, `DELETE /assistant/sessions/:id`. `POST /assistant/ask`
