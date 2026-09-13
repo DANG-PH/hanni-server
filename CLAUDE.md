@@ -109,7 +109,16 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   đặt từ tin nhắn đầu, không đổi lại sau) — `GET/POST /assistant/sessions`,
   `GET /assistant/sessions/:id/messages`, `DELETE /assistant/sessions/:id`. `POST /assistant/ask`
   nhận `sessionId` tuỳ chọn — bỏ trống thì tự tiếp tục phiên gần nhất (tự tạo nếu chưa có).
-  `GET /assistant/status` chẩn đoán (đã bật chưa, đã đánh index bao nhiêu). **Để trống
+  **`GET /assistant/ask/stream`** (SSE qua `@Sse()`, nhận `message`/`sessionId` qua query vì
+  `EventSource` chỉ hỗ trợ GET) đẩy từng đoạn chữ ngay khi Gemini sinh ra (`generateContentStream`,
+  chỉ thử `CHAT_MODELS[0]` — không "đổi model giữa dòng" được — lỗi thì rơi về
+  `generateWithFallback()` không streaming). `buildPromptContents()` gộp chung phần dựng
+  prompt (RAG/từ vựng/dữ kiện cá nhân) cho cả 2 đường `ask`/`askStream`; `persistTurn()` gộp
+  chung phần lưu DB. `GET /assistant/status` chẩn đoán (đã bật chưa, đã đánh index bao nhiêu).
+  **TODO(scale)** ngay trong `assistant.service.ts`: throttle hiện tại chỉ chặn spam 1 user,
+  CHƯA giới hạn tổng quota Gemini free tier khi nhiều user thật cùng dùng — cần nâng gói trả
+  phí hoặc thêm hạn mức/ngày mỗi user trước khi ra mắt rộng (có thể gắn với tính năng nạp
+  tiền/gói trả phí sau này, chưa làm). **Để trống
   `GEMINI_API_KEY` thì toàn bộ tự
   báo "chưa bật", không chặn app khởi động** — cần thêm `GEMINI_API_KEY` (+ `AI_SYSTEM_PROMPT`
   tuỳ chọn) vào `.env`/`.env.production.local` (đã có sẵn ở máy dev, cần copy tay lên VPS).

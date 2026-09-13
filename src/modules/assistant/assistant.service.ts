@@ -1,6 +1,7 @@
 import {
   Injectable,
   Logger,
+  MessageEvent,
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
@@ -9,6 +10,7 @@ import { GoogleGenAI } from '@google/genai';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { ChatRole, SrsState } from '@prisma/client';
+import { Observable } from 'rxjs';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import type { Env } from '../../config/env.validation';
 import { EmbeddedChunk, InMemoryVectorStore } from './rag/vector-store';
@@ -98,6 +100,17 @@ export class AssistantService implements OnModuleInit {
   ];
   private readonly EMBED_MODEL = 'gemini-embedding-001';
   private readonly EMBED_BATCH_SIZE = 20;
+
+  // TODO(scale): GEMINI_API_KEY hiện dùng chung 1 key free tier (quota rất
+  // thấp — đã từng hết quota embed_content chỉ vì vài chục lượt hỏi/đánh
+  // index trong lúc test, xem README lịch sử buildIndex()). Throttle hiện
+  // tại (`@Throttle 20/60s` ở assistant.controller.ts) chỉ chặn 1 user spam
+  // nhanh — KHÔNG bảo vệ quota chung khi có nhiều user thật cùng dùng cùng
+  // lúc. Trước khi ra mắt rộng cần: (1) nâng lên gói Gemini trả phí (bỏ giới
+  // hạn free tier) hoặc (2) thêm giới hạn số lượt hỏi/ngày mỗi user (DB đếm
+  // theo ChatMessage.createdAt, kiểu quota giống PracticeAttempt) — có thể
+  // gắn với tính năng nạp tiền/gói trả phí sau này (chưa làm, để dành bàn
+  // riêng khi cần) để user trả phí có hạn mức cao hơn user miễn phí.
 
   constructor(
     private readonly config: ConfigService<Env, true>,
@@ -326,32 +339,138 @@ export class AssistantService implements OnModuleInit {
       where: { sessionId: session.id },
     });
     const replyText = await this.generateReply(userId, message, session.id);
+    await this.persistTurn(
+      session.id,
+      session.title,
+      message,
+      replyText,
+      priorCount,
+    );
 
+    return { message: replyText, sessionId: session.id };
+  }
+
+  /**
+   * Bản streaming của `ask()` — dùng SSE (`@Sse()` route ở controller) để
+   * đẩy từng đoạn chữ về ngay khi Gemini sinh ra, thay vì bắt người dùng
+   * đợi toàn bộ câu trả lời xong mới thấy gì. Chỉ thử 1 model đầu tiên
+   * trong `CHAT_MODELS` (streaming dở giữa chừng thì không "đổi model giữa
+   * dòng" được) — nếu model đó lỗi trước khi kịp trả chữ nào thì rơi về
+   * `generateWithFallback()` (không streaming) để vẫn có câu trả lời.
+   */
+  askStream(
+    userId: string,
+    message: string,
+    sessionId?: string,
+  ): Observable<MessageEvent> {
+    return new Observable<MessageEvent>((subscriber) => {
+      void (async () => {
+        try {
+          if (!this.genAI) {
+            subscriber.next({
+              data: JSON.stringify({
+                delta:
+                  'Trợ lý AI chưa được bật — cần cấu hình GEMINI_API_KEY trước đã.',
+              }),
+            });
+            subscriber.next({ data: JSON.stringify({ done: true }) });
+            subscriber.complete();
+            return;
+          }
+
+          const session = sessionId
+            ? await this.requireOwnSession(userId, sessionId)
+            : await this.getOrCreateLatestSession(userId);
+          const priorCount = await this.prisma.chatMessage.count({
+            where: { sessionId: session.id },
+          });
+          const contents = await this.buildPromptContents(
+            userId,
+            message,
+            session.id,
+          );
+
+          let fullText = '';
+          try {
+            const stream = await this.genAI.models.generateContentStream({
+              model: this.CHAT_MODELS[0],
+              contents,
+            });
+            for await (const chunk of stream) {
+              const delta = chunk.text ?? '';
+              if (!delta) continue;
+              fullText += delta;
+              subscriber.next({ data: JSON.stringify({ delta }) });
+            }
+          } catch (err) {
+            this.logger.warn(
+              `[Assistant] streaming model lỗi, rơi về generateWithFallback: ${(err as Error).message}`,
+            );
+          }
+          if (!fullText) {
+            const fallback = await this.generateWithFallback(contents);
+            fullText = fallback ?? this.pickRandom(this.OVERLOADED_REPLIES);
+            subscriber.next({ data: JSON.stringify({ delta: fullText }) });
+          }
+
+          await this.persistTurn(
+            session.id,
+            session.title,
+            message,
+            fullText,
+            priorCount,
+          );
+          subscriber.next({
+            data: JSON.stringify({ done: true, sessionId: session.id }),
+          });
+          subscriber.complete();
+        } catch (err) {
+          this.lastError = (err as Error).message;
+          this.logger.error(
+            `[Assistant] askStream lỗi: ${(err as Error).message}`,
+          );
+          subscriber.next({
+            data: JSON.stringify({ delta: 'Có lỗi xảy ra, thử lại nhé.' }),
+          });
+          subscriber.next({ data: JSON.stringify({ done: true }) });
+          subscriber.complete();
+        }
+      })();
+    });
+  }
+
+  /** Lưu 2 lượt (người hỏi + model) + cập nhật session — dùng chung cho cả
+   * ask() và askStream(). */
+  private async persistTurn(
+    sessionId: string,
+    existingTitle: string | null,
+    userMessage: string,
+    replyText: string,
+    priorCount: number,
+  ): Promise<void> {
     await this.prisma.$transaction([
       this.prisma.chatMessage.create({
-        data: { sessionId: session.id, role: ChatRole.USER, text: message },
+        data: { sessionId, role: ChatRole.USER, text: userMessage },
       }),
       this.prisma.chatMessage.create({
-        data: { sessionId: session.id, role: ChatRole.MODEL, text: replyText },
+        data: { sessionId, role: ChatRole.MODEL, text: replyText },
       }),
       this.prisma.chatSession.update({
-        where: { id: session.id },
+        where: { id: sessionId },
         data: {
           updatedAt: new Date(),
           // Đặt tên cuộc trò chuyện từ tin nhắn đầu tiên, không đổi lại sau đó.
-          ...(priorCount === 0 && !session.title
+          ...(priorCount === 0 && !existingTitle
             ? {
                 title:
-                  message.length > this.TITLE_MAX_LEN
-                    ? `${message.slice(0, this.TITLE_MAX_LEN).trim()}…`
-                    : message,
+                  userMessage.length > this.TITLE_MAX_LEN
+                    ? `${userMessage.slice(0, this.TITLE_MAX_LEN).trim()}…`
+                    : userMessage,
               }
             : {}),
         },
       }),
     ]);
-
-    return { message: replyText, sessionId: session.id };
   }
 
   private async generateReply(
@@ -363,46 +482,66 @@ export class AssistantService implements OnModuleInit {
       return 'Trợ lý AI chưa được bật — cần cấu hình GEMINI_API_KEY trước đã.';
     }
     try {
-      const history = await this.prisma.chatMessage.findMany({
-        where: { sessionId },
-        orderBy: { createdAt: 'desc' },
-        take: HISTORY_LIMIT,
-      });
-      history.reverse();
+      const contents = await this.buildPromptContents(
+        userId,
+        message,
+        sessionId,
+      );
+      const reply = await this.generateWithFallback(contents);
+      return reply ?? this.pickRandom(this.OVERLOADED_REPLIES);
+    } catch (err) {
+      this.lastError = (err as Error).message;
+      this.logger.error(`[Assistant] ask lỗi: ${(err as Error).message}`);
+      return 'Có lỗi xảy ra, thử lại nhé.';
+    }
+  }
 
-      const userFacts = await this.buildUserFactsBlock(userId);
+  /** Ghép lịch sử hội thoại + RAG (ngữ pháp/FAQ) + tra từ vựng theo Hán tự +
+   * dữ kiện cá nhân thành `contents` gửi Gemini — dùng chung cho `ask()`
+   * (không streaming) và `askStream()`. */
+  private async buildPromptContents(
+    userId: string,
+    message: string,
+    sessionId: string,
+  ): Promise<GeminiContent[]> {
+    const history = await this.prisma.chatMessage.findMany({
+      where: { sessionId },
+      orderBy: { createdAt: 'desc' },
+      take: HISTORY_LIMIT,
+    });
+    history.reverse();
 
-      let relevant: EmbeddedChunk[] = [];
-      try {
-        const queryEmbedding = await this.embedText(message);
-        relevant = this.vectorStore.search(queryEmbedding, 4);
-      } catch (err) {
-        this.lastError = `embed câu hỏi: ${(err as Error).message}`;
-        this.logger.warn(
-          `[Assistant] embed câu hỏi thất bại: ${(err as Error).message}`,
-        );
-      }
-      // `c.text` đã tự mang nhãn nguồn riêng (vd "[Ngữ pháp HSK..." hoặc
-      // "[Câu hỏi thường gặp Hanni...") lúc đánh index, không cần bọc thêm.
-      const ragContext = relevant.map((c) => c.text).join('\n\n---\n\n');
+    const userFacts = await this.buildUserFactsBlock(userId);
 
-      // Tra từ điển thẳng theo Hán tự có trong câu hỏi — không tốn quota
-      // embedding (chỉ query DB), nhưng cho ground truth chính xác tuyệt đối
-      // về cấp HSK/nghĩa của TỪ CỤ THỂ đang được hỏi, thay vì để model đoán.
-      const words = await this.searchWordsByChineseTerms(message);
-      const wordContext = words
-        .map((w) => this.wordMetadataBlock(w))
-        .join('\n');
+    let relevant: EmbeddedChunk[] = [];
+    try {
+      const queryEmbedding = await this.embedText(message);
+      relevant = this.vectorStore.search(queryEmbedding, 4);
+    } catch (err) {
+      this.lastError = `embed câu hỏi: ${(err as Error).message}`;
+      this.logger.warn(
+        `[Assistant] embed câu hỏi thất bại: ${(err as Error).message}`,
+      );
+    }
+    // `c.text` đã tự mang nhãn nguồn riêng (vd "[Ngữ pháp HSK..." hoặc
+    // "[Câu hỏi thường gặp Hanni...") lúc đánh index, không cần bọc thêm.
+    const ragContext = relevant.map((c) => c.text).join('\n\n---\n\n');
 
-      const context = [ragContext, wordContext]
-        .filter(Boolean)
-        .join('\n\n---\n\n');
+    // Tra từ điển thẳng theo Hán tự có trong câu hỏi — không tốn quota
+    // embedding (chỉ query DB), nhưng cho ground truth chính xác tuyệt đối
+    // về cấp HSK/nghĩa của TỪ CỤ THỂ đang được hỏi, thay vì để model đoán.
+    const words = await this.searchWordsByChineseTerms(message);
+    const wordContext = words.map((w) => this.wordMetadataBlock(w)).join('\n');
 
-      const systemPrompt =
-        this.config.get('AI_SYSTEM_PROMPT', { infer: true }) ||
-        'Bạn là Hanni, trợ lý AI thân thiện của app học tiếng Trung theo chuẩn HSK 3.0. Trả lời tự nhiên, ấm áp, ngắn gọn bằng kiến thức tiếng Trung của bạn — không chỉ hành xử như công cụ tra cứu.';
+    const context = [ragContext, wordContext]
+      .filter(Boolean)
+      .join('\n\n---\n\n');
 
-      const prompt = `
+    const systemPrompt =
+      this.config.get('AI_SYSTEM_PROMPT', { infer: true }) ||
+      'Bạn là Hanni, trợ lý AI thân thiện của app học tiếng Trung theo chuẩn HSK 3.0. Trả lời tự nhiên, ấm áp, ngắn gọn bằng kiến thức tiếng Trung của bạn — không chỉ hành xử như công cụ tra cứu.';
+
+    const prompt = `
 ${systemPrompt}
 
 Thông tin học tập hiện tại của người đang hỏi (dùng để cá nhân hoá câu trả lời khi phù hợp):
@@ -426,15 +565,7 @@ Hướng dẫn trả lời:
 - Trả lời ngắn gọn, có thể dùng gạch đầu dòng và **in đậm** cho từ khoá quan trọng.
       `.trim();
 
-      const reply = await this.generateWithFallback(
-        this.buildContents(prompt, history),
-      );
-      return reply ?? this.pickRandom(this.OVERLOADED_REPLIES);
-    } catch (err) {
-      this.lastError = (err as Error).message;
-      this.logger.error(`[Assistant] ask lỗi: ${(err as Error).message}`);
-      return 'Có lỗi xảy ra, thử lại nhé.';
-    }
+    return this.buildContents(prompt, history);
   }
 
   /** Ground truth về tiến độ CHÍNH người đang hỏi — tránh AI đoán bừa streak/số từ.
