@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from '@google/genai';
 import { promises as fs } from 'fs';
@@ -180,8 +185,33 @@ export class AssistantService implements OnModuleInit {
     );
   }
 
-  /** Cuộc trò chuyện đang mở của user — mỗi user chỉ có 1, tự tạo nếu chưa có. */
-  private async getOrCreateSession(userId: string) {
+  private readonly TITLE_MAX_LEN = 80;
+
+  /** Danh sách cuộc trò chuyện của user, mới nhất trước — như ChatGPT/Claude. */
+  async listSessions(userId: string) {
+    return this.prisma.chatSession.findMany({
+      where: { userId },
+      orderBy: { updatedAt: 'desc' },
+      select: { id: true, title: true, createdAt: true, updatedAt: true },
+    });
+  }
+
+  createSession(userId: string) {
+    return this.prisma.chatSession.create({ data: { userId } });
+  }
+
+  /** 404 nếu không phải cuộc trò chuyện của chính user này — tránh dò UUID người khác. */
+  private async requireOwnSession(userId: string, sessionId: string) {
+    const session = await this.prisma.chatSession.findUnique({
+      where: { id: sessionId },
+    });
+    if (!session || session.userId !== userId) {
+      throw new NotFoundException('Không tìm thấy cuộc trò chuyện');
+    }
+    return session;
+  }
+
+  private async getOrCreateLatestSession(userId: string) {
     const existing = await this.prisma.chatSession.findFirst({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
@@ -190,25 +220,36 @@ export class AssistantService implements OnModuleInit {
     return this.prisma.chatSession.create({ data: { userId } });
   }
 
-  async getMessages(userId: string) {
-    const session = await this.prisma.chatSession.findFirst({
-      where: { userId },
-      orderBy: { updatedAt: 'desc' },
-    });
-    if (!session) return [];
+  async getMessages(userId: string, sessionId: string) {
+    await this.requireOwnSession(userId, sessionId);
     return this.prisma.chatMessage.findMany({
-      where: { sessionId: session.id },
+      where: { sessionId },
       orderBy: { createdAt: 'asc' },
     });
   }
 
-  async clearSession(userId: string): Promise<{ ok: true }> {
-    await this.prisma.chatSession.deleteMany({ where: { userId } });
+  async deleteSession(
+    userId: string,
+    sessionId: string,
+  ): Promise<{ ok: true }> {
+    await this.prisma.chatSession.deleteMany({
+      where: { id: sessionId, userId },
+    });
     return { ok: true };
   }
 
-  async ask(userId: string, message: string): Promise<{ message: string }> {
-    const session = await this.getOrCreateSession(userId);
+  async ask(
+    userId: string,
+    message: string,
+    sessionId?: string,
+  ): Promise<{ message: string; sessionId: string }> {
+    const session = sessionId
+      ? await this.requireOwnSession(userId, sessionId)
+      : await this.getOrCreateLatestSession(userId);
+
+    const priorCount = await this.prisma.chatMessage.count({
+      where: { sessionId: session.id },
+    });
     const replyText = await this.generateReply(userId, message, session.id);
 
     await this.prisma.$transaction([
@@ -220,11 +261,22 @@ export class AssistantService implements OnModuleInit {
       }),
       this.prisma.chatSession.update({
         where: { id: session.id },
-        data: { updatedAt: new Date() },
+        data: {
+          updatedAt: new Date(),
+          // Đặt tên cuộc trò chuyện từ tin nhắn đầu tiên, không đổi lại sau đó.
+          ...(priorCount === 0 && !session.title
+            ? {
+                title:
+                  message.length > this.TITLE_MAX_LEN
+                    ? `${message.slice(0, this.TITLE_MAX_LEN).trim()}…`
+                    : message,
+              }
+            : {}),
+        },
       }),
     ]);
 
-    return { message: replyText };
+    return { message: replyText, sessionId: session.id };
   }
 
   private async generateReply(

@@ -91,9 +91,12 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   = 1 chunk (không cần chia nhỏ như PDF vì đã ngắn gọn sẵn), KHÔNG dùng phần đại cương thô chưa
   giải thích. `POST /assistant/ask` (throttle 20/60s) ground thêm bằng dữ kiện cá nhân người hỏi
   (streak, số từ đã thuộc, số từ đến hạn, đề xuất từ `OnboardingProfile` nếu có) để trả lời tự
-  nhiên hơn "hôm nay nên học gì". Mỗi user chỉ có 1 `ChatSession` đang mở (đơn giản hoá, không có
-  UI chọn nhiều phiên) — `DELETE /assistant/session` xoá để bắt đầu lại. `GET /assistant/status`
-  chẩn đoán (đã bật chưa, đã đánh index bao nhiêu). **Để trống `GEMINI_API_KEY` thì toàn bộ tự
+  nhiên hơn "hôm nay nên học gì". Nhiều `ChatSession` song song như ChatGPT/Claude (`title` tự
+  đặt từ tin nhắn đầu, không đổi lại sau) — `GET/POST /assistant/sessions`,
+  `GET /assistant/sessions/:id/messages`, `DELETE /assistant/sessions/:id`. `POST /assistant/ask`
+  nhận `sessionId` tuỳ chọn — bỏ trống thì tự tiếp tục phiên gần nhất (tự tạo nếu chưa có).
+  `GET /assistant/status` chẩn đoán (đã bật chưa, đã đánh index bao nhiêu). **Để trống
+  `GEMINI_API_KEY` thì toàn bộ tự
   báo "chưa bật", không chặn app khởi động** — cần thêm `GEMINI_API_KEY` (+ `AI_SYSTEM_PROMPT`
   tuỳ chọn) vào `.env`/`.env.production.local` (đã có sẵn ở máy dev, cần copy tay lên VPS).
 

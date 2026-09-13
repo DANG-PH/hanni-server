@@ -830,17 +830,19 @@ enum ChatRole {
   MODEL
 }
 
-/// 1 cuộc trò chuyện với trợ lý AI — mỗi user chỉ có 1 cuộc đang mở
-/// (đơn giản hoá so với nhiều phiên song song), xoá là bắt đầu lại từ đầu.
+/// 1 cuộc trò chuyện với trợ lý AI — user có thể có nhiều cuộc song song
+/// (như ChatGPT/Claude). Tên tự đặt từ tin nhắn đầu tiên, không đổi lại sau
+/// đó dù có nhắn thêm — xem AssistantService.ask().
 model ChatSession {
   id        String        @id @default(uuid()) @db.Uuid
   userId    String        @db.Uuid
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
   messages  ChatMessage[]
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
-  @@index([userId])
+  @@index([userId, updatedAt(sort: Desc)])
 }
 
 model ChatMessage {
