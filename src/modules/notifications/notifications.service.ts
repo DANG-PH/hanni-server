@@ -9,6 +9,7 @@ const INCLUDE = {
   actor: { select: ACTOR_SELECT },
   video: { select: { id: true, title: true } },
   comment: { select: { id: true, content: true } },
+  achievement: { select: { code: true, nameVi: true, descriptionVi: true } },
 } as const;
 
 interface CreateNotificationInput {
@@ -17,6 +18,7 @@ interface CreateNotificationInput {
   actorId?: string | null;
   videoId?: string | null;
   commentId?: string | null;
+  achievementId?: string | null;
 }
 
 @Injectable()
@@ -36,6 +38,7 @@ export class NotificationsService {
         actorId: input.actorId ?? null,
         videoId: input.videoId ?? null,
         commentId: input.commentId ?? null,
+        achievementId: input.achievementId ?? null,
       },
       include: INCLUDE,
     });

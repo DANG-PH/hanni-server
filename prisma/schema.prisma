@@ -506,7 +506,8 @@ model Achievement {
   threshold     Int                 @default(0)
   meta          Json?
 
-  users UserAchievement[]
+  users         UserAchievement[]
+  notifications Notification[]
 }
 
 model UserAchievement {
@@ -720,23 +721,26 @@ enum NotificationType {
   VIDEO_COMMENT // ai đó bình luận vào video mình đã thêm
   VIDEO_LIKE // ai đó thích video mình đã thêm
   NEW_FOLLOWER // ai đó theo dõi mình
+  ACHIEVEMENT_UNLOCKED // vừa mở khoá 1 huy hiệu
 }
 
 /// Thông báo trong app, lưu DB để xem lại lịch sử; đẩy realtime qua
 /// NotificationsGateway (Socket.IO) ngay khi tạo. Không xoá khi đã đọc — chỉ đánh dấu `readAt`.
 model Notification {
-  id        String           @id @default(uuid()) @db.Uuid
-  userId    String           @db.Uuid
-  user      User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
-  type      NotificationType
-  actorId   String?          @db.Uuid
-  actor     User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
-  videoId   String?          @db.Uuid
-  video     Video?           @relation(fields: [videoId], references: [id], onDelete: Cascade)
-  commentId String?          @db.Uuid
-  comment   VideoComment?    @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  readAt    DateTime?
-  createdAt DateTime         @default(now())
+  id            String           @id @default(uuid()) @db.Uuid
+  userId        String           @db.Uuid
+  user          User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  type          NotificationType
+  actorId       String?          @db.Uuid
+  actor         User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  videoId       String?          @db.Uuid
+  video         Video?           @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  commentId     String?          @db.Uuid
+  comment       VideoComment?    @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  achievementId String?          @db.Uuid
+  achievement   Achievement?     @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  readAt        DateTime?
+  createdAt     DateTime         @default(now())
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, readAt])

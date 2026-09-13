@@ -3,6 +3,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { NotificationType } from '@prisma/client';
 import {
   AppEvent,
+  type AchievementUnlockedPayload,
   type CommentCreatedPayload,
   type UserFollowedPayload,
   type VideoLikedPayload,
@@ -87,6 +88,23 @@ export class NotificationsListener {
       });
     } catch (err) {
       this.logger.error(`onUserFollowed: ${(err as Error).message}`);
+    }
+  }
+
+  @OnEvent(AppEvent.AchievementUnlocked, { async: true })
+  async onAchievementUnlocked(p: AchievementUnlockedPayload): Promise<void> {
+    try {
+      // Không có actorId — chính người dùng tự đạt được, không phải do
+      // người khác tác động, nên NotificationsService.create() không bỏ
+      // qua thông báo này (điều kiện bỏ qua chỉ áp dụng khi actorId trùng
+      // userId nhận).
+      await this.notifications.create({
+        userId: p.userId,
+        type: NotificationType.ACHIEVEMENT_UNLOCKED,
+        achievementId: p.achievementId,
+      });
+    } catch (err) {
+      this.logger.error(`onAchievementUnlocked: ${(err as Error).message}`);
     }
   }
 }

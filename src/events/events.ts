@@ -14,6 +14,7 @@ export const AppEvent = {
   VideoLiked: 'video.liked',
   PracticeAttempted: 'practice.attempted',
   UserFollowed: 'user.followed',
+  AchievementUnlocked: 'achievement.unlocked',
 } as const;
 
 export interface WordReviewedPayload {
@@ -75,4 +76,9 @@ export interface PracticeAttemptedPayload {
 export interface UserFollowedPayload {
   followerId: string;
   followingId: string;
+}
+
+export interface AchievementUnlockedPayload {
+  userId: string;
+  achievementId: string;
 }

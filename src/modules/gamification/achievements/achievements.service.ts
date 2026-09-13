@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { AppEvent } from '../../../events/events';
 import { PrismaService } from '../../../infra/prisma/prisma.service';
 import { ACHIEVEMENT_CATALOG } from './achievement-catalog';
 
@@ -6,7 +8,10 @@ import { ACHIEVEMENT_CATALOG } from './achievement-catalog';
 export class AchievementsService {
   private readonly logger = new Logger(AchievementsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly events: EventEmitter2,
+  ) {}
 
   async list(userId: string) {
     const [catalog, mine] = await Promise.all([
@@ -35,6 +40,10 @@ export class AchievementsService {
         data: { userId, achievementId: achievement.id, progressValue },
       });
       this.logger.log(`User ${userId} mở khoá huy hiệu ${code}`);
+      this.events.emit(AppEvent.AchievementUnlocked, {
+        userId,
+        achievementId: achievement.id,
+      });
       return true;
     } catch {
       return false; // đã có rồi (unique)
