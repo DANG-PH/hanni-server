@@ -68,7 +68,10 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   chặn tự theo dõi chính mình (400). Phát `AppEvent.UserFollowed` → `NotificationsListener` tạo
   `NEW_FOLLOWER`. `LeaderboardService.top()` trả thêm `isFollowing` mỗi dòng (so với người đang
   gọi API) để FE hiện nút theo dõi ngay trong bảng xếp hạng — hiện CHƯA có trang hồ sơ công khai
-  hay danh sách người theo dõi/đang theo dõi, chỉ mới có nút bật/tắt.
+  hay danh sách người theo dõi/đang theo dõi, chỉ mới có nút bật/tắt. `GET /leaderboard` nhận
+  thêm `scope=friends` (mặc định `global`) — lọc `rankedPairs()` còn (chính mình + người đang
+  theo dõi) TRƯỚC khi tính hạng, cho FE làm thẻ "So với bạn bè" ở dashboard — theo dõi ai đó giờ
+  có tác dụng cụ thể (so tiến độ) thay vì chỉ tăng follower count.
 - **Luyện nghe/phát âm (`src/modules/practice`)**: `POST /practice/attempts` ghi 1 lượt luyện
   (`wordId`, `skill: LISTENING|PRONUNCIATION`, `isCorrect?` — chỉ dùng cho LISTENING vì
   PRONUNCIATION chưa có chấm điểm tự động, luôn lưu `null`). `GET /practice/stats?skill=` trả
@@ -127,16 +130,22 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   báo "chưa bật", không chặn app khởi động** — cần thêm `GEMINI_API_KEY` (+ `AI_SYSTEM_PROMPT`
   tuỳ chọn) vào `.env`/`.env.production.local` (đã có sẵn ở máy dev, cần copy tay lên VPS).
   **"AI Agent" — tool-calling (`TOOLS`, `executeTool()`)**: trợ lý gọi được 2 tool Gemini
-  function-calling — `navigate_to_page` (13 trang tĩnh, `PAGE_PATHS`/`PAGE_LABELS_VI`, tuỳ chọn
+  function-calling — `navigate_to_page` (16 trang tĩnh, `PAGE_PATHS`/`PAGE_LABELS_VI` — gồm cả
+  `study` "ôn flashcard" và `account` "đổi mật khẩu", tuỳ chọn
   `level` cho `learn`/`vocabulary`) và `open_video` (tìm `Video` theo `title`/`titleZh` chứa từ
   khoá). Cả 2 tool đều CHỈ ĐỌC dữ liệu và trả về 1 đường dẫn — không có tool nào tự đổi dữ liệu
   hay tự điều hướng thay người dùng (`resultForModel` luôn nhắc model mời người dùng tự bấm nút,
   KHÔNG được nói là đã tự mở/chuyển trang giúp — sửa đúng lỗi trợ lý hay bịa "đã mở video cho bạn
-  rồi" mà thực ra không mở được gì). `askStream()`/`generateReply()` chạy tối đa 2 lượt gọi model
+  rồi" mà thực ra không mở được gì). Description của tool + hướng dẫn hệ thống dạy model nhận ra
+  câu hỏi "ở đâu"/"sao lâu rồi chưa..." cũng là ý định điều hướng (vd "ôn từ vựng ở đâu" ->
+  page=study), không chỉ câu lệnh "mở X" tường minh. `askStream()`/`generateReply()` chạy tối đa
+  2 lượt gọi model
   (lượt 1 có `config.tools`, lượt 2 bỏ tool để ép trả lời bằng text dựa trên
   `functionResponse`), field `action?: AssistantAction` (`{type:'navigate', path, label}`) trả
   về trong event `done` của SSE stream (và trong response `POST /assistant/ask`) — FE hiện nút
-  bấm, không tự chuyển trang.
+  bấm, không tự chuyển trang. Lưu ý: `persistTurn()` ghim `createdAt` của tin nhắn model lệch
+  +1ms so với user (2 bản ghi tạo cùng lúc trong 1 transaction dễ trùng mốc thời gian tới từng
+  mili-giây, làm `orderBy: createdAt asc` trả sai thứ tự khi tra lịch sử).
 
 ## Lệnh
 `npm run start:dev` · `npm run build` · `npm run prisma:migrate` · `npm run db:seed` ·
