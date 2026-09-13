@@ -29,6 +29,7 @@
     "data:build-words": "tsx scripts/import/build-words.ts"
   },
   "dependencies": {
+    "@google/genai": "^2.22.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",

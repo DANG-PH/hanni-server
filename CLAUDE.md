@@ -8,6 +8,7 @@ API học tiếng Trung theo chuẩn **HSK 3.0** (9 cấp). Xem `README.md` cho 
 - Redis (ioredis) — state OAuth, cache
 - `@nestjs/event-emitter` (in-process) cho luồng sự kiện; handler phải **idempotent**
 - `@nestjs/websockets` + `socket.io` (namespace `/notifications`) — đẩy thông báo realtime
+- `@google/genai` (Gemini) — trợ lý AI RAG, để trống `GEMINI_API_KEY` thì tự tắt (báo rõ, không crash)
 
 ## Cấu trúc thư mục
 ```
@@ -20,6 +21,7 @@ src/
 │                        · gamification · learn · videos (+ videos/comments, videos/likes)
 │                        · grammar · exams · leaderboard · push · notifications (WebSocket gateway)
 │                        · practice (lưu kết quả luyện nghe/phát âm) · onboarding (khảo sát đầu vào)
+│                        · assistant (trợ lý AI RAG, Gemini)
 └── health/
 prisma/  schema.prisma + seed/ (hsk-levels, achievements, words)
 scripts/import/  ETL nguồn mở → data/processed/words.seed.json
@@ -82,6 +84,18 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   chia cho nhịp học `UserSettings.dailyGoalValue` ra số ngày cần học, so với hạn thi nếu có đặt
   để nhận xét nhịp độ (thoải mái/vừa đủ/gấp) — toàn bộ `recommendationVi` là text ghép luật, có
   thể làm lại khảo sát bất cứ lúc nào (upsert, ghi đè `completedAt`).
+- **Trợ lý AI Hanni (`src/modules/assistant`)**: RAG qua Gemini (`@google/genai`), kiến trúc
+  tham khảo từ project `tech-books-backend` cá nhân (in-memory vector store, model fallback
+  chain `CHAT_MODELS`, cache index xuống `.cache/assistant-index.json` — KHÔNG commit). Nguồn
+  RAG là các `GrammarPoint` ĐÃ CÓ giải thích thật (`explanationVi != ''`, ~235 điểm) — mỗi điểm
+  = 1 chunk (không cần chia nhỏ như PDF vì đã ngắn gọn sẵn), KHÔNG dùng phần đại cương thô chưa
+  giải thích. `POST /assistant/ask` (throttle 20/60s) ground thêm bằng dữ kiện cá nhân người hỏi
+  (streak, số từ đã thuộc, số từ đến hạn, đề xuất từ `OnboardingProfile` nếu có) để trả lời tự
+  nhiên hơn "hôm nay nên học gì". Mỗi user chỉ có 1 `ChatSession` đang mở (đơn giản hoá, không có
+  UI chọn nhiều phiên) — `DELETE /assistant/session` xoá để bắt đầu lại. `GET /assistant/status`
+  chẩn đoán (đã bật chưa, đã đánh index bao nhiêu). **Để trống `GEMINI_API_KEY` thì toàn bộ tự
+  báo "chưa bật", không chặn app khởi động** — cần thêm `GEMINI_API_KEY` (+ `AI_SYSTEM_PROMPT`
+  tuỳ chọn) vào `.env`/`.env.production.local` (đã có sẵn ở máy dev, cần copy tay lên VPS).
 
 ## Lệnh
 `npm run start:dev` · `npm run build` · `npm run prisma:migrate` · `npm run db:seed` ·
@@ -96,7 +110,8 @@ theo từ đã thuộc), push (thông báo đẩy Web Push, VAPID), notification
 lưu DB + đẩy realtime qua WebSocket khi có người trả lời bình luận/bình luận hoặc thích video
 mình thêm/theo dõi mình), practice (lưu kết quả luyện nghe/phát âm lên server, xem bên dưới),
 follows (theo dõi 1 chiều giữa người dùng, xem bên dưới), onboarding (khảo sát đầu vào → đề
-xuất cấp HSK + lộ trình bằng luật đơn giản, xem bên dưới), health, Swagger.
+xuất cấp HSK + lộ trình bằng luật đơn giản, xem bên dưới), assistant (trợ lý AI RAG qua Gemini,
+xem bên dưới — cần `GEMINI_API_KEY` mới bật), health, Swagger.
 Seed đầy đủ để deploy: 9 cấp HSK · huy hiệu · 10.9k từ (`data/processed/words.seed.json`) ·
 744 bài, TOÀN BỘ 9 cấp đều chia theo chủ đề thật (xem bên dưới) — không còn cấp nào chia đều
 15 từ/bài theo tần suất · 40 điểm ngữ pháp HSK 1–3 + 349 mục HSK 4–9 (đại cương,

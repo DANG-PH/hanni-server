@@ -10,6 +10,7 @@ import { validateEnv } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './infra/prisma/prisma.module';
 import { RedisModule } from './infra/redis/redis.module';
+import { AssistantModule } from './modules/assistant/assistant.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
@@ -78,6 +79,7 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
     NotificationsModule,
     PracticeModule,
     OnboardingModule,
+    AssistantModule,
     HealthModule,
   ],
   providers: [
