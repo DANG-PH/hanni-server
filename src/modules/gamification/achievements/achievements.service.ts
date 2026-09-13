@@ -18,23 +18,38 @@ export class AchievementsService {
    * ngày") — trước đây chỉ báo "Đang chinh phục" chung chung, không biết
    * còn cách bao xa. `UserLevelProgress` đã có sẵn cache totalWords/
    * learnedWords theo từng cấp (duy trì bởi ProgressService) nên tái dùng
-   * luôn cho nhóm LEVEL, không cần tính lại. */
+   * luôn cho nhóm LEVEL — NHƯNG bản ghi này chỉ được tạo khi user đã ôn ít
+   * nhất 1 từ ở cấp đó, nên user hoàn toàn chưa động vào cấp nào sẽ không
+   * có dòng nào cả; fallback sang đếm thẳng `Word` theo cấp (giống cách
+   * ProgressService.overview() tính totalWords) thay vì lấy nhầm SỐ CẤP
+   * (`threshold`, 1-9) làm mẫu số — bug thật đã gặp khi test (hiện "0/1"
+   * thay vì "0/300" cho HSK 1 lúc chưa học gì). */
   async list(userId: string) {
-    const [catalog, mine, streak, learnedWordsCount, levelProgress] =
-      await Promise.all([
-        this.prisma.achievement.findMany({ orderBy: { threshold: 'asc' } }),
-        this.prisma.userAchievement.findMany({ where: { userId } }),
-        this.prisma.userStreak.findUnique({ where: { userId } }),
-        this.prisma.userWordProgress.count({
-          where: { userId, learnedAt: { not: null } },
-        }),
-        this.prisma.userLevelProgress.findMany({
-          where: { userId },
-          select: { hskLevel: true, learnedWords: true, totalWords: true },
-        }),
-      ]);
+    const [
+      catalog,
+      mine,
+      streak,
+      learnedWordsCount,
+      levelProgress,
+      totalByLevel,
+    ] = await Promise.all([
+      this.prisma.achievement.findMany({ orderBy: { threshold: 'asc' } }),
+      this.prisma.userAchievement.findMany({ where: { userId } }),
+      this.prisma.userStreak.findUnique({ where: { userId } }),
+      this.prisma.userWordProgress.count({
+        where: { userId, learnedAt: { not: null } },
+      }),
+      this.prisma.userLevelProgress.findMany({
+        where: { userId },
+        select: { hskLevel: true, learnedWords: true, totalWords: true },
+      }),
+      this.prisma.word.groupBy({ by: ['hskLevel'], _count: { _all: true } }),
+    ]);
     const unlocked = new Map(mine.map((m) => [m.achievementId, m]));
     const levelMap = new Map(levelProgress.map((l) => [l.hskLevel, l]));
+    const totalWordsMap = new Map(
+      totalByLevel.map((g) => [g.hskLevel, g._count._all]),
+    );
 
     return catalog.map((a) => {
       let progressCurrent = 0;
@@ -47,7 +62,8 @@ export class AchievementsService {
         // threshold ở nhóm LEVEL là SỐ CẤP HSK (1-9), không phải số từ.
         const lp = levelMap.get(a.threshold);
         progressCurrent = lp?.learnedWords ?? 0;
-        progressTarget = lp?.totalWords ?? a.threshold;
+        progressTarget =
+          lp?.totalWords ?? totalWordsMap.get(a.threshold) ?? a.threshold;
       }
       return {
         ...a,
