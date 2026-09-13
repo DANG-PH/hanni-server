@@ -13,6 +13,6 @@ import { NotificationsService } from './notifications.service';
     NotificationsListener,
     NotificationsService,
   ],
-  exports: [NotificationsService],
+  exports: [NotificationsService, NotificationsGateway],
 })
 export class NotificationsModule {}

@@ -21,6 +21,7 @@ import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
 import { LearnModule } from './modules/learn/learn.module';
 import { VideosModule } from './modules/videos/videos.module';
 import { MailModule } from './modules/mail/mail.module';
+import { MessagesModule } from './modules/messages/messages.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { PracticeModule } from './modules/practice/practice.module';
@@ -77,6 +78,7 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
     LeaderboardModule,
     PushModule,
     NotificationsModule,
+    MessagesModule,
     PracticeModule,
     OnboardingModule,
     AssistantModule,
