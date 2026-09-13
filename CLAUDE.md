@@ -5,9 +5,11 @@ API học tiếng Trung theo chuẩn **HSK 3.0** (9 cấp). Xem `README.md` cho 
 ## Stack
 - NestJS 11 + TypeScript (CommonJS, `module: nodenext`)
 - PostgreSQL qua **Prisma 6** (`prisma/schema.prisma`)
-- Redis (ioredis) — state OAuth, cache
+- Redis (ioredis) — state OAuth, cache, và Redis adapter cho WebSocket (`RedisIoAdapter`,
+  `src/infra/redis/redis-io.adapter.ts`) — sẵn sàng scale nhiều instance
 - `@nestjs/event-emitter` (in-process) cho luồng sự kiện; handler phải **idempotent**
-- `@nestjs/websockets` + `socket.io` (namespace `/notifications`) — đẩy thông báo realtime
+- `@nestjs/websockets` + `socket.io` (namespace `/notifications`) — đẩy thông báo realtime VÀ
+  tin nhắn trực tiếp (dùng chung 1 gateway, khác event name — xem mục Nhắn tin bên dưới)
 - `@google/genai` (Gemini) — trợ lý AI RAG, để trống `GEMINI_API_KEY` thì tự tắt (báo rõ, không crash)
 
 ## Cấu trúc thư mục
@@ -96,6 +98,14 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   số bài đã xong, huy hiệu ĐÃ MỞ KHOÁ (không phải toàn bộ catalog như `/achievements` của chính
   mình), số người theo dõi/đang theo dõi + danh sách rút gọn tối đa 30 mỗi bên, và `isFollowing`
   tương đối với người đang xem (`viewerId`).
+- **Nhắn tin trực tiếp (`src/modules/messages`, model `Conversation` + `DirectMessage`)**: 1-1,
+  `Conversation.userAId` LUÔN nhỏ hơn `userBId` theo thứ tự chuỗi (chuẩn hoá ở
+  `MessagesService.pairIds()`) để 1 cặp user chỉ có đúng 1 hội thoại dù ai nhắn trước.
+  `GET /messages/conversations` (kèm tin nhắn cuối + số chưa đọc), `POST /messages/with/:userId`
+  (lấy hoặc tự tạo hội thoại), `GET/POST .../messages` (phân trang/gửi, gửi có throttle 30/60s),
+  `POST .../read`, `GET /messages/unread-count`. KHÔNG dựng gateway/namespace riêng — tái dùng
+  `NotificationsGateway` (`emitToUser`) có sẵn, phát event `message:new` khác với
+  `notification:new` trên cùng kết nối `/notifications`.
 - **Luyện nghe/phát âm (`src/modules/practice`)**: `POST /practice/attempts` ghi 1 lượt luyện
   (`wordId`, `skill: LISTENING|PRONUNCIATION`, `isCorrect?` — chỉ dùng cho LISTENING vì
   PRONUNCIATION chưa có chấm điểm tự động, luôn lưu `null`). `GET /practice/stats?skill=` trả
