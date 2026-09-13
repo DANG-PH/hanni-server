@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   UploadedFile,
@@ -73,6 +75,14 @@ export class UsersController {
   @Get('me/settings')
   getSettings(@CurrentUser() user: AuthUser) {
     return this.settings.get(user.id);
+  }
+
+  @Get(':id/profile')
+  getPublicProfile(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.users.getPublicProfile(id, user.id);
   }
 
   @Patch('me/settings')

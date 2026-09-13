@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AuthProvider, Prisma, type User } from '@prisma/client';
+import { AuthProvider, Prisma, SrsState, type User } from '@prisma/client';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Env } from '../../config/env.validation';
@@ -73,6 +73,107 @@ export class UsersService {
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
     const { passwordHash, ...safe } = user;
     return { ...safe, hasPassword: Boolean(passwordHash) };
+  }
+
+  /** Hồ sơ công khai xem được bởi người khác — CHỈ trả field an toàn để lộ
+   * (không email/settings/oauth như getProfile()). Kèm huy hiệu đã mở khoá,
+   * số liệu học tập, và danh sách rút gọn người theo dõi/đang theo dõi (tối
+   * đa 30) để có trang "hồ sơ + bạn bè" mà roadmap còn thiếu. */
+  async getPublicProfile(targetId: string, viewerId: string) {
+    const [
+      user,
+      streak,
+      learnedWordsCount,
+      completedLessonsCount,
+      achievements,
+      followerCount,
+      followingCount,
+      isFollowing,
+      followers,
+      following,
+    ] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: targetId },
+        select: {
+          id: true,
+          displayName: true,
+          avatarUrl: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.userStreak.findUnique({ where: { userId: targetId } }),
+      this.prisma.userWordProgress.count({
+        where: {
+          userId: targetId,
+          OR: [
+            { learnedAt: { not: null } },
+            { state: SrsState.REVIEW, intervalDays: { gte: 21 } },
+          ],
+        },
+      }),
+      this.prisma.userLessonProgress.count({
+        where: { userId: targetId, completedAt: { not: null } },
+      }),
+      this.prisma.userAchievement.findMany({
+        where: { userId: targetId },
+        include: { achievement: true },
+        orderBy: { unlockedAt: 'desc' },
+      }),
+      this.prisma.follow.count({ where: { followingId: targetId } }),
+      this.prisma.follow.count({ where: { followerId: targetId } }),
+      this.prisma.follow.findUnique({
+        where: {
+          followerId_followingId: {
+            followerId: viewerId,
+            followingId: targetId,
+          },
+        },
+      }),
+      this.prisma.follow.findMany({
+        where: { followingId: targetId },
+        take: 30,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          follower: {
+            select: { id: true, displayName: true, avatarUrl: true },
+          },
+        },
+      }),
+      this.prisma.follow.findMany({
+        where: { followerId: targetId },
+        take: 30,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          following: {
+            select: { id: true, displayName: true, avatarUrl: true },
+          },
+        },
+      }),
+    ]);
+    if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+
+    return {
+      id: user.id,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      joinedAt: user.createdAt,
+      currentStreak: streak?.currentStreak ?? 0,
+      longestStreak: streak?.longestStreak ?? 0,
+      learnedWordsCount,
+      completedLessonsCount,
+      achievements: achievements.map((a) => ({
+        code: a.achievement.code,
+        nameVi: a.achievement.nameVi,
+        descriptionVi: a.achievement.descriptionVi,
+        unlockedAt: a.unlockedAt,
+      })),
+      followerCount,
+      followingCount,
+      isFollowing: Boolean(isFollowing),
+      isMe: targetId === viewerId,
+      followers: followers.map((f) => f.follower),
+      following: following.map((f) => f.following),
+    };
   }
 
   /** Tạo user kèm settings + streak mặc định trong 1 transaction. */
