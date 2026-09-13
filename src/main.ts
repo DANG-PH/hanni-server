@@ -1,18 +1,21 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { IoAdapter } from '@nestjs/platform-socket.io';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import type { Env } from './config/env.validation';
+import { RedisIoAdapter } from './infra/redis/redis-io.adapter';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   const config = app.get<ConfigService<Env, true>>(ConfigService);
-  // WebSocket (NotificationsGateway) chạy chung cổng HTTP — dùng adapter Socket.IO tường minh.
-  app.useWebSocketAdapter(new IoAdapter(app));
+  // WebSocket (NotificationsGateway, tin nhắn realtime) chạy chung cổng HTTP
+  // — gắn Redis adapter để pub/sub được xuyên suốt khi chạy nhiều instance.
+  const redisIoAdapter = new RedisIoAdapter(app);
+  await redisIoAdapter.connectToRedis(config.get('REDIS_URL', { infer: true }));
+  app.useWebSocketAdapter(redisIoAdapter);
 
   const apiPrefix = config.get('API_PREFIX', { infer: true });
   app.setGlobalPrefix(apiPrefix.replace(/^\//, ''));
