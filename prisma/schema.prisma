@@ -160,6 +160,8 @@ model User {
   practiceAttempts    PracticeAttempt[]
   following           Follow[]             @relation("Follower")
   followers           Follow[]             @relation("Following")
+  onboarding          OnboardingProfile?
+  chatSessions        ChatSession[]
 
   @@index([lastActiveAt])
 }
@@ -781,4 +783,73 @@ model Follow {
 
   @@unique([followerId, followingId])
   @@index([followingId])
+}
+
+// ===================================================================
+//  KHẢO SÁT ĐẦU VÀO (lộ trình đề xuất)
+// ===================================================================
+
+enum OnboardingGoal {
+  TRAVEL // giao tiếp khi du lịch
+  WORK // phục vụ công việc
+  EXAM // thi lấy chứng chỉ HSK
+  ACADEMIC // du học
+  INTEREST // sở thích cá nhân, tìm hiểu văn hoá
+  OTHER
+}
+
+/// Khảo sát 1 lần khi mới dùng app (có thể làm lại) — dùng để tính
+/// `recommendedLevel` (cấp HSK nên bắt đầu/ôn lại) bằng luật đơn giản
+/// (không cần AI): dựa vào cấp tự đánh giá + số từ mới giữa các cấp
+/// (`HskLevel.cumulative2025`) + nhịp học (`UserSettings.dailyGoalValue`)
+/// để ước tính thời gian nếu có đặt hạn thi.
+model OnboardingProfile {
+  userId            String         @id @db.Uuid
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hasStudiedBefore  Boolean
+  /// Cấp HSK tự đánh giá đã học tới đâu — null nếu `hasStudiedBefore = false`.
+  selfAssessedLevel Int?
+  goal              OnboardingGoal
+  plansToTakeExam   Boolean
+  /// Cấp muốn thi — null nếu `plansToTakeExam = false`.
+  targetLevel       Int?
+  targetDate        DateTime?
+  recommendedLevel  Int
+  /// Đoạn giải thích lộ trình bằng tiếng Việt, sinh từ luật ở trên.
+  recommendationVi  String
+  completedAt       DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+// ===================================================================
+//  TRỢ LÝ AI HANNI (RAG qua Gemini)
+// ===================================================================
+
+enum ChatRole {
+  USER
+  MODEL
+}
+
+/// 1 cuộc trò chuyện với trợ lý AI — mỗi user chỉ có 1 cuộc đang mở
+/// (đơn giản hoá so với nhiều phiên song song), xoá là bắt đầu lại từ đầu.
+model ChatSession {
+  id        String        @id @default(uuid()) @db.Uuid
+  userId    String        @db.Uuid
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  ChatMessage[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([userId])
+}
+
+model ChatMessage {
+  id        String      @id @default(uuid()) @db.Uuid
+  sessionId String      @db.Uuid
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      ChatRole
+  text      String      @db.VarChar(4000)
+  createdAt DateTime    @default(now())
+
+  @@index([sessionId, createdAt])
 }

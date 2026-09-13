@@ -19,7 +19,7 @@ src/
 ├── modules/<domain>/   auth · users (+ users/follows) · mail · vocabulary · srs · progress
 │                        · gamification · learn · videos (+ videos/comments, videos/likes)
 │                        · grammar · exams · leaderboard · push · notifications (WebSocket gateway)
-│                        · practice (lưu kết quả luyện nghe/phát âm)
+│                        · practice (lưu kết quả luyện nghe/phát âm) · onboarding (khảo sát đầu vào)
 └── health/
 prisma/  schema.prisma + seed/ (hsk-levels, achievements, words)
 scripts/import/  ETL nguồn mở → data/processed/words.seed.json
@@ -74,6 +74,14 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   khi ghi nhận nhưng CHƯA có listener nào tiêu thụ (giống `QuizCompleted`) — chừa chỗ cho sau
   này (huy hiệu luyện tập, tính vào streak...), không tự ý gộp vào mục tiêu ngày hiện tại vì đó
   là quyết định sản phẩm cần bàn riêng.
+- **Khảo sát đầu vào (`src/modules/onboarding`, model `OnboardingProfile`, 1-1 User)**: `GET`/
+  `POST /onboarding` — hỏi đã học HSK chưa (+ cấp tự đánh giá), mục tiêu (`OnboardingGoal`), có
+  định thi không (+ cấp muốn thi + hạn thi tuỳ chọn). `recommendedLevel` tính bằng LUẬT ĐƠN GIẢN
+  (không gọi AI): = cấp tự đánh giá (ôn tiếp từ đó) hoặc HSK1 nếu chưa học. Nếu có đặt mục tiêu
+  thi, ước tính số từ mới còn thiếu qua `HskLevel.cumulative2025` (cấp đích trừ cấp hiện tại),
+  chia cho nhịp học `UserSettings.dailyGoalValue` ra số ngày cần học, so với hạn thi nếu có đặt
+  để nhận xét nhịp độ (thoải mái/vừa đủ/gấp) — toàn bộ `recommendationVi` là text ghép luật, có
+  thể làm lại khảo sát bất cứ lúc nào (upsert, ghi đè `completedAt`).
 
 ## Lệnh
 `npm run start:dev` · `npm run build` · `npm run prisma:migrate` · `npm run db:seed` ·
@@ -87,7 +95,8 @@ videos (học qua video, kèm bình luận 1 cấp trả lời + thích video), 
 theo từ đã thuộc), push (thông báo đẩy Web Push, VAPID), notifications (thông báo trong app —
 lưu DB + đẩy realtime qua WebSocket khi có người trả lời bình luận/bình luận hoặc thích video
 mình thêm/theo dõi mình), practice (lưu kết quả luyện nghe/phát âm lên server, xem bên dưới),
-follows (theo dõi 1 chiều giữa người dùng, xem bên dưới), health, Swagger.
+follows (theo dõi 1 chiều giữa người dùng, xem bên dưới), onboarding (khảo sát đầu vào → đề
+xuất cấp HSK + lộ trình bằng luật đơn giản, xem bên dưới), health, Swagger.
 Seed đầy đủ để deploy: 9 cấp HSK · huy hiệu · 10.9k từ (`data/processed/words.seed.json`) ·
 744 bài, TOÀN BỘ 9 cấp đều chia theo chủ đề thật (xem bên dưới) — không còn cấp nào chia đều
 15 từ/bài theo tần suất · 40 điểm ngữ pháp HSK 1–3 + 349 mục HSK 4–9 (đại cương,

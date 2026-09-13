@@ -64,6 +64,11 @@ export const envSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+
+  // Trợ lý AI (RAG) — để trống thì AssistantService tự báo "chưa bật",
+  // không chặn app khởi động.
+  GEMINI_API_KEY: z.string().default(''),
+  AI_SYSTEM_PROMPT: z.string().default(''),
 });
 
 export type Env = z.infer<typeof envSchema>;

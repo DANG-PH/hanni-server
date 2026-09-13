@@ -21,6 +21,7 @@ import { LearnModule } from './modules/learn/learn.module';
 import { VideosModule } from './modules/videos/videos.module';
 import { MailModule } from './modules/mail/mail.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { PracticeModule } from './modules/practice/practice.module';
 import { ProgressModule } from './modules/progress/progress.module';
 import { PushModule } from './modules/push/push.module';
@@ -76,6 +77,7 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
     PushModule,
     NotificationsModule,
     PracticeModule,
+    OnboardingModule,
     HealthModule,
   ],
   providers: [
