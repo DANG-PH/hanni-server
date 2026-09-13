@@ -40,7 +40,7 @@ const PAGE_PATHS: Record<string, string> = {
   watch: '/watch',
   onboarding: '/onboarding',
   settings: '/settings',
-  study: '/study',
+  flashcard: '/study',
   account: '/account',
   achievements: '/achievements',
 };
@@ -58,7 +58,7 @@ const PAGE_LABELS_VI: Record<string, string> = {
   watch: 'Học qua video',
   onboarding: 'Khảo sát lộ trình',
   settings: 'Cài đặt',
-  study: 'Ôn tập flashcard',
+  flashcard: 'Ôn tập flashcard',
   account: 'Tài khoản',
   achievements: 'Huy hiệu',
 };
@@ -72,7 +72,7 @@ const TOOLS: Tool[] = [
       {
         name: 'navigate_to_page',
         description:
-          'Lấy đường dẫn tới 1 trang trong app Hanni. GỌI TOOL NÀY (không trả lời bằng text) cho MỌI câu hỏi có dạng "...ở đâu", "...ở chỗ nào", "vào đâu để...", "làm sao/thế nào để...", "sao lâu rồi chưa...", hay bất kỳ câu nào ngụ ý người dùng muốn ĐẾN một trang/tính năng cụ thể — kể cả khi câu hỏi không dùng động từ "mở". Ví dụ: "ôn từ vựng/flashcard ở đâu", "sao lâu rồi chưa ôn bài", "ôn tập kiểu gì vậy" -> page=study; "đổi mật khẩu ở đâu", "sao đổi email/tài khoản", "cập nhật hồ sơ ở chỗ nào" -> page=account; "chỉnh mục tiêu ngày ở đâu" -> page=settings. Các trang khác: lộ trình (learn), từ vựng (vocabulary), ngữ pháp (grammar), luyện nghe (listening), luyện phát âm (pronunciation), luyện viết (writing), kiểm tra HSK (exams), bảng xếp hạng (leaderboard), tiến độ (progress), huy hiệu (achievements). KHÔNG dùng cho video — video dùng open_video. TUYỆT ĐỐI không trả lời kiểu "bạn vào mục X nhé" bằng text suông — phải gọi tool thật để hệ thống hiện nút bấm. `level` là tuỳ chọn, cứ để trống nếu không rõ, ĐỪNG hỏi lại người dùng trước khi gọi tool.',
+          'Lấy đường dẫn tới 1 trang trong app Hanni. GỌI TOOL NÀY (không trả lời bằng text) cho MỌI câu hỏi có dạng "...ở đâu", "...ở chỗ nào", "vào đâu để...", "làm sao/thế nào để...", "sao lâu rồi chưa...", hay bất kỳ câu nào ngụ ý người dùng muốn ĐẾN một trang/tính năng cụ thể — kể cả khi câu hỏi không dùng động từ "mở". Ví dụ: "ôn từ vựng/flashcard ở đâu", "sao lâu rồi chưa ôn bài", "ôn tập kiểu gì vậy" -> page=flashcard; "đổi mật khẩu ở đâu", "sao đổi email/tài khoản", "cập nhật hồ sơ ở chỗ nào" -> page=account; "chỉnh mục tiêu ngày ở đâu" -> page=settings. Các trang khác: lộ trình (learn), từ vựng (vocabulary), ngữ pháp (grammar), luyện nghe (listening), luyện phát âm (pronunciation), luyện viết (writing), kiểm tra HSK (exams), bảng xếp hạng (leaderboard), tiến độ (progress), huy hiệu (achievements). KHÔNG dùng cho video — video dùng open_video. TUYỆT ĐỐI không trả lời kiểu "bạn vào mục X nhé" bằng text suông — phải gọi tool thật để hệ thống hiện nút bấm. `level` là tuỳ chọn, cứ để trống nếu không rõ, ĐỪNG hỏi lại người dùng trước khi gọi tool.',
         parameters: {
           type: Type.OBJECT,
           properties: {
