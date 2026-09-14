@@ -18,7 +18,7 @@ function toIso(d: Date | null | undefined): string | null {
 /** Cứ đủ 7 ngày liên tục lại được thưởng 1 "lá chắn" — dùng để giữ nguyên
  * chuỗi nếu lỡ nghỉ đúng 1 ngày (xem nhánh gap>1 trong advanceStreak()). */
 const FREEZE_MILESTONE_DAYS = 7;
-const MAX_STREAK_FREEZE = 2;
+export const MAX_STREAK_FREEZE = 2;
 
 interface ActivityDelta {
   wordsReviewed?: number;

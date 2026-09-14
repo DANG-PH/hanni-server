@@ -167,6 +167,9 @@ model User {
   sentDirectMessages  DirectMessage[]
   referralsSent       Referral[]           @relation("ReferralsSent")
   referredBy          Referral?            @relation("ReferralsReceived")
+  minigameSessions    MinigameSession[]
+  wallet              UserWallet?
+  coinTransactions    CoinTransaction[]
 
   @@index([lastActiveAt])
 }
@@ -808,6 +811,51 @@ model Referral {
   createdAt  DateTime  @default(now())
 
   @@index([referrerId])
+}
+
+/// Minigame "Dịch tốc độ": mỗi lượt chơi lưu SẴN bộ câu hỏi + đáp án đúng
+/// (field `questions`, JSON) ngay lúc bắt đầu — khi nộp bài, server tự so
+/// khớp lựa chọn với đáp án đã lưu thay vì tin vào điểm client tự báo (khác
+/// QuizAttempt cũ vốn tin thẳng `isCorrect` từ client). `score`/`totalAsked`/
+/// `durationMs`/`finishedAt` đều null cho tới khi nộp bài xong.
+model MinigameSession {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions  Json
+  score      Int?
+  totalAsked Int?
+  durationMs Int?
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@index([userId])
+  @@index([finishedAt])
+}
+
+/// Ví xu (soft currency) — KHÔNG quy đổi tiền thật, chỉ kiếm được qua
+/// chơi/học và tiêu trong app (xem WalletService). Tách riêng khỏi mọi
+/// hình thức tiền tệ premium/nạp tiền thật sau này (nếu có) để tránh vướng
+/// quy định về trung gian thanh toán khi neo tỷ giá trực tiếp vào VNĐ.
+model UserWallet {
+  userId    String   @id @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance   Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+/// Sổ giao dịch xu — mỗi lần cộng/trừ đều ghi 1 dòng để đối soát, chống
+/// gian lận/nhân bản xu do race condition (xem WalletService.debit() dùng
+/// updateMany có điều kiện balance thay vì đọc-rồi-ghi).
+model CoinTransaction {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int
+  reason    String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 /// Nhắn tin trực tiếp 1-1 — 1 cặp user chỉ có ĐÚNG 1 cuộc hội thoại

@@ -133,8 +133,27 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   streak đầu tiên trong đời tài khoản — longestStreak không giảm khi streak đứt, nên phân biệt
   được với "bắt đầu lại sau khi đứt chuỗi cũ") — cả người giới thiệu lẫn người được giới thiệu
   nhận +1 "lá chắn" streak qua `StreakService.grantFreeze()` (tách khỏi mốc 7-ngày tự động ở
-  `advanceStreak()`, cùng chung mức trần `MAX_STREAK_FREEZE`). `GET /referrals/me` trả số liệu
-  cho trang "Mời bạn bè".
+  `advanceStreak()`, cùng chung mức trần `MAX_STREAK_FREEZE`, nay `export` để dùng chéo module).
+  `GET /referrals/me` trả số liệu cho trang "Mời bạn bè".
+- **Ví xu (`src/modules/wallet`, model `UserWallet` + `CoinTransaction`)**: soft currency, KHÔNG
+  quy đổi tiền thật (xem `FEATURES.md` ở gốc repo — mục đánh giá rủi ro tỷ giá 1 VNĐ = 1 xu ban
+  đầu, đã đổi hướng dùng xu không neo giá thật để tránh vướng quy định trung gian thanh toán).
+  Mọi thay đổi số dư đi qua `WalletService.credit()`/`debit()` — LUÔN ghi kèm 1 dòng
+  `CoinTransaction` để đối soát; `debit()` dùng `prisma.userWallet.updateMany({where: {balance:
+  {gte: amount}}})` (atomic, có điều kiện) thay vì đọc-rồi-ghi, tránh ví âm khi nhiều request
+  cùng lúc. Nguồn thu: minigame (xem dưới) + **điểm danh hằng ngày** (`WalletListener` lắng
+  ĐÚNG `AppEvent.StreakUpdated` — sự kiện này chỉ phát khi có hoạt động NGÀY MỚI, khớp nghĩa
+  "điểm danh" mà không cần dựng hệ theo dõi riêng). Nơi tiêu đầu tiên (sink):
+  `POST /wallet/buy/streak-freeze` (300 xu/lá chắn, chặn nếu đã đạt `MAX_STREAK_FREEZE`, kiểm
+  tra TRƯỚC khi trừ xu để không mất xu oan nếu không mua được).
+- **Minigame "Dịch tốc độ" (`src/modules/minigame`, model `MinigameSession`)**: Giai đoạn 1
+  theo lộ trình 5 giai đoạn trong `FEATURES.md` — chơi 1 mình, tính giờ 60s, bảng xếp hạng
+  ngày/tuần. CHƯA có đối kháng realtime/ELO/rank/mùa giải/2v2 (để giai đoạn sau, sau khi kiểm
+  chứng gameplay có hấp dẫn không). Khác `QuizService` (tin thẳng `isCorrect` client tự báo cáo)
+  — ở đây `POST /minigame/start` LƯU SẴN đáp án đúng trong `MinigameSession.questions` (JSON,
+  không trả `correctIndex` về client), `POST /minigame/:id/finish` tự so khớp `chosenIndex` với
+  đáp án đã lưu — cần thiết vì kết quả game này quy đổi thành xu thật, không thể tin client tự
+  báo điểm như quiz thường. Thưởng 1 xu/câu đúng.
 - **Hồ sơ công khai (`GET /users/:id/profile`, `UsersService.getPublicProfile()`)**: field an
   toàn để lộ công khai (KHÔNG email/settings/oauth như `getProfile()` của chính mình) — tên,
   avatar, ngày tham gia, streak, số từ đã thuộc (dùng lại luật LEARNED_WHERE giống
