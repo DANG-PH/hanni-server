@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { join } from 'node:path';
@@ -39,6 +40,7 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
       validate: validateEnv,
     }),
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
     // Phục vụ file audio phát âm: /media/audio/cmn-<hán tự>.mp3
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'assets', 'audio'),

@@ -64,7 +64,17 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 - **Push (`src/modules/push`)**: dùng `web-push` + khóa VAPID (`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`
   trong env, sinh bằng `npx web-push generate-vapid-keys`). Để trống 2 khóa thì API trả 503 rõ ràng,
   không chặn app khởi động. `PushSubscription` xoá tự động khi gửi gặp lỗi 404/410 (thiết bị đã gỡ
-  đăng ký). Chỉ có gửi thủ công (`POST /push/test`) — CHƯA có scheduler nhắc học tự động.
+  đăng ký). Gửi thủ công qua `POST /push/test`, VÀ có **nhắc học tự động**
+  (`ReminderService`, `@nestjs/schedule` — `ScheduleModule.forRoot()` ở `app.module.ts`):
+  mỗi giờ (`@Cron(CronExpression.EVERY_HOUR)`) quét user có `UserSettings.reminderHour` khớp
+  giờ địa phương hiện tại (`getLocalHour()` trong `time.util.ts`, theo `User.timezone`) VÀ có ít
+  nhất 1 `PushSubscription`, bỏ qua ai đã đạt mục tiêu ngày hôm nay (`UserDailyActivity.goalMet`
+  của ngày local — tính bằng `localStudyDate()`/`STREAK_DAY_CUTOFF_HOUR` giống `StreakService`)
+  — tránh nhắc thừa khi đã học đủ. Chạy theo GIỜ (không phải phút) nên chỉ khớp đúng 1 lần/ngày
+  cho hầu hết user, trừ số ít timezone lệch nửa giờ (vd Asia/Kathmandu) — chấp nhận được, một
+  lời nhắc không cần chính xác tới phút. `PushService.sendToUser()` (tách riêng khỏi
+  `sendTest()`) không throw nếu chưa bật/chưa có subscription, vì đây là job nền chạy cho nhiều
+  user chứ không phải request của chính user đó.
 - **Bình luận + thích video + thông báo (`src/modules/videos/comments`, `.../likes`,
   `src/modules/notifications`)**: bình luận 1 cấp trả lời (trả lời của trả lời tự gộp vào bình
   luận gốc — xem `CommentsService.create`), thích video kiểu upsert (idempotent). Tạo bình
@@ -190,7 +200,8 @@ Core đã dựng: auth (email + Google), vocabulary, SRS (SM-2 + FSRS), progress
 (streak/achievements/quiz), learn (744 bài — TOÀN BỘ HSK1-9 đã có chủ đề thật, xem bên dưới),
 videos (học qua video, kèm bình luận 1 cấp trả lời + thích video), grammar (40 điểm HSK 1–3 +
 195 điểm HSK 4–9 có giải thích thật, xem bên dưới), exams (lịch sử kiểm tra), leaderboard (xếp
-theo từ đã thuộc), push (thông báo đẩy Web Push, VAPID), notifications (thông báo trong app —
+theo từ đã thuộc), push (thông báo đẩy Web Push, VAPID, có nhắc học tự động mỗi giờ theo
+`reminderHour`/timezone user), notifications (thông báo trong app —
 lưu DB + đẩy realtime qua WebSocket khi có người trả lời bình luận/bình luận hoặc thích video
 mình thêm/theo dõi mình), practice (lưu kết quả luyện nghe/phát âm lên server, xem bên dưới),
 follows (theo dõi 1 chiều giữa người dùng, xem bên dưới), onboarding (khảo sát đầu vào → đề

@@ -113,4 +113,44 @@ export class PushService {
 
     return { sent, total: subs.length };
   }
+
+  /** Gửi 1 thông báo nhắc học tới mọi thiết bị user — không throw nếu chưa
+   * bật/chưa đăng ký thiết bị nào, vì đây là job nền, không phải request của
+   * chính user đó. Dùng bởi `ReminderService`. */
+  async sendToUser(
+    userId: string,
+    title: string,
+    body: string,
+  ): Promise<number> {
+    if (!this.enabled) return 0;
+    const subs = await this.prisma.pushSubscription.findMany({
+      where: { userId },
+    });
+    if (subs.length === 0) return 0;
+
+    const payload = JSON.stringify({ title, body });
+    let sent = 0;
+    await Promise.all(
+      subs.map(async (sub) => {
+        try {
+          await webpush.sendNotification(
+            {
+              endpoint: sub.endpoint,
+              keys: { p256dh: sub.p256dh, auth: sub.auth },
+            },
+            payload,
+          );
+          sent += 1;
+        } catch (err) {
+          const status = (err as { statusCode?: number }).statusCode;
+          if (status === 404 || status === 410) {
+            await this.prisma.pushSubscription.delete({
+              where: { id: sub.id },
+            });
+          }
+        }
+      }),
+    );
+    return sent;
+  }
 }

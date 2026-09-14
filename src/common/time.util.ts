@@ -52,3 +52,8 @@ export function startOfLocalDayInstant(
   const base = dt.hour < cutoffHour ? dt.minus({ days: 1 }) : dt;
   return base.startOf('day').plus({ hours: cutoffHour }).toJSDate();
 }
+
+/** Giờ hiện tại (0-23) theo timezone user — so khớp `UserSettings.reminderHour`. */
+export function getLocalHour(at: Date, timezone: string): number {
+  return DateTime.fromJSDate(at, { zone: timezone }).hour;
+}
