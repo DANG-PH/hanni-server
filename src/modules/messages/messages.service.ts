@@ -24,7 +24,10 @@ export class MessagesService {
   }
 
   /** Lấy hội thoại với 1 user, tự tạo nếu chưa có — dùng khi bấm "Nhắn tin"
-   * từ hồ sơ công khai. */
+   * từ hồ sơ công khai. Hội thoại MỚI (chưa từng nhắn) yêu cầu đã "kết nối"
+   * (theo dõi nhau, 1 trong 2 chiều) — tránh cảm giác nhắn cho người lạ
+   * hoàn toàn không quen biết gì; hội thoại ĐÃ CÓ sẵn thì luôn mở lại được
+   * dù sau đó có bỏ theo dõi nhau. */
   async getOrCreateWith(userId: string, otherUserId: string) {
     if (userId === otherUserId) {
       throw new ForbiddenException('Không thể tự nhắn tin cho chính mình');
@@ -36,10 +39,31 @@ export class MessagesService {
     if (!other) throw new NotFoundException('Không tìm thấy người dùng');
 
     const [userAId, userBId] = this.pairIds(userId, otherUserId);
-    const conversation = await this.prisma.conversation.upsert({
+    const existing = await this.prisma.conversation.findUnique({
       where: { userAId_userBId: { userAId, userBId } },
-      create: { userAId, userBId },
-      update: {},
+      include: {
+        userA: { select: USER_SELECT },
+        userB: { select: USER_SELECT },
+      },
+    });
+    if (existing) return this.toSummary(existing, userId);
+
+    const connected = await this.prisma.follow.findFirst({
+      where: {
+        OR: [
+          { followerId: userId, followingId: otherUserId },
+          { followerId: otherUserId, followingId: userId },
+        ],
+      },
+    });
+    if (!connected) {
+      throw new ForbiddenException(
+        'Cần theo dõi nhau trước khi bắt đầu nhắn tin',
+      );
+    }
+
+    const conversation = await this.prisma.conversation.create({
+      data: { userAId, userBId },
       include: {
         userA: { select: USER_SELECT },
         userB: { select: USER_SELECT },
@@ -134,11 +158,22 @@ export class MessagesService {
     userId: string,
     conversationId: string,
   ): Promise<{ ok: true }> {
-    await this.requireMember(userId, conversationId);
-    await this.prisma.directMessage.updateMany({
+    const conversation = await this.requireMember(userId, conversationId);
+    const { count } = await this.prisma.directMessage.updateMany({
       where: { conversationId, senderId: { not: userId }, readAt: null },
       data: { readAt: new Date() },
     });
+    // Chỉ báo cho người gửi khi thực sự có tin MỚI vừa được đánh dấu đã
+    // xem — tránh bắn sự kiện thừa mỗi lần mở lại hội thoại cũ.
+    if (count > 0) {
+      const otherUserId =
+        conversation.userAId === userId
+          ? conversation.userBId
+          : conversation.userAId;
+      this.gateway.emitToUser(otherUserId, 'message:read', {
+        conversationId,
+      });
+    }
     return { ok: true };
   }
 

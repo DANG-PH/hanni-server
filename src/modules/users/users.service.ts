@@ -176,17 +176,26 @@ export class UsersService {
     };
   }
 
-  /** Tìm người dùng theo tên hiển thị — để theo dõi/nhắn tin khi họ không
-   * lọt vào bảng xếp hạng. Kèm streak hiện tại + isFollowing giống style
-   * `LeaderboardService.top()`. */
+  /** Tìm người dùng theo tên hiển thị HOẶC đúng mã người dùng (UID) — để
+   * theo dõi/nhắn tin khi họ không lọt vào bảng xếp hạng, hoặc khi trùng
+   * tên khó tìm thì gửi thẳng UID cho nhau. Kèm streak hiện tại +
+   * isFollowing giống style `LeaderboardService.top()`. */
   async search(viewerId: string, q: string) {
     const query = q.trim();
     if (!query) return [];
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        query,
+      );
 
     const users = await this.prisma.user.findMany({
       where: {
-        id: { not: viewerId },
-        displayName: { contains: query, mode: 'insensitive' },
+        AND: [
+          { id: { not: viewerId } },
+          isUuid
+            ? { id: query }
+            : { displayName: { contains: query, mode: 'insensitive' } },
+        ],
       },
       select: { id: true, displayName: true, avatarUrl: true },
       orderBy: { displayName: 'asc' },

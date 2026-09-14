@@ -2,7 +2,10 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
+  ConnectedSocket,
+  MessageBody,
   OnGatewayConnection,
+  SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
@@ -13,6 +16,10 @@ import { ACCESS_COOKIE } from '../auth/cookies';
 
 function roomFor(userId: string): string {
   return `user:${userId}`;
+}
+
+interface SocketData {
+  userId?: string;
 }
 
 /** Parse thô header `Cookie: a=1; b=2` — đủ dùng, không cần thêm gói ngoài. */
@@ -52,11 +59,28 @@ export class NotificationsGateway implements OnGatewayConnection {
       client.disconnect(true);
       return;
     }
+    (client.data as SocketData).userId = userId;
     void client.join(roomFor(userId));
   }
 
   emitToUser(userId: string, event: string, payload: unknown): void {
     this.server.to(roomFor(userId)).emit(event, payload);
+  }
+
+  /** Báo "đang nhập" cho 1 hội thoại — không lưu DB, chỉ chuyển tiếp trực
+   * tiếp tới người nhận (`toUserId` do client tự biết từ danh sách hội
+   * thoại đã tải, khỏi cần tra lại DB ở đây). */
+  @SubscribeMessage('typing')
+  handleTyping(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { conversationId?: string; toUserId?: string },
+  ): void {
+    const userId = (client.data as SocketData).userId;
+    if (!userId || !data?.conversationId || !data?.toUserId) return;
+    this.emitToUser(data.toUserId, 'typing', {
+      conversationId: data.conversationId,
+      userId,
+    });
   }
 
   private authenticate(client: Socket): string | null {

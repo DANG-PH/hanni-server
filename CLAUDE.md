@@ -143,10 +143,13 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   mình), số người theo dõi/đang theo dõi + danh sách rút gọn tối đa 30 mỗi bên, và `isFollowing`
   tương đối với người đang xem (`viewerId`).
 - **Tìm người dùng (`GET /users/search?q=`, `UsersService.search()`)**: khớp `displayName`
-  không phân biệt hoa/thường, tối đa 20 kết quả, kèm `currentStreak`/`isFollowing` giống style
-  `LeaderboardService.top()` — trước đây CHỈ tìm được người qua bảng xếp hạng (giới hạn top N)
-  hoặc biết sẵn link hồ sơ, không có cách nào tìm 1 người quen theo tên. FE dùng ở `/messages`
-  (nút "Tin nhắn mới") để bắt đầu hội thoại với người CHƯA từng nhắn tin trước đó.
+  không phân biệt hoa/thường, HOẶC đúng mã người dùng (UID, tự nhận diện `q` có đúng định dạng
+  UUID hay không để đổi cách khớp) — hữu ích khi trùng tên khó tìm, chỉ cần gửi UID cho nhau.
+  Tối đa 20 kết quả, kèm `currentStreak`/`isFollowing` giống style `LeaderboardService.top()` —
+  trước đây CHỈ tìm được người qua bảng xếp hạng (giới hạn top N) hoặc biết sẵn link hồ sơ,
+  không có cách nào tìm 1 người quen theo tên. FE dùng ở `/messages` (nút "Tin nhắn mới") để bắt
+  đầu hội thoại với người CHƯA từng nhắn tin trước đó, và ở `SendToFriendButton` (gửi huy
+  hiệu/hồ sơ dưới dạng tin nhắn cho 1 người bạn cụ thể).
 - **Xoá tài khoản (`DELETE /users/me`, `UsersService.deleteAccount()`)**: yêu cầu đúng mật khẩu
   nếu tài khoản có đặt mật khẩu (đăng nhập Google thuần thì bỏ qua), xoá file avatar trên đĩa,
   rồi `prisma.user.delete()` — KHÔNG cần logic dọn dẹp thủ công vì schema đã thiết kế sẵn
@@ -167,6 +170,16 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `translateLinesToVi()` (module videos, dịch máy free có sẵn) thay vì xây bộ dịch riêng. Không
   lưu kết quả (khác cache dịch video — 1 hội thoại chỉ 2 người xem, không đáng cache DB), FE chỉ
   hiện nút "Dịch" khi tin nhắn có chữ Hán và tự cache trong state khi đã dịch 1 lần.
+  **Kết nối trước khi nhắn tin**: `getOrCreateWith()` chỉ tự tạo hội thoại MỚI nếu 2 người đã
+  theo dõi nhau (1 trong 2 chiều, `Follow`) — hội thoại ĐÃ CÓ sẵn vẫn mở lại được bình thường dù
+  sau đó bỏ theo dõi. Ném `ForbiddenException` (403) nếu chưa kết nối, để tránh cảm giác nhắn
+  cho người lạ hoàn toàn không quen biết. **Báo đã xem**: `markRead()` phát `message:read` qua
+  `NotificationsGateway` cho người GỬI khi có tin MỚI được đánh dấu đã xem (chỉ phát khi thực sự
+  có gì đổi, tránh bắn thừa mỗi lần mở lại hội thoại cũ) — field `DirectMessage.readAt` vốn đã
+  có sẵn, chỉ thiếu phần báo realtime. **Báo đang nhập**: `NotificationsGateway` có thêm
+  `@SubscribeMessage('typing')` — client tự biết `toUserId` (người nhận) nên gateway chỉ CHUYỂN
+  TIẾP, không tra lại DB; lưu `userId` vào `client.data` lúc `handleConnection()` để biết ai vừa
+  gõ. Không lưu DB, chỉ là tín hiệu tức thời.
 - **Luyện nghe/phát âm (`src/modules/practice`)**: `POST /practice/attempts` ghi 1 lượt luyện
   (`wordId`, `skill: LISTENING|PRONUNCIATION`, `isCorrect?` — chỉ dùng cho LISTENING vì
   PRONUNCIATION chưa có chấm điểm tự động, luôn lưu `null`). `GET /practice/stats?skill=` trả
