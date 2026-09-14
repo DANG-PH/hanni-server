@@ -53,6 +53,10 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   sang bản "mời quay lại" thay vì bản tổng kết (`weeklyDigestHtml()` trong `templates.ts` tự đổi
   heading/CTA theo `daysStudied > 0`).
 - **Phân cấp HSK dùng số bản 11/2025** (không phải bản nháp 2021). `HskLevel` giữ cả 2 bộ số.
+- **Từ vựng hôm nay** (`GET /words/of-the-day`, route đăng ký TRƯỚC `words/:id` để tránh
+  `ParseUUIDPipe` nuốt mất — xem `vocabulary.controller.ts`): 1 từ CỐ ĐỊNH theo ngày (đổi lúc 0h
+  UTC), giống nhau cho mọi user, không lưu DB — xoay vòng theo `frequencyRank` (chỉ từ có nghĩa
+  + có `frequencyRank`, tránh rơi vào từ hiếm) bằng `dayIndex % tổng số từ hợp lệ`.
 - **SRS**: `SchedulerRegistry.get(name)` chọn `Sm2Scheduler` | `FsrsScheduler` theo
   `UserSettings.srsScheduler`. `UserWordProgress` có cả trường SM-2 (easeFactor/intervalDays)
   lẫn FSRS (stability/difficulty) → đổi thuật toán không cần migration.
@@ -121,6 +125,16 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   thêm `scope=friends` (mặc định `global`) — lọc `rankedPairs()` còn (chính mình + người đang
   theo dõi) TRƯỚC khi tính hạng, cho FE làm thẻ "So với bạn bè" ở dashboard — theo dõi ai đó giờ
   có tác dụng cụ thể (so tiến độ) thay vì chỉ tăng follower count.
+- **Mời bạn bè (`src/modules/referrals`, model `Referral`)**: link mời là `/register?ref=<userId>`
+  — không sinh mã riêng, dùng thẳng userId. `AuthService.register()` ghi 1 dòng `Referral`
+  best-effort (lỗi không chặn đăng ký — link cũ/giả không được để hỏng cả luồng đăng ký) nếu có
+  `dto.ref` hợp lệ và khác chính user mới. Thưởng: `ReferralsListener` lắng `AppEvent.
+  StreakUpdated`, chỉ thưởng khi `currentStreak === 1 && longestStreak === 1` (dấu hiệu ĐÂY LÀ
+  streak đầu tiên trong đời tài khoản — longestStreak không giảm khi streak đứt, nên phân biệt
+  được với "bắt đầu lại sau khi đứt chuỗi cũ") — cả người giới thiệu lẫn người được giới thiệu
+  nhận +1 "lá chắn" streak qua `StreakService.grantFreeze()` (tách khỏi mốc 7-ngày tự động ở
+  `advanceStreak()`, cùng chung mức trần `MAX_STREAK_FREEZE`). `GET /referrals/me` trả số liệu
+  cho trang "Mời bạn bè".
 - **Hồ sơ công khai (`GET /users/:id/profile`, `UsersService.getPublicProfile()`)**: field an
   toàn để lộ công khai (KHÔNG email/settings/oauth như `getProfile()` của chính mình) — tên,
   avatar, ngày tham gia, streak, số từ đã thuộc (dùng lại luật LEARNED_WHERE giống

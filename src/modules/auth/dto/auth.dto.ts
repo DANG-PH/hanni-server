@@ -2,6 +2,7 @@ import {
   IsEmail,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -23,6 +24,11 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   timezone?: string;
+
+  /** userId của người giới thiệu (link mời bạn bè `?ref=<userId>`). */
+  @IsOptional()
+  @IsUUID()
+  ref?: string;
 }
 
 export class LoginDto {

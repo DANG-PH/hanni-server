@@ -53,6 +53,16 @@ export class AuthService {
       timezone: dto.timezone,
     });
 
+    if (dto.ref && dto.ref !== user.id) {
+      // Best-effort: người giới thiệu không tồn tại (link cũ/giả) không nên
+      // chặn đăng ký — chỉ log, không throw.
+      await this.prisma.referral
+        .create({ data: { referrerId: dto.ref, referredId: user.id } })
+        .catch((err: Error) =>
+          this.logger.warn(`Ghi referral thất bại: ${err.message}`),
+        );
+    }
+
     await this.createAndSendVerification(user.email);
     return this.tokens.issueForUser(user, ctx);
   }

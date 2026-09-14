@@ -35,6 +35,11 @@ export class VocabularyController {
     return this.words.list(query);
   }
 
+  @Get('words/of-the-day')
+  getWordOfTheDay() {
+    return this.words.ofTheDay();
+  }
+
   @Get('words/:id')
   getWord(@Param('id', ParseUUIDPipe) id: string) {
     return this.words.get(id);

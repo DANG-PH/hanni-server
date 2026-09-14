@@ -224,6 +224,22 @@ export class StreakService {
     };
   }
 
+  /** Cấp 1 "lá chắn" streak (tối đa MAX_STREAK_FREEZE) cho sự kiện đáng
+   * thưởng RIÊNG (vd giới thiệu bạn mới, xem ReferralsListener) — tách khỏi
+   * mốc 7-ngày tự động ở advanceStreak(). */
+  async grantFreeze(userId: string): Promise<void> {
+    const streak = await this.prisma.userStreak.upsert({
+      where: { userId },
+      create: { userId },
+      update: {},
+    });
+    if (streak.streakFreezeCount >= MAX_STREAK_FREEZE) return;
+    await this.prisma.userStreak.update({
+      where: { userId },
+      data: { streakFreezeCount: { increment: 1 } },
+    });
+  }
+
   /** Lịch sử hoạt động N ngày gần nhất (cho biểu đồ/lịch). */
   async history(userId: string, days = 30) {
     const rows = await this.prisma.userDailyActivity.findMany({

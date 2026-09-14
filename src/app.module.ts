@@ -28,6 +28,7 @@ import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { PracticeModule } from './modules/practice/practice.module';
 import { ProgressModule } from './modules/progress/progress.module';
 import { PushModule } from './modules/push/push.module';
+import { ReferralsModule } from './modules/referrals/referrals.module';
 import { SrsModule } from './modules/srs/srs.module';
 import { UsersModule } from './modules/users/users.module';
 import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
@@ -84,6 +85,7 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
     PracticeModule,
     OnboardingModule,
     AssistantModule,
+    ReferralsModule,
     HealthModule,
   ],
   providers: [

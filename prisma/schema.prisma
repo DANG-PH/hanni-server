@@ -165,6 +165,8 @@ model User {
   conversationsAsA    Conversation[]       @relation("ConversationUserA")
   conversationsAsB    Conversation[]       @relation("ConversationUserB")
   sentDirectMessages  DirectMessage[]
+  referralsSent       Referral[]           @relation("ReferralsSent")
+  referredBy          Referral?            @relation("ReferralsReceived")
 
   @@index([lastActiveAt])
 }
@@ -791,6 +793,21 @@ model Follow {
 
   @@unique([followerId, followingId])
   @@index([followingId])
+}
+
+/// Giới thiệu bạn mới — 1 user CHỈ được giới thiệu bởi ĐÚNG 1 người
+/// (referredId unique). rewardedAt null cho tới khi referred hoàn thành
+/// ngày học đầu tiên (xem ReferralsListener), lúc đó cả 2 nhận thưởng.
+model Referral {
+  id         String    @id @default(uuid()) @db.Uuid
+  referrerId String    @db.Uuid
+  referrer   User      @relation("ReferralsSent", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredId String    @unique @db.Uuid
+  referred   User      @relation("ReferralsReceived", fields: [referredId], references: [id], onDelete: Cascade)
+  rewardedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([referrerId])
 }
 
 /// Nhắn tin trực tiếp 1-1 — 1 cặp user chỉ có ĐÚNG 1 cuộc hội thoại

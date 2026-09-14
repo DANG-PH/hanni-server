@@ -46,4 +46,28 @@ export class WordsService {
     if (!word) throw new NotFoundException('Không tìm thấy từ');
     return word;
   }
+
+  /** "Từ vựng hôm nay": chọn CỐ ĐỊNH theo ngày (giống nhau cho mọi user, đổi
+   * lúc 0h UTC) — xoay vòng theo `frequencyRank` (chỉ từ phổ biến, có nghĩa)
+   * để tránh rơi vào từ hiếm ít ai biết. Không lưu DB, tính trực tiếp mỗi lần
+   * gọi nên luôn khớp ngày hiện tại kể cả khi có từ mới được thêm vào. */
+  async ofTheDay() {
+    const where: Prisma.WordWhereInput = {
+      meaningVi: { not: null },
+      frequencyRank: { not: null },
+    };
+    const total = await this.prisma.word.count({ where });
+    if (total === 0) throw new NotFoundException('Chưa có dữ liệu từ vựng');
+
+    const dayIndex = Math.floor(Date.now() / 86_400_000);
+    const [word] = await this.prisma.word.findMany({
+      where,
+      orderBy: { frequencyRank: 'asc' },
+      skip: dayIndex % total,
+      take: 1,
+      include: { examples: { orderBy: { orderIndex: 'asc' } } },
+    });
+    if (!word) throw new NotFoundException('Chưa có dữ liệu từ vựng');
+    return word;
+  }
 }
