@@ -49,6 +49,14 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 - **SRS**: `SchedulerRegistry.get(name)` chọn `Sm2Scheduler` | `FsrsScheduler` theo
   `UserSettings.srsScheduler`. `UserWordProgress` có cả trường SM-2 (easeFactor/intervalDays)
   lẫn FSRS (stability/difficulty) → đổi thuật toán không cần migration.
+  `ReviewService.getQueue()` chặn 2 tầng riêng: `newCardsPerDay` giới hạn từ MỚI mỗi ngày (bỏ
+  qua khi học theo bài, `lessonId` — nạp cả bài luôn), `maxReviewsPerDay` (tuỳ chọn, null =
+  không giới hạn) giới hạn số THẺ ÔN lấy ra mỗi lần gọi hàng đợi dựa trên `reviewsDoneToday` —
+  `counts.due` vẫn trả tổng số thực sự đến hạn (không bị cắt) để FE biết còn tồn đọng bao nhiêu,
+  chỉ có mảng `due` trả về là bị giới hạn. `maxReviewsPerDay` trước đây đã có sẵn trong
+  schema/DTO nhưng chưa có logic nào dùng tới, cũng chưa có UI đặt được ở `/settings` — giống
+  lỗi `reminderHour` từng gặp (field mồ côi cả 2 đầu, chỉ khác là field này còn thiếu cả phần
+  áp dụng ở backend).
 - **Streak** tính theo **timezone IANA của user** + giờ cắt ngày `STREAK_DAY_CUTOFF_HOUR`,
   cập nhật **lười** (xem `StreakService`). Không dùng cron reset. Có "lá chắn"
   (`UserStreak.streakFreezeCount`) giữ nguyên chuỗi nếu lỡ nghỉ ĐÚNG 1 ngày — thưởng 1 lá chắn

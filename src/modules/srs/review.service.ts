@@ -209,6 +209,7 @@ export class ReviewService {
     );
     const limit = query.limit ?? 60;
     const newPerDay = user.settings?.newCardsPerDay ?? 10;
+    const maxReviewsPerDay = user.settings?.maxReviewsPerDay ?? null;
 
     // Học theo BÀI: bỏ giới hạn từ mới/ngày, nạp cả bài (tối đa 25).
     const byLesson = Boolean(query.lessonId);
@@ -224,22 +225,32 @@ export class ReviewService {
       ...wordScope,
     };
 
-    const [newDoneToday, reviewsDoneToday, dueCount, dueRows] =
-      await Promise.all([
-        this.prisma.reviewLog.count({
-          where: { userId, reviewType: 'LEARN', reviewedAt: { gte: dayStart } },
-        }),
-        this.prisma.reviewLog.count({
-          where: { userId, reviewedAt: { gte: dayStart } },
-        }),
-        this.prisma.userWordProgress.count({ where: dueWhere }),
-        this.prisma.userWordProgress.findMany({
-          where: dueWhere,
-          include: { word: true },
-          orderBy: [{ dueAt: 'asc' }, { easeFactor: 'asc' }],
-          take: limit,
-        }),
-      ]);
+    const [newDoneToday, reviewsDoneToday, dueCount] = await Promise.all([
+      this.prisma.reviewLog.count({
+        where: { userId, reviewType: 'LEARN', reviewedAt: { gte: dayStart } },
+      }),
+      this.prisma.reviewLog.count({
+        where: { userId, reviewedAt: { gte: dayStart } },
+      }),
+      this.prisma.userWordProgress.count({ where: dueWhere }),
+    ]);
+
+    // maxReviewsPerDay chặn số lượt ôn (không tính từ mới) lấy ra trong 1
+    // lần gọi hàng đợi — vẫn cho biết tổng số thực sự đến hạn qua `dueCount`
+    // (không giới hạn) để FE biết còn tồn đọng bao nhiêu.
+    const dueTake =
+      maxReviewsPerDay != null
+        ? Math.max(0, Math.min(limit, maxReviewsPerDay - reviewsDoneToday))
+        : limit;
+    const dueRows =
+      dueTake > 0
+        ? await this.prisma.userWordProgress.findMany({
+            where: dueWhere,
+            include: { word: true },
+            orderBy: [{ dueAt: 'asc' }, { easeFactor: 'asc' }],
+            take: dueTake,
+          })
+        : [];
 
     const newRemaining = byLesson ? 25 : Math.max(0, newPerDay - newDoneToday);
     const newRows =
