@@ -116,6 +116,11 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   số bài đã xong, huy hiệu ĐÃ MỞ KHOÁ (không phải toàn bộ catalog như `/achievements` của chính
   mình), số người theo dõi/đang theo dõi + danh sách rút gọn tối đa 30 mỗi bên, và `isFollowing`
   tương đối với người đang xem (`viewerId`).
+- **Tìm người dùng (`GET /users/search?q=`, `UsersService.search()`)**: khớp `displayName`
+  không phân biệt hoa/thường, tối đa 20 kết quả, kèm `currentStreak`/`isFollowing` giống style
+  `LeaderboardService.top()` — trước đây CHỈ tìm được người qua bảng xếp hạng (giới hạn top N)
+  hoặc biết sẵn link hồ sơ, không có cách nào tìm 1 người quen theo tên. FE dùng ở `/messages`
+  (nút "Tin nhắn mới") để bắt đầu hội thoại với người CHƯA từng nhắn tin trước đó.
 - **Nhắn tin trực tiếp (`src/modules/messages`, model `Conversation` + `DirectMessage`)**: 1-1,
   `Conversation.userAId` LUÔN nhỏ hơn `userBId` theo thứ tự chuỗi (chuẩn hoá ở
   `MessagesService.pairIds()`) để 1 cặp user chỉ có đúng 1 hội thoại dù ai nhắn trước.

@@ -176,6 +176,47 @@ export class UsersService {
     };
   }
 
+  /** Tìm người dùng theo tên hiển thị — để theo dõi/nhắn tin khi họ không
+   * lọt vào bảng xếp hạng. Kèm streak hiện tại + isFollowing giống style
+   * `LeaderboardService.top()`. */
+  async search(viewerId: string, q: string) {
+    const query = q.trim();
+    if (!query) return [];
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        id: { not: viewerId },
+        displayName: { contains: query, mode: 'insensitive' },
+      },
+      select: { id: true, displayName: true, avatarUrl: true },
+      orderBy: { displayName: 'asc' },
+      take: 20,
+    });
+    if (users.length === 0) return [];
+
+    const ids = users.map((u) => u.id);
+    const [streaks, myFollows] = await Promise.all([
+      this.prisma.userStreak.findMany({
+        where: { userId: { in: ids } },
+        select: { userId: true, currentStreak: true },
+      }),
+      this.prisma.follow.findMany({
+        where: { followerId: viewerId, followingId: { in: ids } },
+        select: { followingId: true },
+      }),
+    ]);
+    const streakMap = new Map(streaks.map((s) => [s.userId, s.currentStreak]));
+    const followingSet = new Set(myFollows.map((f) => f.followingId));
+
+    return users.map((u) => ({
+      id: u.id,
+      displayName: u.displayName,
+      avatarUrl: u.avatarUrl,
+      currentStreak: streakMap.get(u.id) ?? 0,
+      isFollowing: followingSet.has(u.id),
+    }));
+  }
+
   /** Tạo user kèm settings + streak mặc định trong 1 transaction. */
   async createUser(input: CreateUserInput): Promise<User> {
     const defaultTz = this.config.get('DEFAULT_USER_TIMEZONE', { infer: true });

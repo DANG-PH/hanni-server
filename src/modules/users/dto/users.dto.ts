@@ -81,3 +81,10 @@ export class UpdateSettingsDto {
   @Max(23)
   reminderHour?: number;
 }
+
+export class SearchUsersQuery {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(50)
+  q!: string;
+}

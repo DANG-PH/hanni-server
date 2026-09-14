@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -17,6 +18,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../../common/types';
 import {
   ChangePasswordDto,
+  SearchUsersQuery,
   UpdateMeDto,
   UpdateSettingsDto,
 } from './dto/users.dto';
@@ -75,6 +77,11 @@ export class UsersController {
   @Get('me/settings')
   getSettings(@CurrentUser() user: AuthUser) {
     return this.settings.get(user.id);
+  }
+
+  @Get('search')
+  search(@CurrentUser() user: AuthUser, @Query() q: SearchUsersQuery) {
+    return this.users.search(user.id, q.q);
   }
 
   @Get(':id/profile')
