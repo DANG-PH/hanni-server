@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEnum,
   IsInt,
   IsOptional,
@@ -80,6 +81,10 @@ export class UpdateSettingsDto {
   @Min(0)
   @Max(23)
   reminderHour?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  weeklyDigestEnabled?: boolean;
 }
 
 export class SearchUsersQuery {

@@ -222,16 +222,17 @@ model VerificationToken {
 
 /// Cài đặt học của user (1-1 User).
 model UserSettings {
-  userId           String   @id @db.Uuid
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  dailyGoalType    GoalType @default(WORDS)
-  dailyGoalValue   Int      @default(20)
-  newCardsPerDay   Int      @default(10)
-  maxReviewsPerDay Int?
-  srsScheduler     String   @default("sm2") // sm2 | fsrs
-  targetRetention  Float    @default(0.9) // chỉ dùng cho FSRS
-  reminderHour     Int? // 0-23, giờ địa phương (cho push sau)
-  updatedAt        DateTime @updatedAt
+  userId              String   @id @db.Uuid
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dailyGoalType       GoalType @default(WORDS)
+  dailyGoalValue      Int      @default(20)
+  newCardsPerDay      Int      @default(10)
+  maxReviewsPerDay    Int?
+  srsScheduler        String   @default("sm2") // sm2 | fsrs
+  targetRetention     Float    @default(0.9) // chỉ dùng cho FSRS
+  reminderHour        Int? // 0-23, giờ địa phương (cho push sau)
+  weeklyDigestEnabled Boolean  @default(true) // email tổng kết tuần
+  updatedAt           DateTime @updatedAt
 }
 
 // ===================================================================

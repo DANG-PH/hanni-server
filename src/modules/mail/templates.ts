@@ -77,3 +77,43 @@ export function passwordResetHtml(link: string): string {
       'Nếu bạn không yêu cầu điều này, có thể bỏ qua email — mật khẩu hiện tại của bạn vẫn an toàn.',
   });
 }
+
+function statRow(label: string, value: string, last = false): string {
+  const border = last ? '' : 'border-bottom:1px solid #eee0da;';
+  return `<tr>
+    <td style="padding:10px 0;${border}">${label}</td>
+    <td style="padding:10px 0;${border}text-align:right;font-weight:700;">${value}</td>
+  </tr>`;
+}
+
+export function weeklyDigestHtml(opts: {
+  displayName: string;
+  daysStudied: number;
+  wordsReviewed: number;
+  wordsLearned: number;
+  currentStreak: number;
+  appUrl: string;
+}): string {
+  const active = opts.daysStudied > 0;
+  const bodyHtml = active
+    ? `Chào ${opts.displayName}! Đây là tổng kết tuần học tiếng Trung của bạn trên Hanni:
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;">
+        ${statRow('📅 Số ngày đã học', `${opts.daysStudied}/7 ngày`)}
+        ${statRow('📖 Từ đã ôn', String(opts.wordsReviewed))}
+        ${statRow('✨ Từ mới đã thuộc', String(opts.wordsLearned))}
+        ${statRow('🔥 Chuỗi ngày hiện tại', `${opts.currentStreak} ngày`, true)}
+      </table>
+      Tiếp tục giữ nhịp học này nhé!`
+    : `Chào ${opts.displayName}! Tuần này bạn chưa ghi nhận buổi học nào trên Hanni. Chỉ cần vài phút mỗi ngày là đủ để giữ vốn từ vựng không bị quên — quay lại học ngay nhé!`;
+
+  return layout({
+    heading: active
+      ? 'Tổng kết tuần học của bạn'
+      : 'Đã lâu không gặp bạn trên Hanni',
+    bodyHtml,
+    ctaLabel: active ? 'Tiếp tục học' : 'Quay lại học ngay',
+    ctaUrl: opts.appUrl,
+    footNote:
+      'Bạn nhận được email này vì đã bật "Email tổng kết tuần" trong Cài đặt trên Hanni — có thể tắt bất cứ lúc nào tại mục Cài đặt.',
+  });
+}

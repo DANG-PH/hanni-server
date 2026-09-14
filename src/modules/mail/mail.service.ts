@@ -2,7 +2,11 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createTransport, type Transporter } from 'nodemailer';
 import type { Env } from '../../config/env.validation';
-import { passwordResetHtml, verifyEmailHtml } from './templates';
+import {
+  passwordResetHtml,
+  verifyEmailHtml,
+  weeklyDigestHtml,
+} from './templates';
 
 /**
  * Để trống MAIL_HOST (mặc định) -> chỉ log nội dung mail ra console (đủ để
@@ -56,6 +60,28 @@ export class MailService implements OnModuleInit {
       'Đặt lại mật khẩu Hanni',
       `Nhấn để đặt lại: ${link}`,
       passwordResetHtml(link),
+    );
+  }
+
+  async sendWeeklyDigest(
+    to: string,
+    stats: {
+      displayName: string;
+      daysStudied: number;
+      wordsReviewed: number;
+      wordsLearned: number;
+      currentStreak: number;
+    },
+  ): Promise<void> {
+    const subject =
+      stats.daysStudied > 0
+        ? 'Tổng kết tuần học tiếng Trung của bạn'
+        : 'Đã lâu không gặp bạn trên Hanni 👋';
+    await this.deliver(
+      to,
+      subject,
+      subject,
+      weeklyDigestHtml({ ...stats, appUrl: this.frontendUrl }),
     );
   }
 

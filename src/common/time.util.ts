@@ -57,3 +57,15 @@ export function startOfLocalDayInstant(
 export function getLocalHour(at: Date, timezone: string): number {
   return DateTime.fromJSDate(at, { zone: timezone }).hour;
 }
+
+/** Thứ trong tuần theo timezone user (1 = Thứ Hai .. 7 = Chủ Nhật, chuẩn ISO). */
+export function getLocalWeekday(at: Date, timezone: string): number {
+  return DateTime.fromJSDate(at, { zone: timezone }).weekday;
+}
+
+/** Lùi/tiến N ngày lịch từ 1 chuỗi ISO date — dùng để dựng khoảng ngày (vd 7
+ * ngày gần nhất) mà không cần lặp qua từng Date thủ công. */
+export function shiftIsoDate(iso: string, days: number): string {
+  const shifted = DateTime.fromISO(iso).plus({ days });
+  return shifted.toISODate() ?? iso;
+}
