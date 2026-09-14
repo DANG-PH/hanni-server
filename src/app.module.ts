@@ -13,6 +13,7 @@ import { PrismaModule } from './infra/prisma/prisma.module';
 import { RedisModule } from './infra/redis/redis.module';
 import { AssistantModule } from './modules/assistant/assistant.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { DuelModule } from './modules/duel/duel.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { GamificationModule } from './modules/gamification/gamification.module';
@@ -90,6 +91,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
     ReferralsModule,
     WalletModule,
     MinigameModule,
+    DuelModule,
     HealthModule,
   ],
   providers: [

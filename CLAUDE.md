@@ -154,6 +154,24 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   không trả `correctIndex` về client), `POST /minigame/:id/finish` tự so khớp `chosenIndex` với
   đáp án đã lưu — cần thiết vì kết quả game này quy đổi thành xu thật, không thể tin client tự
   báo điểm như quiz thường. Thưởng 1 xu/câu đúng.
+- **Đấu 1v1 (`src/modules/duel`, model `UserRating` + `DuelMatch`)**: Giai đoạn 2 minigame —
+  ghép trận + đấu realtime qua WebSocket, ELO thô (K=32, công thức chuẩn cờ vua), CHƯA có rank
+  tier/mùa giải/2v2 (giai đoạn 3-4). Dùng CHUNG namespace `/notifications` — 3 sự kiện mới
+  `duel:join-queue`/`duel:leave-queue`/`duel:answer` thêm thẳng vào `NotificationsGateway`
+  (không dựng gateway riêng, cùng lý do với tin nhắn/typing). `DuelService` giữ TOÀN BỘ trạng
+  thái hàng đợi + trận đấu ĐANG DIỄN RA trong bộ nhớ (`Map`) — **CHỈ đúng khi chạy 1 instance**;
+  RedisIoAdapter hiện chỉ lo phần chuyển tiếp WebSocket giữa các instance, CHƯA áp dụng cho hàng
+  đợi/trạng thái trận — cần chuyển sang Redis nếu sau này thật sự scale ngang. Luật: 8 câu, mỗi
+  câu `ROUND_DURATION_MS` (8s) để cả 2 trả lời, ai đúng được 1 điểm (đúng cả 2 thì cả 2 đều được
+  — không cộng thêm vì nhanh hơn, đơn giản hoá cho giai đoạn kiểm chứng), vòng kết thúc SỚM nếu
+  cả 2 đã trả lời chứ không cần đợi hết giờ (`submitAnswer()` tự huỷ timer). Người rớt mạng giữa
+  trận KHÔNG có xử lý đặc biệt — vẫn tính thua dần theo timer mỗi vòng (chấp nhận được, chưa cần
+  forfeit/reconnect ở giai đoạn này). `NotificationsGateway` ↔ `DuelService` phụ thuộc vòng lẫn
+  nhau (gateway gọi `DuelService` khi nhận sự kiện, `DuelService` gọi `gateway.emitToUser()` khi
+  đẩy kết quả) — xử lý bằng `forwardRef()` cả 2 chiều; `DuelService` "sống" trong
+  `NotificationsModule` (xem ghi chú trong `notifications.module.ts`) để tránh vòng lặp Ở CẤP
+  MODULE, `DuelModule` chỉ import `NotificationsModule` một chiều cho phần REST
+  (`GET /duel/rating/me`, `GET /duel/leaderboard`).
 - **Hồ sơ công khai (`GET /users/:id/profile`, `UsersService.getPublicProfile()`)**: field an
   toàn để lộ công khai (KHÔNG email/settings/oauth như `getProfile()` của chính mình) — tên,
   avatar, ngày tham gia, streak, số từ đã thuộc (dùng lại luật LEARNED_WHERE giống

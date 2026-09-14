@@ -170,6 +170,9 @@ model User {
   minigameSessions    MinigameSession[]
   wallet              UserWallet?
   coinTransactions    CoinTransaction[]
+  rating              UserRating?
+  duelsAsA            DuelMatch[]          @relation("DuelPlayerA")
+  duelsAsB            DuelMatch[]          @relation("DuelPlayerB")
 
   @@index([lastActiveAt])
 }
@@ -856,6 +859,38 @@ model CoinTransaction {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+/// Điểm ELO cho "Đấu 1v1" — Giai đoạn 2 minigame (xem FEATURES.md). CHƯA có
+/// rank tier (Sắt→Thách Đấu)/mùa giải, chỉ 1 con số ELO thô để kiểm chứng
+/// ghép trận + tính điểm hoạt động ổn trước khi thêm lớp rank ở giai đoạn 3.
+model UserRating {
+  userId    String   @id @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  elo       Int      @default(1000)
+  wins      Int      @default(0)
+  losses    Int      @default(0)
+  draws     Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+/// Lịch sử 1 trận đấu đơn — lưu lại kết quả + biến động ELO của cả 2 bên để
+/// tra cứu/đối soát (không lưu chi tiết từng câu, chỉ tổng điểm).
+model DuelMatch {
+  id         String   @id @default(uuid()) @db.Uuid
+  playerAId  String   @db.Uuid
+  playerA    User     @relation("DuelPlayerA", fields: [playerAId], references: [id], onDelete: Cascade)
+  playerBId  String   @db.Uuid
+  playerB    User     @relation("DuelPlayerB", fields: [playerBId], references: [id], onDelete: Cascade)
+  scoreA     Int
+  scoreB     Int
+  winnerId   String?  @db.Uuid
+  eloChangeA Int
+  eloChangeB Int
+  createdAt  DateTime @default(now())
+
+  @@index([playerAId])
+  @@index([playerBId])
 }
 
 /// Nhắn tin trực tiếp 1-1 — 1 cặp user chỉ có ĐÚNG 1 cuộc hội thoại

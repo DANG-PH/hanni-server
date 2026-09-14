@@ -1,10 +1,15 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import { DuelService } from '../duel/duel.service';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsGateway } from './notifications.gateway';
 import { NotificationsListener } from './notifications.listener';
 import { NotificationsService } from './notifications.service';
 
+// DuelService "sống" ở đây (không phải module duel/) để NotificationsGateway
+// gọi thẳng được (xử lý sự kiện WebSocket duel:*) mà không tạo phụ thuộc
+// vòng giữa 2 module — DuelModule chỉ import NotificationsModule để lấy lại
+// DuelService cho phần REST (rating/leaderboard), không đi chiều ngược lại.
 @Module({
   imports: [JwtModule.register({})],
   controllers: [NotificationsController],
@@ -12,7 +17,8 @@ import { NotificationsService } from './notifications.service';
     NotificationsGateway,
     NotificationsListener,
     NotificationsService,
+    DuelService,
   ],
-  exports: [NotificationsService, NotificationsGateway],
+  exports: [NotificationsService, NotificationsGateway, DuelService],
 })
 export class NotificationsModule {}
