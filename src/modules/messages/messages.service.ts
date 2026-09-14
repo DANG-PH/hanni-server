@@ -3,8 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { pinyin } from 'pinyin-pro';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { translateLinesToVi } from '../videos/translate.util';
 
 const USER_SELECT = { id: true, displayName: true, avatarUrl: true } as const;
 
@@ -138,6 +140,19 @@ export class MessagesService {
       data: { readAt: new Date() },
     });
     return { ok: true };
+  }
+
+  /** Dịch nhanh 1 tin nhắn (pinyin + nghĩa tiếng Việt) để luyện đọc ngay
+   * trong khung chat — tái dùng bộ dịch máy free đã có cho video. Không lưu
+   * lại (khác video: 1 hội thoại chỉ 2 người xem, không đáng cache DB). */
+  async translateText(
+    text: string,
+  ): Promise<{ pinyin: string; vi: string | null }> {
+    const [vi] = await translateLinesToVi([text]);
+    return {
+      pinyin: pinyin(text, { toneType: 'symbol', nonZh: 'consecutive' }),
+      vi,
+    };
   }
 
   async unreadCount(userId: string): Promise<{ count: number }> {

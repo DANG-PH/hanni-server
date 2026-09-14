@@ -11,7 +11,11 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../../common/types';
-import { MessagesPageQuery, SendMessageDto } from './dto/messages.dto';
+import {
+  MessagesPageQuery,
+  SendMessageDto,
+  TranslateMessageDto,
+} from './dto/messages.dto';
 import { MessagesService } from './messages.service';
 
 @ApiTags('messages')
@@ -55,6 +59,12 @@ export class MessagesController {
     @Body() dto: SendMessageDto,
   ) {
     return this.messages.sendMessage(user.id, id, dto.content);
+  }
+
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Post('translate')
+  translate(@Body() dto: TranslateMessageDto) {
+    return this.messages.translateText(dto.text);
   }
 
   @Post('conversations/:id/read')

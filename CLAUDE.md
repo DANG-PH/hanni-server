@@ -123,7 +123,12 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   (lấy hoặc tự tạo hội thoại), `GET/POST .../messages` (phân trang/gửi, gửi có throttle 30/60s),
   `POST .../read`, `GET /messages/unread-count`. KHÔNG dựng gateway/namespace riêng — tái dùng
   `NotificationsGateway` (`emitToUser`) có sẵn, phát event `message:new` khác với
-  `notification:new` trên cùng kết nối `/notifications`.
+  `notification:new` trên cùng kết nối `/notifications`. `POST /messages/translate` (throttle
+  20/60s, `MessagesService.translateText()`) dịch nhanh 1 tin nhắn ra pinyin + nghĩa tiếng Việt
+  ngay trong khung chat — tái dùng `pinyin-pro` (giống `transcript.util.ts` của video) +
+  `translateLinesToVi()` (module videos, dịch máy free có sẵn) thay vì xây bộ dịch riêng. Không
+  lưu kết quả (khác cache dịch video — 1 hội thoại chỉ 2 người xem, không đáng cache DB), FE chỉ
+  hiện nút "Dịch" khi tin nhắn có chữ Hán và tự cache trong state khi đã dịch 1 lần.
 - **Luyện nghe/phát âm (`src/modules/practice`)**: `POST /practice/attempts` ghi 1 lượt luyện
   (`wordId`, `skill: LISTENING|PRONUNCIATION`, `isCorrect?` — chỉ dùng cho LISTENING vì
   PRONUNCIATION chưa có chấm điểm tự động, luôn lưu `null`). `GET /practice/stats?skill=` trả

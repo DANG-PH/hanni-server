@@ -22,3 +22,10 @@ export class MessagesPageQuery {
   @Min(1)
   page?: number;
 }
+
+export class TranslateMessageDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(2000)
+  text!: string;
+}
