@@ -93,3 +93,9 @@ export class SearchUsersQuery {
   @MaxLength(50)
   q!: string;
 }
+
+export class DeleteAccountDto {
+  @IsOptional()
+  @IsString()
+  password?: string;
+}

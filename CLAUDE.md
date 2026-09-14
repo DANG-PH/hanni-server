@@ -133,6 +133,13 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `LeaderboardService.top()` — trước đây CHỈ tìm được người qua bảng xếp hạng (giới hạn top N)
   hoặc biết sẵn link hồ sơ, không có cách nào tìm 1 người quen theo tên. FE dùng ở `/messages`
   (nút "Tin nhắn mới") để bắt đầu hội thoại với người CHƯA từng nhắn tin trước đó.
+- **Xoá tài khoản (`DELETE /users/me`, `UsersService.deleteAccount()`)**: yêu cầu đúng mật khẩu
+  nếu tài khoản có đặt mật khẩu (đăng nhập Google thuần thì bỏ qua), xoá file avatar trên đĩa,
+  rồi `prisma.user.delete()` — KHÔNG cần logic dọn dẹp thủ công vì schema đã thiết kế sẵn
+  `onDelete` đúng ý nghĩa cho từng quan hệ: `Video.createdBy`/`Notification.actor` dùng
+  `SetNull` (nội dung/thông báo liên quan tới người KHÁC vẫn giữ lại, chỉ mất gắn tác giả), còn
+  lại (settings, tiến độ, bình luận, tin nhắn, follow...) dùng `Cascade` (dữ liệu CÁ NHÂN xoá
+  sạch). Route tự xoá cookie auth (`clearAuthCookies`) như lúc `/auth/logout`.
 - **Nhắn tin trực tiếp (`src/modules/messages`, model `Conversation` + `DirectMessage`)**: 1-1,
   `Conversation.userAId` LUÔN nhỏ hơn `userBId` theo thứ tự chuỗi (chuẩn hoá ở
   `MessagesService.pairIds()`) để 1 cặp user chỉ có đúng 1 hội thoại dù ai nhắn trước.

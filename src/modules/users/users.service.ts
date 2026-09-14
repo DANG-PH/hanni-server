@@ -355,4 +355,23 @@ export class UsersService {
   async setPassword(id: string, passwordHash: string): Promise<void> {
     await this.prisma.user.update({ where: { id }, data: { passwordHash } });
   }
+
+  /** Xoá tài khoản vĩnh viễn. Video đã thêm giữ lại (createdById → null, xử
+   * lý sẵn ở schema với onDelete: SetNull) — chỉ dữ liệu CÁ NHÂN (tiến độ,
+   * bình luận, tin nhắn, cài đặt...) mới bị xoá theo Cascade có sẵn trong
+   * schema. Yêu cầu đúng mật khẩu nếu tài khoản có đặt mật khẩu (đăng nhập
+   * Google thuần thì bỏ qua vì không có gì để xác minh thêm). */
+  async deleteAccount(id: string, password?: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+    if (user.passwordHash) {
+      const ok = await this.password.verify(password ?? '', user.passwordHash);
+      if (!ok) throw new BadRequestException('Mật khẩu không đúng');
+    }
+    const dir = join(process.cwd(), 'assets', 'avatars');
+    for (const e of ['png', 'jpg', 'webp']) {
+      await rm(join(dir, `${id}.${e}`), { force: true });
+    }
+    await this.prisma.user.delete({ where: { id } });
+  }
 }
