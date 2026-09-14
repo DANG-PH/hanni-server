@@ -10,12 +10,24 @@ import type { Env } from '../../config/env.validation';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { PushService } from './push.service';
 
+/** Giờ địa phương gửi cảnh báo "sắp mất chuỗi" — cố định (không cho user tự
+ * chỉnh như `reminderHour`), chọn buổi tối để còn kịp học trước khi ngày học
+ * kết thúc (`STREAK_DAY_CUTOFF_HOUR` thật ra là 3h sáng hôm sau, nhưng nhắc
+ * lúc đó thì phiền — 21h vẫn còn vài tiếng mà không làm phiền giấc ngủ). */
+const STREAK_RISK_HOUR = 21;
+
 /**
  * Nhắc học tự động: mỗi giờ, tìm user có `UserSettings.reminderHour` khớp
  * giờ địa phương hiện tại VÀ chưa đạt mục tiêu ngày hôm nay — gửi push. Chạy
  * theo giờ (không phải phút) nên chỉ khớp đúng 1 lần/ngày cho từng user, trừ
  * số ít timezone lệch nửa giờ (vd Asia/Kathmandu) — chấp nhận được, không
  * cần chính xác tới phút cho một lời nhắc.
+ *
+ * Ngoài ra còn cảnh báo riêng "sắp mất chuỗi" (`sendStreakRiskReminders()`)
+ * lúc `STREAK_RISK_HOUR` cho ai có streak > 0 nhưng CHƯA có hoạt động nào
+ * hôm nay — khác điều kiện với nhắc thường (dựa vào `goalMet`) vì streak chỉ
+ * cần hoạt động ĐẦU TIÊN trong ngày là giữ được (xem `StreakService.
+ * recordActivity()`'s `wasNewDay`), không cần đạt đủ mục tiêu.
  */
 @Injectable()
 export class ReminderService {
@@ -76,6 +88,57 @@ export class ReminderService {
 
     if (sentCount > 0) {
       this.logger.log(`Đã gửi nhắc học tới ${sentCount} người dùng`);
+    }
+  }
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async sendStreakRiskReminders(): Promise<void> {
+    const now = new Date();
+    const cutoffHour = this.config.get('STREAK_DAY_CUTOFF_HOUR', {
+      infer: true,
+    });
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        pushSubscriptions: { some: {} },
+        streak: { currentStreak: { gt: 0 } },
+      },
+      select: {
+        id: true,
+        timezone: true,
+        streak: { select: { currentStreak: true } },
+      },
+    });
+    if (users.length === 0) return;
+
+    let sentCount = 0;
+    await Promise.all(
+      users.map(async (user) => {
+        if (getLocalHour(now, user.timezone) !== STREAK_RISK_HOUR) return;
+
+        const todayIso = localStudyDate(now, user.timezone, cutoffHour);
+        const activity = await this.prisma.userDailyActivity.findUnique({
+          where: {
+            userId_localDate: {
+              userId: user.id,
+              localDate: isoDateToUtcDate(todayIso),
+            },
+          },
+        });
+        if (activity) return; // đã có hoạt động hôm nay -> streak đã an toàn
+
+        const streakDays = user.streak?.currentStreak ?? 0;
+        const sent = await this.push.sendToUser(
+          user.id,
+          `Đừng để mất chuỗi ${streakDays} ngày!`,
+          'Bạn chưa học gì hôm nay — học ngay vài phút để giữ chuỗi nhé.',
+        );
+        if (sent > 0) sentCount += 1;
+      }),
+    );
+
+    if (sentCount > 0) {
+      this.logger.log(`Đã gửi cảnh báo mất chuỗi tới ${sentCount} người dùng`);
     }
   }
 }

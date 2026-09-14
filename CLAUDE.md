@@ -82,7 +82,12 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   cho hầu hết user, trừ số ít timezone lệch nửa giờ (vd Asia/Kathmandu) — chấp nhận được, một
   lời nhắc không cần chính xác tới phút. `PushService.sendToUser()` (tách riêng khỏi
   `sendTest()`) không throw nếu chưa bật/chưa có subscription, vì đây là job nền chạy cho nhiều
-  user chứ không phải request của chính user đó.
+  user chứ không phải request của chính user đó. Riêng cảnh báo **"sắp mất chuỗi"**
+  (`sendStreakRiskReminders()`, cùng file) chạy lúc `STREAK_RISK_HOUR` cố định (21h local, KHÔNG
+  cho user tự chỉnh như `reminderHour`) cho ai có `currentStreak > 0` nhưng CHƯA có bản ghi
+  `UserDailyActivity` nào hôm nay — điều kiện khác nhắc thường (`goalMet`) vì streak chỉ cần
+  hoạt động ĐẦU TIÊN trong ngày là giữ được (`StreakService.recordActivity()`'s `wasNewDay`),
+  không cần đạt đủ mục tiêu — cơ chế giữ chân người dùng kiểu Duolingo.
 - **Bình luận + thích video + thông báo (`src/modules/videos/comments`, `.../likes`,
   `src/modules/notifications`)**: bình luận 1 cấp trả lời (trả lời của trả lời tự gộp vào bình
   luận gốc — xem `CommentsService.create`), thích video kiểu upsert (idempotent). Tạo bình
