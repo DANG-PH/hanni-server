@@ -151,20 +151,27 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   "điểm danh" mà không cần dựng hệ theo dõi riêng). Nơi tiêu đầu tiên (sink):
   `POST /wallet/buy/streak-freeze` (300 xu/lá chắn, chặn nếu đã đạt `MAX_STREAK_FREEZE`, kiểm
   tra TRƯỚC khi trừ xu để không mất xu oan nếu không mua được).
-- **Minigame "Dịch tốc độ" + "Nghe đoán từ" (`src/modules/minigame`, model `MinigameSession`)**:
-  Giai đoạn 1 theo lộ trình 5 giai đoạn trong `FEATURES.md` — chơi 1 mình, tính giờ 60s, bảng
-  xếp hạng ngày/tuần. 2 CHẾ ĐỘ (`GameMode`: `TRANSLATE`/`LISTENING`) dùng CHUNG engine —
+- **Minigame "Dịch tốc độ" + "Nghe đoán từ" + "Ghép cặp" (`src/modules/minigame`, model
+  `MinigameSession`)**: Giai đoạn 1 theo lộ trình 5 giai đoạn trong `FEATURES.md` — chơi 1 mình,
+  tính giờ, bảng xếp hạng ngày/tuần RIÊNG theo từng mode (gộp chung sẽ không công bằng vì độ khó
+  khác nhau). TRANSLATE/LISTENING dùng CHUNG engine trắc nghiệm —
   `MinigameService.start(userId, mode)` chỉ khác nguồn từ (LISTENING lọc `audioUrl: {not:null}`)
   và trả thêm `audioUrl` mỗi câu; server luôn trả đủ Hán tự + pinyin + audio cho MỌI mode, FE tự
   quyết định ẩn/hiện theo mode (LISTENING ẩn Hán tự/pinyin, tự phát audio — y hệt cách
-  `QuizService`/`quiz-runner.tsx` đã làm cho câu nghe). `MinigameSession.mode` lưu lại để
-  `GET /minigame/leaderboard?mode=` xếp hạng RIÊNG theo từng mode (gộp chung sẽ không công bằng
-  vì độ khó khác nhau — số từ có audio ít hơn số từ có nghĩa). Khác `QuizService` (tin thẳng
-  `isCorrect` client tự báo cáo) — ở đây `POST /minigame/start` LƯU SẴN đáp án đúng trong
+  `QuizService`/`quiz-runner.tsx` đã làm cho câu nghe). Khác `QuizService` (tin thẳng `isCorrect`
+  client tự báo cáo) — ở đây `POST /minigame/start` LƯU SẴN đáp án đúng trong
   `MinigameSession.questions` (JSON, không trả `correctIndex` về client), `POST
   /minigame/:id/finish` tự so khớp `chosenIndex` với đáp án đã lưu — cần thiết vì kết quả game
   này quy đổi thành xu thật, không thể tin client tự báo điểm như quiz thường. Thưởng 1 xu/câu
   đúng.
+  **"Ghép cặp" (MATCH)**: khác hẳn 2 mode trên — `startMatchGame()` chọn `MATCH_PAIRS` (8) từ,
+  tạo 2 thẻ/từ (mặt Hán tự + mặt nghĩa, `MatchCard{cardId,wordId,kind,content}`), trộn vị trí rồi
+  trả về NGUYÊN mảng thẻ CÓ `wordId` — không giấu được "đáp án" như `correctIndex` vì việc so
+  khớp 2 thẻ vốn công khai ngay khi tải dữ liệu (bản chất trò lật thẻ trí nhớ, client tự biết 2
+  thẻ nào khớp nhau ngay khi nhận response). `finishMatchGame()` vì vậy CHỈ chặn được gian dối lộ
+  liễu nhất — `durationMs` phải ≥ `MATCH_PAIRS * MATCH_MIN_MS_PER_PAIR` (500ms/cặp) mới tính điểm,
+  không xác minh được chi tiết từng lượt lật như MC. Điểm = `MATCH_PAIRS - mistakes` (tối thiểu
+  1 nếu hợp lệ), `mistakes` (số lần lật sai) do client tự đếm và báo qua `FinishMinigameDto`.
 - **Đấu 1v1 + rank tier + mùa giải (`src/modules/duel`, model `UserRating` + `DuelMatch` +
   `DuelSeason` + `DuelSeasonResult`)**: Giai đoạn 2+3 minigame — ghép trận + đấu realtime qua
   WebSocket, ELO thô (K=32, công thức chuẩn cờ vua), CHỈ có chế độ `TRANSLATE` (chưa ghép LISTENING

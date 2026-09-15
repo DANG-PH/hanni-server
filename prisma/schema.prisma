@@ -844,6 +844,9 @@ model MinigameSession {
 enum GameMode {
   TRANSLATE
   LISTENING
+  /// "Ghép cặp" — lật thẻ tìm đúng cặp Hán tự ↔ nghĩa, khác cơ chế trắc
+  /// nghiệm của 2 mode trên nên `finish()` nhận `mistakes` thay vì `answers`.
+  MATCH
 }
 
 /// Ví xu (soft currency) — KHÔNG quy đổi tiền thật, chỉ kiếm được qua

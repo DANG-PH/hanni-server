@@ -21,10 +21,18 @@ export class MinigameAnswerDto {
 }
 
 export class FinishMinigameDto {
+  /** TRANSLATE/LISTENING: trắc nghiệm mỗi câu. Không dùng cho MATCH. */
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => MinigameAnswerDto)
-  answers!: MinigameAnswerDto[];
+  answers?: MinigameAnswerDto[];
+
+  /** MATCH: số lượt lật KHÔNG khớp cặp. Không dùng cho TRANSLATE/LISTENING. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  mistakes?: number;
 
   @IsInt()
   @Min(0)
