@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import { GameMode, type Prisma } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { WalletService } from '../wallet/wallet.service';
 import type { FinishMinigameDto } from './dto/minigame.dto';
@@ -24,15 +24,18 @@ interface StoredQuestion {
   wordId: string;
   prompt: string;
   pinyin: string;
+  audioUrl: string | null;
   options: string[];
   correctIndex: number;
 }
 
 /**
- * Minigame "Dịch tốc độ": Giai đoạn 1 theo lộ trình trong FEATURES.md —
- * chơi 1 mình, tính giờ, có bảng xếp hạng ngày/tuần. CHƯA có đối kháng
- * realtime/ELO/rank/mùa giải — những phần đó để giai đoạn sau, sau khi
- * kiểm chứng gameplay này có hấp dẫn không.
+ * Minigame "Dịch tốc độ" (TRANSLATE) + "Nghe đoán từ" (LISTENING) — Giai
+ * đoạn 1 theo lộ trình trong FEATURES.md: chơi 1 mình, tính giờ, có bảng
+ * xếp hạng ngày/tuần. 2 chế độ dùng CHUNG engine, chỉ khác nguồn từ (LISTENING
+ * bắt buộc có `audioUrl`) và việc client có ẩn Hán tự/pinyin hay không (server
+ * luôn trả đủ cả 2 trường, FE tự quyết định ẩn/hiện theo mode — y hệt cách
+ * `QuizService`/`quiz-runner.tsx` đã làm cho câu nghe).
  *
  * Khác `QuizService` (tin thẳng `isCorrect` client tự báo): ở đây server
  * LƯU SẴN đáp án đúng lúc bắt đầu (`MinigameSession.questions`), và tự so
@@ -45,9 +48,12 @@ export class MinigameService {
     private readonly wallet: WalletService,
   ) {}
 
-  async start(userId: string) {
+  async start(userId: string, mode: GameMode = GameMode.TRANSLATE) {
     const pool = await this.prisma.word.findMany({
-      where: { meaningVi: { not: null } },
+      where: {
+        meaningVi: { not: null },
+        ...(mode === GameMode.LISTENING ? { audioUrl: { not: null } } : {}),
+      },
       orderBy: { frequencyRank: 'asc' },
       take: POOL_SIZE,
     });
@@ -70,6 +76,7 @@ export class MinigameService {
         wordId: w.id,
         prompt: w.simplified,
         pinyin: w.pinyin,
+        audioUrl: w.audioUrl,
         options,
         correctIndex: options.indexOf(w.meaningVi!),
       };
@@ -78,16 +85,19 @@ export class MinigameService {
     const session = await this.prisma.minigameSession.create({
       data: {
         userId,
+        mode,
         questions: questions as unknown as Prisma.InputJsonValue,
       },
     });
 
     return {
       sessionId: session.id,
+      mode,
       questions: questions.map((q) => ({
         wordId: q.wordId,
         prompt: q.prompt,
         pinyin: q.pinyin,
+        audioUrl: q.audioUrl,
         options: q.options,
       })),
     };
@@ -133,7 +143,10 @@ export class MinigameService {
     };
   }
 
-  async leaderboard(period: 'daily' | 'weekly' = 'daily') {
+  async leaderboard(
+    period: 'daily' | 'weekly' = 'daily',
+    mode: GameMode = GameMode.TRANSLATE,
+  ) {
     const now = new Date();
     const since =
       period === 'weekly'
@@ -142,8 +155,10 @@ export class MinigameService {
             Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
           );
 
+    // Xếp hạng riêng theo TỪNG mode — ghép cả 2 vào 1 bảng sẽ không công
+    // bằng vì độ khó (số từ có audio ít hơn số từ có nghĩa) khác nhau.
     const rows = await this.prisma.minigameSession.findMany({
-      where: { finishedAt: { gte: since } },
+      where: { finishedAt: { gte: since }, mode },
       orderBy: [{ score: 'desc' }, { durationMs: 'asc' }],
       take: 20,
       include: {

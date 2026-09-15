@@ -9,9 +9,14 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { GameMode } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../../common/types';
-import { FinishMinigameDto, LeaderboardQueryDto } from './dto/minigame.dto';
+import {
+  FinishMinigameDto,
+  LeaderboardQueryDto,
+  StartMinigameDto,
+} from './dto/minigame.dto';
 import { MinigameService } from './minigame.service';
 
 @ApiTags('minigame')
@@ -22,8 +27,8 @@ export class MinigameController {
 
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('start')
-  start(@CurrentUser() user: AuthUser) {
-    return this.minigame.start(user.id);
+  start(@CurrentUser() user: AuthUser, @Body() dto: StartMinigameDto) {
+    return this.minigame.start(user.id, dto.mode ?? GameMode.TRANSLATE);
   }
 
   @Post(':id/finish')
@@ -37,6 +42,6 @@ export class MinigameController {
 
   @Get('leaderboard')
   leaderboard(@Query() q: LeaderboardQueryDto) {
-    return this.minigame.leaderboard(q.period);
+    return this.minigame.leaderboard(q.period, q.mode);
   }
 }

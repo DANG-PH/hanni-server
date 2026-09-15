@@ -1,6 +1,7 @@
 import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { tierForElo } from './duel-rank.util';
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -14,6 +15,13 @@ function shuffle<T>(arr: T[]): T[] {
 const ROUNDS_PER_MATCH = 8;
 const ROUND_DURATION_MS = 8_000;
 const RESULT_DISPLAY_MS = 2_500;
+/** Khoảng nghỉ sau khi ghép trận xong, trước câu hỏi đầu tiên — cho UI hiện
+ * màn hình "VS" (2 avatar + đếm ngược) thay vì nhảy thẳng vào câu hỏi. */
+const MATCH_INTRO_MS = 3_000;
+/** Thời gian chờ sau khi 1 người rớt mạng giữa trận trước khi xử thua luôn
+ * (forfeit) — đủ để load lại trang/mạng chập chờn ngắn mà không huỷ trận
+ * oan, nhưng không dài tới mức đối thủ phải chờ vô thời hạn. */
+const DISCONNECT_FORFEIT_MS = 15_000;
 const POOL_SIZE = 800;
 const ELO_K = 32;
 const STARTING_ELO = 1000;
@@ -26,7 +34,7 @@ interface DuelQuestion {
   correctIndex: number;
 }
 
-interface PlayerInfo {
+export interface PlayerInfo {
   id: string;
   displayName: string;
   avatarUrl: string | null;
@@ -41,10 +49,13 @@ interface ActiveMatch {
   players: [PlayerInfo, PlayerInfo];
   questions: DuelQuestion[];
   round: number;
+  started: boolean;
   scores: Map<string, number>;
   roundAnswers: Map<string, number>;
   roundTimer: ReturnType<typeof setTimeout> | null;
   nextRoundTimer: ReturnType<typeof setTimeout> | null;
+  /** timer chờ xử forfeit nếu người này đang rớt mạng, xem `handlePlayerDisconnect()` */
+  disconnectTimers: Map<string, ReturnType<typeof setTimeout>>;
 }
 
 /**
@@ -94,6 +105,86 @@ export class DuelService {
     this.queue = this.queue.filter((p) => p.id !== userId);
   }
 
+  getQueueSize(): number {
+    return this.queue.length;
+  }
+
+  /** Trạng thái trận ĐANG DIỄN RA của user, nếu có — để FE tự phục hồi UI
+   * khi mở lại trang/refresh giữa trận thay vì bị kẹt ở màn hình "Tìm đối
+   * thủ" trong lúc trận vẫn tiếp diễn ở server (round timer không phụ thuộc
+   * việc client có đang xem hay không). */
+  getActiveMatchState(userId: string) {
+    const matchId = this.playerToMatch.get(userId);
+    if (!matchId) return null;
+    const match = this.matches.get(matchId);
+    if (!match) return null;
+    const opponent = match.players.find((p) => p.id !== userId);
+    if (!opponent) return null;
+    const q = match.started ? match.questions[match.round] : null;
+    return {
+      matchId: match.id,
+      opponent,
+      totalRounds: ROUNDS_PER_MATCH,
+      round: match.round,
+      scores: Object.fromEntries(match.scores),
+      question: q
+        ? {
+            wordId: q.wordId,
+            prompt: q.prompt,
+            pinyin: q.pinyin,
+            options: q.options,
+          }
+        : null,
+      myAnswered: match.roundAnswers.has(userId),
+    };
+  }
+
+  /** Rớt mạng giữa hàng đợi thì rời hàng đợi luôn (không ai muốn ghép với
+   * người sắp mất kết nối); rớt mạng GIỮA TRẬN thì cho `DISCONNECT_FORFEIT_MS`
+   * để load lại/mạng chập chờn ngắn, không xử thua ngay lập tức. */
+  handlePlayerDisconnect(userId: string): void {
+    this.leaveQueue(userId);
+    const matchId = this.playerToMatch.get(userId);
+    if (!matchId) return;
+    const match = this.matches.get(matchId);
+    if (!match) return;
+
+    const existing = match.disconnectTimers.get(userId);
+    if (existing) clearTimeout(existing);
+    match.disconnectTimers.set(
+      userId,
+      setTimeout(
+        () => void this.forfeitMatch(matchId, userId),
+        DISCONNECT_FORFEIT_MS,
+      ),
+    );
+  }
+
+  /** Huỷ timer forfeit nếu người này kết nối lại kịp trong lúc trận vẫn còn
+   * đang diễn ra. */
+  handlePlayerReconnect(userId: string): void {
+    const matchId = this.playerToMatch.get(userId);
+    if (!matchId) return;
+    const match = this.matches.get(matchId);
+    if (!match) return;
+    const timer = match.disconnectTimers.get(userId);
+    if (timer) {
+      clearTimeout(timer);
+      match.disconnectTimers.delete(userId);
+    }
+  }
+
+  private async forfeitMatch(
+    matchId: string,
+    forfeitedBy: string,
+  ): Promise<void> {
+    const match = this.matches.get(matchId);
+    if (!match) return; // trận đã kết thúc bình thường trước khi hết hạn chờ
+    if (match.roundTimer) clearTimeout(match.roundTimer);
+    if (match.nextRoundTimer) clearTimeout(match.nextRoundTimer);
+    await this.finishMatch(matchId, forfeitedBy);
+  }
+
   private tryMatch(): void {
     if (this.queue.length < 2) return;
     const [a, b] = this.queue.splice(0, 2);
@@ -112,6 +203,7 @@ export class DuelService {
       players: [a, b],
       questions,
       round: 0,
+      started: false,
       scores: new Map([
         [a.id, 0],
         [b.id, 0],
@@ -119,6 +211,7 @@ export class DuelService {
       roundAnswers: new Map(),
       roundTimer: null,
       nextRoundTimer: null,
+      disconnectTimers: new Map(),
     };
     this.matches.set(match.id, match);
     this.playerToMatch.set(a.id, match.id);
@@ -128,14 +221,21 @@ export class DuelService {
       matchId: match.id,
       opponent: b,
       totalRounds: ROUNDS_PER_MATCH,
+      introMs: MATCH_INTRO_MS,
     });
     this.gateway.emitToUser(b.id, 'duel:matched', {
       matchId: match.id,
       opponent: a,
       totalRounds: ROUNDS_PER_MATCH,
+      introMs: MATCH_INTRO_MS,
     });
 
-    this.startRound(match);
+    // Chờ 1 nhịp cho UI hiện màn "VS" trước khi bắn câu hỏi đầu tiên, thay
+    // vì nhảy thẳng vào chơi ngay lúc vừa ghép xong.
+    match.nextRoundTimer = setTimeout(() => {
+      match.started = true;
+      this.startRound(match);
+    }, MATCH_INTRO_MS);
   }
 
   private startRound(match: ActiveMatch): void {
@@ -214,13 +314,26 @@ export class DuelService {
     }
   }
 
-  private async finishMatch(matchId: string): Promise<void> {
+  private async finishMatch(
+    matchId: string,
+    forfeitedBy?: string,
+  ): Promise<void> {
     const match = this.matches.get(matchId);
     if (!match) return;
     const [a, b] = match.players;
     const scoreA = match.scores.get(a.id) ?? 0;
     const scoreB = match.scores.get(b.id) ?? 0;
-    const winnerId = scoreA === scoreB ? null : scoreA > scoreB ? a.id : b.id;
+    // Forfeit (rớt mạng quá lâu giữa trận) luôn xử người đó thua, bất kể
+    // điểm số hiện tại đang dẫn hay không.
+    const winnerId = forfeitedBy
+      ? forfeitedBy === a.id
+        ? b.id
+        : a.id
+      : scoreA === scoreB
+        ? null
+        : scoreA > scoreB
+          ? a.id
+          : b.id;
     const resultA = winnerId === null ? 0.5 : winnerId === a.id ? 1 : 0;
     const resultB = 1 - resultA;
 
@@ -259,6 +372,7 @@ export class DuelService {
           scoreA,
           scoreB,
           winnerId,
+          forfeitedUserId: forfeitedBy ?? null,
           eloChangeA: changeA,
           eloChangeB: changeB,
         },
@@ -278,6 +392,14 @@ export class DuelService {
       myScore,
       opponentScore,
       winnerId,
+      // "me" | "opponent" | null — ai là người rớt mạng gây kết thúc sớm,
+      // để FE hiện đúng thông báo ("bạn bị xử thua" khác "đối thủ rớt mạng").
+      forfeitedBy:
+        forfeitedBy === undefined
+          ? null
+          : forfeitedBy === me.id
+            ? 'me'
+            : 'opponent',
       eloChange: myChange,
       newElo: myNewElo,
     });
@@ -293,6 +415,7 @@ export class DuelService {
       resultFor(b, a, scoreB, scoreA, changeB, ratingB.elo + changeB),
     );
 
+    for (const timer of match.disconnectTimers.values()) clearTimeout(timer);
     this.matches.delete(matchId);
     this.playerToMatch.delete(a.id);
     this.playerToMatch.delete(b.id);
@@ -308,11 +431,14 @@ export class DuelService {
 
   async getMyRating(userId: string) {
     const rating = await this.getOrCreateRating(userId);
+    const tier = tierForElo(rating.elo);
     return {
       elo: rating.elo,
       wins: rating.wins,
       losses: rating.losses,
       draws: rating.draws,
+      tier: tier.name,
+      tierColor: tier.color,
     };
   }
 
@@ -330,6 +456,8 @@ export class DuelService {
       displayName: r.user.displayName,
       avatarUrl: r.user.avatarUrl,
       elo: r.elo,
+      tier: tierForElo(r.elo).name,
+      tierColor: tierForElo(r.elo).color,
       wins: r.wins,
       losses: r.losses,
       draws: r.draws,

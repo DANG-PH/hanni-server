@@ -173,6 +173,7 @@ model User {
   rating              UserRating?
   duelsAsA            DuelMatch[]          @relation("DuelPlayerA")
   duelsAsB            DuelMatch[]          @relation("DuelPlayerB")
+  duelSeasonResults   DuelSeasonResult[]
 
   @@index([lastActiveAt])
 }
@@ -825,6 +826,8 @@ model MinigameSession {
   id         String    @id @default(uuid()) @db.Uuid
   userId     String    @db.Uuid
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// TRANSLATE (Hán tự → nghĩa, mặc định) hay LISTENING (nghe → nghĩa)
+  mode       GameMode  @default(TRANSLATE)
   questions  Json
   score      Int?
   totalAsked Int?
@@ -834,6 +837,13 @@ model MinigameSession {
 
   @@index([userId])
   @@index([finishedAt])
+}
+
+/// Chế độ chơi minigame — chừa chỗ thêm chế độ mới (vd ghép cặp, điền pinyin)
+/// mà không cần đổi cấu trúc bảng.
+enum GameMode {
+  TRANSLATE
+  LISTENING
 }
 
 /// Ví xu (soft currency) — KHÔNG quy đổi tiền thật, chỉ kiếm được qua
@@ -885,12 +895,49 @@ model DuelMatch {
   scoreA     Int
   scoreB     Int
   winnerId   String?  @db.Uuid
+  /// khác null nếu trận kết thúc do 1 bên rớt mạng quá lâu (forfeit) thay vì
+  /// đấu hết vòng — bằng playerAId hoặc playerBId, KHÔNG có quan hệ FK riêng
+  /// vì đã trùng 1 trong 2 cột trên (chỉ để hiển thị lý do kết thúc).
+  forfeitedUserId String? @db.Uuid
   eloChangeA Int
   eloChangeB Int
   createdAt  DateTime @default(now())
 
   @@index([playerAId])
   @@index([playerBId])
+}
+
+/// 1 mùa xếp hạng ELO — reset hàng tháng (xem DuelSeasonService). Mùa ĐANG
+/// diễn ra là dòng có `endedAt = null` (luôn chỉ có tối đa 1 dòng như vậy).
+model DuelSeason {
+  id        String             @id @default(uuid()) @db.Uuid
+  /// khoá mùa dạng YYYYMM (vd 202609) — vừa unique vừa tự sắp thứ tự đúng
+  number    Int                @unique
+  startedAt DateTime           @default(now())
+  endedAt   DateTime?
+  results   DuelSeasonResult[]
+}
+
+/// Kết quả 1 người chơi khi kết thúc mùa — chụp lại hạng/tier/ELO cuối mùa
+/// TRƯỚC khi ELO bị giảm nhẹ (soft reset) cho mùa mới, để còn tra lại lịch
+/// sử mùa trước dù ELO hiện tại đã đổi khác.
+model DuelSeasonResult {
+  id           String     @id @default(uuid()) @db.Uuid
+  seasonId     String     @db.Uuid
+  season       DuelSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  userId       String     @db.Uuid
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  finalElo     Int
+  tier         String
+  rank         Int
+  wins         Int
+  losses       Int
+  draws        Int
+  coinsAwarded Int
+  createdAt    DateTime   @default(now())
+
+  @@unique([seasonId, userId])
+  @@index([userId])
 }
 
 /// Nhắn tin trực tiếp 1-1 — 1 cặp user chỉ có ĐÚNG 1 cuộc hội thoại

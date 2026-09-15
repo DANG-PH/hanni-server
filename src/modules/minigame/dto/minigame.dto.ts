@@ -1,6 +1,8 @@
+import { GameMode } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsEnum,
   IsIn,
   IsInt,
   IsOptional,
@@ -33,4 +35,14 @@ export class LeaderboardQueryDto {
   @IsOptional()
   @IsIn(['daily', 'weekly'])
   period?: 'daily' | 'weekly';
+
+  @IsOptional()
+  @IsEnum(GameMode)
+  mode?: GameMode;
+}
+
+export class StartMinigameDto {
+  @IsOptional()
+  @IsEnum(GameMode)
+  mode?: GameMode;
 }

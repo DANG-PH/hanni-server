@@ -66,13 +66,16 @@ export class NotificationsGateway
     }
     (client.data as SocketData).userId = userId;
     void client.join(roomFor(userId));
+    // Huỷ timer forfeit nếu vừa rớt mạng giữa 1 trận đấu rồi kết nối lại kịp.
+    this.duel.handlePlayerReconnect(userId);
   }
 
-  /** Rời hàng đợi đấu 1v1 nếu đang chờ — trận ĐANG diễn ra thì không huỷ
-   * (round timeout tự xử lý người rớt mạng giữa chừng, xem DuelService). */
+  /** Rời hàng đợi ngay nếu đang chờ ghép trận; trận ĐANG diễn ra thì cho
+   * `DISCONNECT_FORFEIT_MS` để load lại/mạng chập chờn ngắn trước khi xử
+   * thua (xem `DuelService.handlePlayerDisconnect()`). */
   handleDisconnect(client: Socket): void {
     const userId = (client.data as SocketData).userId;
-    if (userId) this.duel.leaveQueue(userId);
+    if (userId) this.duel.handlePlayerDisconnect(userId);
   }
 
   emitToUser(userId: string, event: string, payload: unknown): void {

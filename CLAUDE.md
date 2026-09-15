@@ -146,32 +146,65 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   "điểm danh" mà không cần dựng hệ theo dõi riêng). Nơi tiêu đầu tiên (sink):
   `POST /wallet/buy/streak-freeze` (300 xu/lá chắn, chặn nếu đã đạt `MAX_STREAK_FREEZE`, kiểm
   tra TRƯỚC khi trừ xu để không mất xu oan nếu không mua được).
-- **Minigame "Dịch tốc độ" (`src/modules/minigame`, model `MinigameSession`)**: Giai đoạn 1
-  theo lộ trình 5 giai đoạn trong `FEATURES.md` — chơi 1 mình, tính giờ 60s, bảng xếp hạng
-  ngày/tuần. CHƯA có đối kháng realtime/ELO/rank/mùa giải/2v2 (để giai đoạn sau, sau khi kiểm
-  chứng gameplay có hấp dẫn không). Khác `QuizService` (tin thẳng `isCorrect` client tự báo cáo)
-  — ở đây `POST /minigame/start` LƯU SẴN đáp án đúng trong `MinigameSession.questions` (JSON,
-  không trả `correctIndex` về client), `POST /minigame/:id/finish` tự so khớp `chosenIndex` với
-  đáp án đã lưu — cần thiết vì kết quả game này quy đổi thành xu thật, không thể tin client tự
-  báo điểm như quiz thường. Thưởng 1 xu/câu đúng.
-- **Đấu 1v1 (`src/modules/duel`, model `UserRating` + `DuelMatch`)**: Giai đoạn 2 minigame —
-  ghép trận + đấu realtime qua WebSocket, ELO thô (K=32, công thức chuẩn cờ vua), CHƯA có rank
-  tier/mùa giải/2v2 (giai đoạn 3-4). Dùng CHUNG namespace `/notifications` — 3 sự kiện mới
-  `duel:join-queue`/`duel:leave-queue`/`duel:answer` thêm thẳng vào `NotificationsGateway`
-  (không dựng gateway riêng, cùng lý do với tin nhắn/typing). `DuelService` giữ TOÀN BỘ trạng
-  thái hàng đợi + trận đấu ĐANG DIỄN RA trong bộ nhớ (`Map`) — **CHỈ đúng khi chạy 1 instance**;
-  RedisIoAdapter hiện chỉ lo phần chuyển tiếp WebSocket giữa các instance, CHƯA áp dụng cho hàng
-  đợi/trạng thái trận — cần chuyển sang Redis nếu sau này thật sự scale ngang. Luật: 8 câu, mỗi
-  câu `ROUND_DURATION_MS` (8s) để cả 2 trả lời, ai đúng được 1 điểm (đúng cả 2 thì cả 2 đều được
-  — không cộng thêm vì nhanh hơn, đơn giản hoá cho giai đoạn kiểm chứng), vòng kết thúc SỚM nếu
-  cả 2 đã trả lời chứ không cần đợi hết giờ (`submitAnswer()` tự huỷ timer). Người rớt mạng giữa
-  trận KHÔNG có xử lý đặc biệt — vẫn tính thua dần theo timer mỗi vòng (chấp nhận được, chưa cần
-  forfeit/reconnect ở giai đoạn này). `NotificationsGateway` ↔ `DuelService` phụ thuộc vòng lẫn
-  nhau (gateway gọi `DuelService` khi nhận sự kiện, `DuelService` gọi `gateway.emitToUser()` khi
-  đẩy kết quả) — xử lý bằng `forwardRef()` cả 2 chiều; `DuelService` "sống" trong
-  `NotificationsModule` (xem ghi chú trong `notifications.module.ts`) để tránh vòng lặp Ở CẤP
-  MODULE, `DuelModule` chỉ import `NotificationsModule` một chiều cho phần REST
-  (`GET /duel/rating/me`, `GET /duel/leaderboard`).
+- **Minigame "Dịch tốc độ" + "Nghe đoán từ" (`src/modules/minigame`, model `MinigameSession`)**:
+  Giai đoạn 1 theo lộ trình 5 giai đoạn trong `FEATURES.md` — chơi 1 mình, tính giờ 60s, bảng
+  xếp hạng ngày/tuần. 2 CHẾ ĐỘ (`GameMode`: `TRANSLATE`/`LISTENING`) dùng CHUNG engine —
+  `MinigameService.start(userId, mode)` chỉ khác nguồn từ (LISTENING lọc `audioUrl: {not:null}`)
+  và trả thêm `audioUrl` mỗi câu; server luôn trả đủ Hán tự + pinyin + audio cho MỌI mode, FE tự
+  quyết định ẩn/hiện theo mode (LISTENING ẩn Hán tự/pinyin, tự phát audio — y hệt cách
+  `QuizService`/`quiz-runner.tsx` đã làm cho câu nghe). `MinigameSession.mode` lưu lại để
+  `GET /minigame/leaderboard?mode=` xếp hạng RIÊNG theo từng mode (gộp chung sẽ không công bằng
+  vì độ khó khác nhau — số từ có audio ít hơn số từ có nghĩa). Khác `QuizService` (tin thẳng
+  `isCorrect` client tự báo cáo) — ở đây `POST /minigame/start` LƯU SẴN đáp án đúng trong
+  `MinigameSession.questions` (JSON, không trả `correctIndex` về client), `POST
+  /minigame/:id/finish` tự so khớp `chosenIndex` với đáp án đã lưu — cần thiết vì kết quả game
+  này quy đổi thành xu thật, không thể tin client tự báo điểm như quiz thường. Thưởng 1 xu/câu
+  đúng.
+- **Đấu 1v1 + rank tier + mùa giải (`src/modules/duel`, model `UserRating` + `DuelMatch` +
+  `DuelSeason` + `DuelSeasonResult`)**: Giai đoạn 2+3 minigame — ghép trận + đấu realtime qua
+  WebSocket, ELO thô (K=32, công thức chuẩn cờ vua), CHỈ có chế độ `TRANSLATE` (chưa ghép LISTENING
+  vào đấu 1v1 — tách riêng hàng đợi theo mode sẽ làm hàng chờ lâu hơn nhiều khi lượng người chơi
+  còn nhỏ, để dồn hết vào 1 hàng đợi duy nhất trước). Dùng CHUNG namespace `/notifications` — 3
+  sự kiện `duel:join-queue`/`duel:leave-queue`/`duel:answer` thêm thẳng vào
+  `NotificationsGateway` (không dựng gateway riêng, cùng lý do với tin nhắn/typing). `DuelService`
+  giữ TOÀN BỘ trạng thái hàng đợi + trận đấu ĐANG DIỄN RA trong bộ nhớ (`Map`) — **CHỈ đúng khi
+  chạy 1 instance**; RedisIoAdapter hiện chỉ lo phần chuyển tiếp WebSocket giữa các instance,
+  CHƯA áp dụng cho hàng đợi/trạng thái trận — cần chuyển sang Redis nếu sau này thật sự scale
+  ngang. Luật: 8 câu, sau khi ghép xong chờ `MATCH_INTRO_MS` (3s, cho FE hiện màn "VS") rồi mới
+  bắn câu đầu, mỗi câu `ROUND_DURATION_MS` (8s) để cả 2 trả lời, ai đúng được 1 điểm (đúng cả 2
+  thì cả 2 đều được — không cộng thêm vì nhanh hơn, đơn giản hoá cho giai đoạn kiểm chứng), vòng
+  kết thúc SỚM nếu cả 2 đã trả lời chứ không cần đợi hết giờ (`submitAnswer()` tự huỷ timer).
+  `NotificationsGateway` ↔ `DuelService` phụ thuộc vòng lẫn nhau (gateway gọi `DuelService` khi
+  nhận sự kiện, `DuelService` gọi `gateway.emitToUser()` khi đẩy kết quả) — xử lý bằng
+  `forwardRef()` cả 2 chiều; `DuelService` "sống" trong `NotificationsModule` (xem ghi chú trong
+  `notifications.module.ts`) để tránh vòng lặp Ở CẤP MODULE, `DuelModule` chỉ import
+  `NotificationsModule` một chiều cho phần REST.
+  **Forfeit khi rớt mạng giữa trận**: `handleDisconnect()` gọi
+  `DuelService.handlePlayerDisconnect()` — cho `DISCONNECT_FORFEIT_MS` (15s) để load lại
+  trang/mạng chập chờn ngắn trước khi tự xử thua (`forfeitMatch()` → `finishMatch(matchId,
+  forfeitedBy)`, ép `winnerId` về phía còn lại BẤT KỂ điểm số hiện tại, lưu vào cột
+  `DuelMatch.forfeitedUserId`); `handleConnection()` gọi `handlePlayerReconnect()` huỷ timer nếu
+  vào lại kịp. **Tự phục hồi UI khi refresh giữa trận**: `GET /duel/active`
+  (`getActiveMatchState()`) trả trạng thái trận hiện tại của user (đối thủ, vòng, điểm, câu hỏi
+  nếu đã bắt đầu) — FE gọi 1 lần lúc vào trang `/minigame` để biết có nên hiện lại đúng màn hình
+  đấu thay vì màn "Tìm đối thủ" (round timer ở server không phụ thuộc việc client có đang xem).
+  **Rank tier** (`duel-rank.util.ts`, `tierForElo()`): 9 bậc tham khảo hệ Liên Minh Huyền Thoại
+  (Sắt → Đồng → Bạc → Vàng → Bạch Kim → Kim Cương → Cao Thủ → Đại Cao Thủ → Thách Đấu) theo
+  ngưỡng ELO, KHÔNG chia division (I-IV) vì lượng người chơi ban đầu còn nhỏ. `GET
+  /duel/rating/me` + `GET /duel/leaderboard` trả kèm `tier`/`tierColor` mỗi dòng (tính tại chỗ
+  từ elo, không lưu DB). **Mùa giải** (`duel-season.service.ts`, `DuelSeasonService`): reset
+  theo THÁNG DƯƠNG LỊCH (`currentSeasonKey()` = YYYYMM), `@Cron(EVERY_DAY_AT_1AM)` kiểm tra mỗi
+  ngày nhưng chỉ THẬT SỰ rollover khi khoá tháng đổi (idempotent — gọi lại trong cùng tháng vô
+  hại). Lúc rollover: chụp `DuelSeasonResult` (hạng/tier/ELO cuối mùa) cho mọi người có rank,
+  thưởng xu theo tier (`seasonReward()` — số THAM KHẢO theo đúng đề xuất ban đầu của người dùng:
+  Thách Đấu +10.000, Đại Cao Thủ +5.000, top 1 Thách Đấu +100.000 THAY VÌ cộng thêm, các bậc
+  thấp hơn nội suy — cần chỉnh lại sau khi quan sát tốc độ kiếm/tiêu xu thật), rồi SOFT RESET
+  ELO toàn bộ trong 1 câu SQL atomic (`elo = 1000 + ROUND((elo-1000)*0.5)`, không reset cứng về
+  1000 — giữ lại 1 nửa khoảng cách so với mùa trước) + reset wins/losses/draws (season-scoped,
+  không phải lifetime). `GET /duel/season` trả số mùa + ngày còn lại cho FE hiện đếm ngược.
+  **CHƯA verify được rollover thật** (không mô phỏng được việc đổi tháng trong môi trường dev
+  hiện tại) — chỉ verify được qua code review + `GET /duel/season` trả đúng dữ liệu tháng hiện
+  tại sau khi deploy; sẽ tự biết đúng/sai vào đầu tháng sau.
 - **Hồ sơ công khai (`GET /users/:id/profile`, `UsersService.getPublicProfile()`)**: field an
   toàn để lộ công khai (KHÔNG email/settings/oauth như `getProfile()` của chính mình) — tên,
   avatar, ngày tham gia, streak, số từ đã thuộc (dùng lại luật LEARNED_WHERE giống
@@ -360,5 +393,6 @@ thích video + thông báo" phía trên.
 
 Chưa làm (roadmap, chừa chỗ): câu ví dụ cho từ vựng, cấu trúc đề thi HSK
 thật đầy đủ (nhiều phần nghe/đọc/viết đúng số câu + thời gian từng cấp — hiện mới có câu
-nghe/đọc trộn vào quiz từ vựng, chưa đúng cấu trúc thật), minigame, kết bạn/theo
-dõi (mới có bình luận + thích video + thông báo, chưa có khái niệm bạn bè/follow).
+nghe/đọc trộn vào quiz từ vựng, chưa đúng cấu trúc thật), minigame giai đoạn 4 (đấu đôi 2v2 +
+thêm currency sink) và giai đoạn 5 (nạp tiền thật đổi xu, cần tư vấn pháp lý/kế toán trước —
+xem FEATURES.md).
