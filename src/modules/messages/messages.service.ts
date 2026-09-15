@@ -201,6 +201,45 @@ export class MessagesService {
     return { count };
   }
 
+  /** Số liệu tổng quan để đánh giá mức độ dùng thật của tính năng nhắn tin
+   * (không phải theo dõi hoạt động 1 user cụ thể) — tổng hội thoại, tổng
+   * tin nhắn, hội thoại/tin nhắn 7 ngày qua, và số hội thoại CÓ ÍT NHẤT 2
+   * tin nhắn qua lại thật sự (khác hội thoại chỉ tạo ra rồi bỏ đó, phản
+   * ánh đúng hơn số cuộc trò chuyện thật). */
+  async usageStats() {
+    const since7d = new Date(Date.now() - 7 * 86_400_000);
+    const [
+      totalConversations,
+      totalMessages,
+      conversations7d,
+      messages7d,
+      conversationsWithReplies,
+    ] = await Promise.all([
+      this.prisma.conversation.count(),
+      this.prisma.directMessage.count(),
+      this.prisma.conversation.count({
+        where: { createdAt: { gte: since7d } },
+      }),
+      this.prisma.directMessage.count({
+        where: { createdAt: { gte: since7d } },
+      }),
+      this.prisma.$queryRaw<{ count: bigint }[]>`
+        SELECT COUNT(*) as count FROM (
+          SELECT "conversationId" FROM "DirectMessage"
+          GROUP BY "conversationId"
+          HAVING COUNT(DISTINCT "senderId") >= 2
+        ) t
+      `,
+    ]);
+    return {
+      totalConversations,
+      totalMessages,
+      conversations7d,
+      messages7d,
+      conversationsWithReplies: Number(conversationsWithReplies[0]?.count ?? 0),
+    };
+  }
+
   private async requireMember(userId: string, conversationId: string) {
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },

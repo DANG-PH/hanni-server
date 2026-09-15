@@ -34,6 +34,13 @@ export class MessagesController {
     return this.messages.unreadCount(user.id);
   }
 
+  /** Số liệu tổng quan (không phải riêng của user gọi) — để đánh giá tính
+   * năng nhắn tin có đang thực sự được dùng hay không, xem `usageStats()`. */
+  @Get('usage-stats')
+  usageStats() {
+    return this.messages.usageStats();
+  }
+
   @Post('with/:userId')
   getOrCreateWith(
     @CurrentUser() user: AuthUser,

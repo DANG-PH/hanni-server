@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { SrsState } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
+import { computeTier } from '../duel/duel-rank.util';
 
 const LEARNED_INTERVAL_DAYS = 21;
 
@@ -12,13 +13,15 @@ const LEARNED_WHERE = {
   ],
 };
 
-export type LeaderboardMetric = 'learned' | 'streak' | 'longest' | 'lessons';
+export type LeaderboardMetric =
+  'learned' | 'streak' | 'longest' | 'lessons' | 'elo';
 
 const METRICS: Record<LeaderboardMetric, { label: string; unit: string }> = {
   learned: { label: 'Từ đã thuộc', unit: 'từ' },
   streak: { label: 'Chuỗi hiện tại', unit: 'ngày' },
   longest: { label: 'Chuỗi dài nhất', unit: 'ngày' },
   lessons: { label: 'Bài đã xong', unit: 'bài' },
+  elo: { label: 'Đấu 1v1 (ELO)', unit: 'ELO' },
 };
 
 export interface LeaderboardRow {
@@ -30,6 +33,9 @@ export interface LeaderboardRow {
   currentStreak: number;
   isMe: boolean;
   isFollowing: boolean;
+  /** chỉ có khi metric = 'elo' — xem duel-rank.util.ts */
+  tier?: string;
+  tierColor?: string;
 }
 
 @Injectable()
@@ -92,16 +98,21 @@ export class LeaderboardService {
     const sMap = new Map(streaks.map((s) => [s.userId, s.currentStreak]));
     const followingSet = new Set(myFollows.map((f) => f.followingId));
 
-    const rows: LeaderboardRow[] = top.map((r, i) => ({
-      rank: i + 1,
-      userId: r.userId,
-      displayName: uMap.get(r.userId)?.displayName ?? 'Người học ẩn danh',
-      avatarUrl: uMap.get(r.userId)?.avatarUrl ?? null,
-      value: r.value,
-      currentStreak: sMap.get(r.userId) ?? 0,
-      isMe: r.userId === userId,
-      isFollowing: followingSet.has(r.userId),
-    }));
+    const rows: LeaderboardRow[] = top.map((r, i) => {
+      const rank = i + 1;
+      const tier = metric === 'elo' ? computeTier(r.value, rank) : null;
+      return {
+        rank,
+        userId: r.userId,
+        displayName: uMap.get(r.userId)?.displayName ?? 'Người học ẩn danh',
+        avatarUrl: uMap.get(r.userId)?.avatarUrl ?? null,
+        value: r.value,
+        currentStreak: sMap.get(r.userId) ?? 0,
+        isMe: r.userId === userId,
+        isFollowing: followingSet.has(r.userId),
+        ...(tier ? { tier: tier.name, tierColor: tier.color } : {}),
+      };
+    });
 
     return { metric, ...METRICS[metric], rows, me };
   }
@@ -118,6 +129,14 @@ export class LeaderboardService {
         orderBy: { _count: { userId: 'desc' } },
       });
       return grouped.map((g) => ({ userId: g.userId, value: g._count }));
+    }
+
+    if (metric === 'elo') {
+      const ratings = await this.prisma.userRating.findMany({
+        orderBy: { elo: 'desc' },
+        select: { userId: true, elo: true },
+      });
+      return ratings.map((r) => ({ userId: r.userId, value: r.elo }));
     }
 
     if (metric === 'lessons') {

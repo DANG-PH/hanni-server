@@ -124,7 +124,12 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   gọi API) để FE hiện nút theo dõi ngay trong bảng xếp hạng. `GET /leaderboard` nhận
   thêm `scope=friends` (mặc định `global`) — lọc `rankedPairs()` còn (chính mình + người đang
   theo dõi) TRƯỚC khi tính hạng, cho FE làm thẻ "So với bạn bè" ở dashboard — theo dõi ai đó giờ
-  có tác dụng cụ thể (so tiến độ) thay vì chỉ tăng follower count.
+  có tác dụng cụ thể (so tiến độ) thay vì chỉ tăng follower count. **Tiêu chí thứ 5 — `elo`**
+  (`rankedPairs()` đọc thẳng `UserRating`, `import computeTier from '../duel/duel-rank.util'`
+  — import THẲNG hàm thuần, không qua DI, để tránh phải kéo cả `NotificationsModule` vào
+  `LeaderboardModule` chỉ để dùng 1 phép tính tier): mỗi dòng trả kèm `tier`/`tierColor` (tính
+  theo `rank` = vị trí trong mảng đã sắp, tôn trọng đúng luật top-100 Thách Đấu) để FE hiện huy
+  hiệu rank ngay trong bảng xếp hạng chính, không chỉ ở `/minigame`.
 - **Mời bạn bè (`src/modules/referrals`, model `Referral`)**: link mời là `/register?ref=<userId>`
   — không sinh mã riêng, dùng thẳng userId. `AuthService.register()` ghi 1 dòng `Referral`
   best-effort (lỗi không chặn đăng ký — link cũ/giả không được để hỏng cả luồng đăng ký) nếu có
@@ -258,7 +263,12 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   có sẵn, chỉ thiếu phần báo realtime. **Báo đang nhập**: `NotificationsGateway` có thêm
   `@SubscribeMessage('typing')` — client tự biết `toUserId` (người nhận) nên gateway chỉ CHUYỂN
   TIẾP, không tra lại DB; lưu `userId` vào `client.data` lúc `handleConnection()` để biết ai vừa
-  gõ. Không lưu DB, chỉ là tín hiệu tức thời.
+  gõ. Không lưu DB, chỉ là tín hiệu tức thời. **`GET /messages/usage-stats`**
+  (`MessagesService.usageStats()`): số liệu TỔNG QUAN (không phải của riêng ai) — tổng hội
+  thoại/tin nhắn, hội thoại/tin nhắn 7 ngày qua, và số hội thoại CÓ ÍT NHẤT 2 người thật sự nhắn
+  qua lại (`conversationsWithReplies`, lọc bằng raw SQL `GROUP BY conversationId HAVING
+  COUNT(DISTINCT senderId) >= 2` — phân biệt với hội thoại chỉ tạo ra rồi bỏ đó) — thêm để có
+  căn cứ đánh giá tính năng nhắn tin có thực sự được dùng hay không, thay vì đoán.
 - **Luyện nghe/phát âm (`src/modules/practice`)**: `POST /practice/attempts` ghi 1 lượt luyện
   (`wordId`, `skill: LISTENING|PRONUNCIATION`, `isCorrect?` — chỉ dùng cho LISTENING vì
   PRONUNCIATION chưa có chấm điểm tự động, luôn lưu `null`). `GET /practice/stats?skill=` trả

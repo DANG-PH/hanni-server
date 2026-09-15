@@ -10,7 +10,7 @@ import {
 
 class LeaderboardQuery {
   @IsOptional()
-  @IsIn(['learned', 'streak', 'longest', 'lessons'])
+  @IsIn(['learned', 'streak', 'longest', 'lessons', 'elo'])
   metric?: LeaderboardMetric;
 
   @IsOptional()
