@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { WalletService } from '../wallet/wallet.service';
-import { currentSeasonKey, seasonReward, tierForElo } from './duel-rank.util';
+import { computeTier, currentSeasonKey, seasonReward } from './duel-rank.util';
 
 /**
  * Mùa giải ELO — Giai đoạn 3 minigame (FEATURES.md). Reset theo THÁNG DƯƠNG
@@ -70,7 +70,10 @@ export class DuelSeasonService {
 
     const resultsData = ratings.map((r, i) => {
       const rank = i + 1;
-      const tier = tierForElo(r.elo);
+      // computeTier (không phải tierForElo thô) — Thách Đấu cuối mùa cũng
+      // phải nằm trong top CHALLENGER_TOP_N mới được tính thưởng bậc đó,
+      // khớp đúng logic hiển thị lúc đang mùa (xem duel.service.ts).
+      const tier = computeTier(r.elo, rank);
       return {
         seasonId: season.id,
         userId: r.userId,

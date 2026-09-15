@@ -188,11 +188,20 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   (`getActiveMatchState()`) trả trạng thái trận hiện tại của user (đối thủ, vòng, điểm, câu hỏi
   nếu đã bắt đầu) — FE gọi 1 lần lúc vào trang `/minigame` để biết có nên hiện lại đúng màn hình
   đấu thay vì màn "Tìm đối thủ" (round timer ở server không phụ thuộc việc client có đang xem).
-  **Rank tier** (`duel-rank.util.ts`, `tierForElo()`): 9 bậc tham khảo hệ Liên Minh Huyền Thoại
-  (Sắt → Đồng → Bạc → Vàng → Bạch Kim → Kim Cương → Cao Thủ → Đại Cao Thủ → Thách Đấu) theo
-  ngưỡng ELO, KHÔNG chia division (I-IV) vì lượng người chơi ban đầu còn nhỏ. `GET
-  /duel/rating/me` + `GET /duel/leaderboard` trả kèm `tier`/`tierColor` mỗi dòng (tính tại chỗ
-  từ elo, không lưu DB). **Mùa giải** (`duel-season.service.ts`, `DuelSeasonService`): reset
+  **Rank tier** (`duel-rank.util.ts`): 9 bậc tham khảo hệ Liên Minh Huyền Thoại (Sắt → Đồng →
+  Bạc → Vàng → Bạch Kim → Kim Cương → Cao Thủ → Đại Cao Thủ → Thách Đấu) theo ngưỡng ELO, KHÔNG
+  chia division (I-IV) vì lượng người chơi ban đầu còn nhỏ. **Thách Đấu bị GIỚI HẠN SỐ LƯỢNG**
+  (`CHALLENGER_TOP_N = 100`, giống Challenger/Cao Thủ Vinh Danh ở game khác) — `computeTier(elo,
+  rank)` mới là hàm tính tier THẬT dùng cho hiển thị/thưởng (đủ ELO Thách Đấu mà rank > 100 thì
+  hạ xuống Đại Cao Thủ); `tierForElo(elo)` chỉ còn là phép tính ngưỡng thuần, dùng cho bảng chú
+  giải chung (`GET /duel/rank-tiers`, trả `RANK_TIERS` + `challengerTopN`) chứ không dùng trực
+  tiếp để gắn tier cho 1 user cụ thể nữa. `getMyRating()` chỉ query đếm rank (`UserRating.elo`
+  có `@@index`) khi ELO đã chạm ngưỡng Thách Đấu — tránh query thừa cho đa số người chơi chưa
+  gần ngưỡng đó. `GET /duel/rating/me` + `GET /duel/leaderboard` trả kèm `tier`/`tierColor` mỗi
+  dòng. **Độ khó theo ELO** (`wordPoolSkipForElo()`): `generateQuestions()` tính ELO trung bình
+  2 người trong trận rồi `skip` dần các từ THÔNG DỤNG NHẤT khi ELO cao hơn (cùng `take` =
+  `POOL_SIZE`, chỉ dịch cửa sổ từ vựng sang từ hiếm/khó hơn) — rơi về pool dễ nhất (`skip=0`)
+  nếu skip vượt quá tổng số từ hợp lệ. **Mùa giải** (`duel-season.service.ts`, `DuelSeasonService`): reset
   theo THÁNG DƯƠNG LỊCH (`currentSeasonKey()` = YYYYMM), `@Cron(EVERY_DAY_AT_1AM)` kiểm tra mỗi
   ngày nhưng chỉ THẬT SỰ rollover khi khoá tháng đổi (idempotent — gọi lại trong cùng tháng vô
   hại). Lúc rollover: chụp `DuelSeasonResult` (hạng/tier/ELO cuối mùa) cho mọi người có rank,

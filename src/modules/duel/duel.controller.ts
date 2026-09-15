@@ -2,6 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../../common/types';
+import { CHALLENGER_TOP_N, RANK_TIERS } from './duel-rank.util';
 import { DuelSeasonService } from './duel-season.service';
 import { DuelService } from './duel.service';
 
@@ -27,6 +28,13 @@ export class DuelController {
   @Get('season')
   getSeason() {
     return this.season.getSeasonInfo();
+  }
+
+  /** Bảng ngưỡng rank + luật riêng của Thách Đấu — nguồn dữ liệu DUY NHẤT
+   * để FE hiện bảng chú giải, tránh phải chép tay lại ngưỡng ELO ở client. */
+  @Get('rank-tiers')
+  getRankTiers() {
+    return { tiers: RANK_TIERS, challengerTopN: CHALLENGER_TOP_N };
   }
 
   @Get('queue-size')

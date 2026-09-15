@@ -882,6 +882,8 @@ model UserRating {
   losses    Int      @default(0)
   draws     Int      @default(0)
   updatedAt DateTime @updatedAt
+
+  @@index([elo])
 }
 
 /// Lịch sử 1 trận đấu đơn — lưu lại kết quả + biến động ELO của cả 2 bên để

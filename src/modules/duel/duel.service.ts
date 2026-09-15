@@ -1,7 +1,12 @@
 import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
-import { tierForElo } from './duel-rank.util';
+import {
+  RANK_TIERS,
+  computeTier,
+  tierForElo,
+  wordPoolSkipForElo,
+} from './duel-rank.util';
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -192,7 +197,15 @@ export class DuelService {
   }
 
   private async startMatch(a: PlayerInfo, b: PlayerInfo): Promise<void> {
-    const questions = await this.generateQuestions();
+    // Độ khó câu hỏi tăng theo ELO trung bình của 2 người — trận rank cao
+    // hơn thì gặp từ hiếm/khó hơn (xem `wordPoolSkipForElo`), thay vì luôn
+    // cùng 1 mức độ khó cho mọi trận bất kể trình độ.
+    const [ratingA, ratingB] = await Promise.all([
+      this.getOrCreateRating(a.id),
+      this.getOrCreateRating(b.id),
+    ]);
+    const avgElo = Math.round((ratingA.elo + ratingB.elo) / 2);
+    const questions = await this.generateQuestions(avgElo);
     if (questions.length < ROUNDS_PER_MATCH) {
       this.logger.warn('Không đủ từ vựng để tạo trận đấu');
       return;
@@ -431,7 +444,16 @@ export class DuelService {
 
   async getMyRating(userId: string) {
     const rating = await this.getOrCreateRating(userId);
-    const tier = tierForElo(rating.elo);
+    // Rank toàn server theo ELO — CHỈ cần tính khi có khả năng chạm ngưỡng
+    // Thách Đấu (elo thấp hơn thì không cần biết rank, luôn không phải top
+    // N nào cả), tránh query đếm thừa cho đa số người chơi.
+    const rank =
+      tierForElo(rating.elo).name === RANK_TIERS[RANK_TIERS.length - 1].name
+        ? (await this.prisma.userRating.count({
+            where: { elo: { gt: rating.elo } },
+          })) + 1
+        : null;
+    const tier = computeTier(rating.elo, rank);
     return {
       elo: rating.elo,
       wins: rating.wins,
@@ -450,26 +472,41 @@ export class DuelService {
         user: { select: { id: true, displayName: true, avatarUrl: true } },
       },
     });
-    return rows.map((r, i) => ({
-      rank: i + 1,
-      userId: r.user.id,
-      displayName: r.user.displayName,
-      avatarUrl: r.user.avatarUrl,
-      elo: r.elo,
-      tier: tierForElo(r.elo).name,
-      tierColor: tierForElo(r.elo).color,
-      wins: r.wins,
-      losses: r.losses,
-      draws: r.draws,
-    }));
+    return rows.map((r, i) => {
+      const rank = i + 1;
+      const tier = computeTier(r.elo, rank);
+      return {
+        rank,
+        userId: r.user.id,
+        displayName: r.user.displayName,
+        avatarUrl: r.user.avatarUrl,
+        elo: r.elo,
+        tier: tier.name,
+        tierColor: tier.color,
+        wins: r.wins,
+        losses: r.losses,
+        draws: r.draws,
+      };
+    });
   }
 
-  private async generateQuestions(): Promise<DuelQuestion[]> {
-    const pool = await this.prisma.word.findMany({
+  private async generateQuestions(avgElo: number): Promise<DuelQuestion[]> {
+    const skip = wordPoolSkipForElo(avgElo);
+    let pool = await this.prisma.word.findMany({
       where: { meaningVi: { not: null } },
       orderBy: { frequencyRank: 'asc' },
+      skip,
       take: POOL_SIZE,
     });
+    // Skip vượt quá tổng số từ hợp lệ (elo cực cao nhưng kho từ chưa đủ
+    // sâu) — rơi về pool dễ nhất thay vì tạo trận với quá ít từ để chọn.
+    if (pool.length < ROUNDS_PER_MATCH && skip > 0) {
+      pool = await this.prisma.word.findMany({
+        where: { meaningVi: { not: null } },
+        orderBy: { frequencyRank: 'asc' },
+        take: POOL_SIZE,
+      });
+    }
     if (pool.length < 4) return [];
 
     const picked = shuffle(pool).slice(

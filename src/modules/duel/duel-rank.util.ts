@@ -23,12 +23,39 @@ export const RANK_TIERS: RankTier[] = [
   { name: 'Thách Đấu', min: 2200, color: '#f2b134' },
 ];
 
+/** Thách Đấu — không chỉ cần đủ ELO mà còn phải nằm trong top N toàn
+ * server, giống Challenger/Cao Thủ Vinh Danh của các game xếp hạng khác
+ * (LMHL, LMHT...) — tránh trường hợp "ai cũng thành Thách Đấu" nếu ELO
+ * trung bình cả server tăng dần theo thời gian. */
+export const CHALLENGER_TOP_N = 100;
+
 export function tierForElo(elo: number): RankTier {
   let tier = RANK_TIERS[0];
   for (const t of RANK_TIERS) {
     if (elo >= t.min) tier = t;
   }
   return tier;
+}
+
+/**
+ * Tier THẬT của 1 người chơi — dùng hàm này thay vì `tierForElo()` bất cứ
+ * đâu cần hiển thị/tính thưởng theo tier của 1 user cụ thể (`tierForElo()`
+ * vẫn được giữ làm phép tính ngưỡng thuần theo ELO, dùng cho phần hiển thị
+ * bảng ngưỡng chung — xem `RANK_TIERS`). Đủ ELO Thách Đấu (`>= 2200`) mà
+ * KHÔNG nằm trong top `CHALLENGER_TOP_N` thì hạ xuống Đại Cao Thủ — `rank`
+ * là thứ hạng ELO toàn server (1-based), `null` nếu chưa biết (fail-safe:
+ * coi như không đủ điều kiện Thách Đấu).
+ */
+export function computeTier(elo: number, rank: number | null): RankTier {
+  const base = tierForElo(elo);
+  const challenger = RANK_TIERS[RANK_TIERS.length - 1];
+  if (
+    base.name === challenger.name &&
+    (rank === null || rank > CHALLENGER_TOP_N)
+  ) {
+    return RANK_TIERS[RANK_TIERS.length - 2]; // Đại Cao Thủ
+  }
+  return base;
 }
 
 /**
@@ -56,6 +83,30 @@ const TOP1_CHALLENGER_REWARD = 100_000;
 export function seasonReward(tier: RankTier, rank: number): number {
   if (tier.name === 'Thách Đấu' && rank === 1) return TOP1_CHALLENGER_REWARD;
   return SEASON_REWARD_BY_TIER[tier.name] ?? 0;
+}
+
+/**
+ * Độ khó câu hỏi 1v1 tăng theo ELO trung bình của 2 người trong trận — bỏ
+ * qua (`skip`) dần các từ THÔNG DỤNG NHẤT khi ELO cao hơn, giữ nguyên kích
+ * thước cửa sổ từ vựng lấy mẫu (`POOL_SIZE` ở duel.service.ts) nên vẫn đủ
+ * biến thiên câu hỏi mỗi trận, chỉ dịch chuyển sang từ HIẾM/KHÓ hơn. Số
+ * THAM KHẢO, canh theo tổng ~10.9k từ HSK 3.0 — cần chỉnh lại nếu phân phối
+ * ELO thật lệch nhiều so với ước lượng ban đầu.
+ */
+const DIFFICULTY_SKIP_BY_TIER: Record<string, number> = {
+  Sắt: 0,
+  Đồng: 0,
+  Bạc: 200,
+  Vàng: 600,
+  'Bạch Kim': 1200,
+  'Kim Cương': 2000,
+  'Cao Thủ': 3000,
+  'Đại Cao Thủ': 4200,
+  'Thách Đấu': 5500,
+};
+
+export function wordPoolSkipForElo(elo: number): number {
+  return DIFFICULTY_SKIP_BY_TIER[tierForElo(elo).name] ?? 0;
 }
 
 /** Soft reset ELO đầu mùa mới — kéo về gần mốc khởi điểm 1 nửa khoảng cách
