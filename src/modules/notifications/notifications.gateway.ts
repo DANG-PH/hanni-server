@@ -15,6 +15,7 @@ import type { AccessTokenPayload } from '../../common/types';
 import type { Env } from '../../config/env.validation';
 import { ACCESS_COOKIE } from '../auth/cookies';
 import { DuelService } from '../duel/duel.service';
+import { TeamDuelService } from '../duel/team-duel.service';
 
 function roomFor(userId: string): string {
   return `user:${userId}`;
@@ -56,6 +57,8 @@ export class NotificationsGateway
     private readonly jwt: JwtService,
     private readonly config: ConfigService<Env, true>,
     @Inject(forwardRef(() => DuelService)) private readonly duel: DuelService,
+    @Inject(forwardRef(() => TeamDuelService))
+    private readonly teamDuel: TeamDuelService,
   ) {}
 
   handleConnection(client: Socket): void {
@@ -68,6 +71,7 @@ export class NotificationsGateway
     void client.join(roomFor(userId));
     // Huỷ timer forfeit nếu vừa rớt mạng giữa 1 trận đấu rồi kết nối lại kịp.
     this.duel.handlePlayerReconnect(userId);
+    this.teamDuel.handlePlayerReconnect(userId);
   }
 
   /** Rời hàng đợi ngay nếu đang chờ ghép trận; trận ĐANG diễn ra thì cho
@@ -75,7 +79,9 @@ export class NotificationsGateway
    * thua (xem `DuelService.handlePlayerDisconnect()`). */
   handleDisconnect(client: Socket): void {
     const userId = (client.data as SocketData).userId;
-    if (userId) this.duel.handlePlayerDisconnect(userId);
+    if (!userId) return;
+    this.duel.handlePlayerDisconnect(userId);
+    this.teamDuel.handlePlayerDisconnect(userId);
   }
 
   emitToUser(userId: string, event: string, payload: unknown): void {
@@ -122,6 +128,32 @@ export class NotificationsGateway
     const userId = (client.data as SocketData).userId;
     if (!userId || !data?.matchId || data.chosenIndex == null) return;
     void this.duel.submitAnswer(userId, data.matchId, data.chosenIndex);
+  }
+
+  /** "Đấu đôi" 2v2 — 3 sự kiện y hệt kiểu đấu 1v1, chuyển thẳng cho
+   * TeamDuelService xử lý. */
+  @SubscribeMessage('teamduel:join-queue')
+  handleTeamDuelJoinQueue(@ConnectedSocket() client: Socket): void {
+    const userId = (client.data as SocketData).userId;
+    if (!userId) return;
+    void this.teamDuel.joinQueue(userId);
+  }
+
+  @SubscribeMessage('teamduel:leave-queue')
+  handleTeamDuelLeaveQueue(@ConnectedSocket() client: Socket): void {
+    const userId = (client.data as SocketData).userId;
+    if (!userId) return;
+    this.teamDuel.leaveQueue(userId);
+  }
+
+  @SubscribeMessage('teamduel:answer')
+  handleTeamDuelAnswer(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { matchId?: string; chosenIndex?: number },
+  ): void {
+    const userId = (client.data as SocketData).userId;
+    if (!userId || !data?.matchId || data.chosenIndex == null) return;
+    this.teamDuel.submitAnswer(userId, data.matchId, data.chosenIndex);
   }
 
   private authenticate(client: Socket): string | null {

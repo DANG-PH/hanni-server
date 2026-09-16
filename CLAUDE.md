@@ -226,6 +226,26 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   **CHƯA verify được rollover thật** (không mô phỏng được việc đổi tháng trong môi trường dev
   hiện tại) — chỉ verify được qua code review + `GET /duel/season` trả đúng dữ liệu tháng hiện
   tại sau khi deploy; sẽ tự biết đúng/sai vào đầu tháng sau.
+- **Đấu đôi 2v2 (`src/modules/duel/team-duel.service.ts`, `TeamDuelService`)**: Giai đoạn 4
+  minigame — kiến trúc SONG SONG với `DuelService` (hàng đợi/trạng thái trận RIÊNG, cùng "sống"
+  trong `NotificationsModule` với cùng lý do `forwardRef()` tránh vòng lặp module), nhưng dùng
+  CHUNG `UserRating`/rank tier/mùa giải với đấu 1v1 — KHÔNG dựng bảng xếp hạng/ELO riêng cho 2v2
+  vì cùng đo 1 kỹ năng (phản xạ dịch từ vựng), đơn giản hơn nhiều so với 2 hệ song song. KHÔNG
+  lưu lịch sử trận đấu (khác `DuelMatch` của 1v1) — bảng đó chưa từng hiển thị ở UI, thêm 1 bảng
+  y hệt cho 4 người chơi (cần 4 cột khoá ngoại) chỉ tăng phức tạp schema mà chưa ai cần tra lại,
+  bỏ qua tới khi thực sự cần. **Ghép đội**: hàng đợi solo (CHƯA hỗ trợ rủ bạn vào cùng đội trước
+  — để dành bản sau), đủ 4 người thì ghép "rắn" (snake seed) theo ELO giảm dần — hạng 1+4 vào 1
+  đội, hạng 2+3 vào đội kia — cân bằng ELO trung bình 2 đội tốt hơn ghép ngẫu nhiên. **Luật trận**
+  y hệt 1v1 (8 câu, 8s/câu, độ khó theo `wordPoolSkipForElo(avgElo)` — ở đây là ELO trung bình
+  CẢ 4 người) nhưng điểm ĐỘI = tổng điểm 2 thành viên; ELO tính theo ELO TRUNG BÌNH ĐỘI (công
+  thức Elo chuẩn giữa 2 đội) rồi áp CÙNG 1 mức thay đổi cho cả 2 thành viên — không chia theo
+  đóng góp riêng từng người. **Forfeit**: 1 người rớt mạng quá `DISCONNECT_FORFEIT_MS` (15s) mà
+  không quay lại kịp thì XỬ THUA CẢ ĐỘI (không có cơ chế "chơi tiếp 2v1"). Sự kiện WebSocket
+  `teamduel:join-queue`/`teamduel:leave-queue`/`teamduel:answer` (gửi) và
+  `teamduel:matched`/`teamduel:round`/`teamduel:round-result`/`teamduel:finished` (nhận) — cùng
+  namespace `/notifications` với 1v1. `GET /teamduel/queue-size` + `GET /teamduel/active` (tự
+  phục hồi UI khi refresh giữa trận, y hệt `GET /duel/active`) ở `TeamDuelController`; rating/
+  leaderboard/rank-tiers vẫn dùng chung endpoint của `DuelController` vì chung 1 bảng dữ liệu.
 - **Hồ sơ công khai (`GET /users/:id/profile`, `UsersService.getPublicProfile()`)**: field an
   toàn để lộ công khai (KHÔNG email/settings/oauth như `getProfile()` của chính mình) — tên,
   avatar, ngày tham gia, streak, số từ đã thuộc (dùng lại luật LEARNED_WHERE giống
