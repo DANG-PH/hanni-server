@@ -59,18 +59,20 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   + có `frequencyRank`, tránh rơi vào từ hiếm) bằng `dayIndex % tổng số từ hợp lệ`.
 - **Ảnh minh hoạ từ vựng** (`word-image.util.ts`, `WordsService.attachImage()`, từ 2026-09-18) —
   research xác nhận KHÔNG có dataset ảnh mở nào sẵn có cho từ vựng HSK (giống tình huống dataset
-  hội thoại trước đó). Giải pháp: lấy DẦN qua Pexels API (miễn phí, dùng thương mại được, không
-  bắt buộc ghi nguồn — khác Unsplash) mỗi khi 1 từ lần đầu được xem qua `GET /words/:id` hoặc
-  `/words/of-the-day`, cache vào `Word.imageUrl` để không gọi lại — KHÔNG cào hàng loạt vì hạn
-  mức Pexels thấp (200 lượt/giờ). CHỈ áp dụng cho danh từ cụ thể (`pos` có `NOUN`) — hư từ/động
-  từ trừu tượng không có gì để minh hoạ, gọi API cho chúng chỉ tốn hạn mức vô ích. Query tìm ảnh
-  lấy từ `meaningEn` (rút gọn qua `imageQueryFrom()` — bỏ tiền tố loại từ như "det.:", lấy cụm
-  đầu trước dấu `/,;(`) chứ không phải `meaningVi`, vì Pexels tìm tiếng Anh chính xác hơn nhiều.
-  Cần `PEXELS_API_KEY` (để trống thì tự bỏ qua, không chặn app khởi động, giống
-  GEMINI_API_KEY/PAYOS_*) — **CHƯA có key thật, cần bạn tự đăng ký tại pexels.com/api rồi điền
-  vào `.env.production.local`**. `GET /videos/:id`'s `tokens` (bấm từ trong video) cũng trả
-  `imageUrl` nếu từ đó ĐÃ có sẵn trong cache — không tự fetch mới trong luồng xem video (tránh
-  gọi API tốn hạn mức cho từng token của từng dòng phụ đề).
+  hội thoại trước đó). Giải pháp: lấy DẦN qua **Wikimedia Commons** (API tìm kiếm, `action=query
+  &generator=search&gsrnamespace=6` kết hợp `prop=imageinfo`) — **KHÔNG cần đăng ký API key**
+  (khác Pexels/Unsplash đều bắt buộc key), hoàn toàn miễn phí, chỉ cần header `User-Agent` mô tả
+  ứng dụng theo đúng chính sách của Wikimedia. Commons chỉ lưu media đã cấp phép tự do (CC0/
+  CC-BY/CC-BY-SA/PD) nên ảnh trả về luôn hợp lệ bản quyền, không cần tự kiểm license từng ảnh.
+  Lấy mỗi khi 1 từ lần đầu được xem qua `GET /words/:id` hoặc `/words/of-the-day`, cache vào
+  `Word.imageUrl` để không gọi lại — không cào hàng loạt (tôn trọng hạ tầng dùng chung của
+  Wikimedia), chỉ tích luỹ dần theo từ nào thật sự được xem. CHỈ áp dụng cho danh từ cụ thể
+  (`pos` có `NOUN`) — hư từ/động từ trừu tượng không có gì để minh hoạ. Query tìm ảnh lấy từ
+  `meaningEn` (rút gọn qua `imageQueryFrom()` — bỏ HẾT cụm trong ngoặc trước rồi mới xét tiền tố
+  loại từ như "det.:", tránh cắt nhầm vào giữa chú thích kiểu "(LT:隻|只[zhi1])") chứ không phải
+  `meaningVi`, vì tìm bằng tiếng Anh chính xác hơn nhiều. **Đã hoạt động thật, không cần bạn làm
+  gì thêm** (khác payOS/GEMINI cần đăng ký). `GET /videos/:id`'s `tokens` (bấm từ trong video)
+  cũng trả `imageUrl` nếu từ đó ĐÃ có sẵn trong cache — không tự fetch mới trong luồng xem video.
 - **SRS**: `SchedulerRegistry.get(name)` chọn `Sm2Scheduler` | `FsrsScheduler` theo
   `UserSettings.srsScheduler`. `UserWordProgress` có cả trường SM-2 (easeFactor/intervalDays)
   lẫn FSRS (stability/difficulty) → đổi thuật toán không cần migration.

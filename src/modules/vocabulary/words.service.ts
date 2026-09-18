@@ -1,30 +1,22 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Prisma, WordPos, type Word } from '@prisma/client';
-import type { Env } from '../../config/env.validation';
 import { paginate, type Paginated } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import type { WordQueryDto } from './dto/word-query.dto';
-import { imageQueryFrom, searchPexelsImage } from './word-image.util';
+import { imageQueryFrom, searchCommonsImage } from './word-image.util';
 
 @Injectable()
 export class WordsService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly config: ConfigService<Env, true>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  /** Lấy ảnh minh hoạ nếu chưa có sẵn — chỉ cho danh từ cụ thể, chỉ khi đã
-   * cấu hình PEXELS_API_KEY. Không chặn caller lâu nếu Pexels lỗi/chậm. */
+  /** Lấy ảnh minh hoạ nếu chưa có sẵn — chỉ cho danh từ cụ thể (Wikimedia
+   * Commons, miễn phí, không cần key). Không chặn caller lâu nếu lỗi/chậm. */
   private async attachImage<T extends Word>(word: T): Promise<T> {
     if (word.imageUrl) return word;
-    const apiKey = this.config.get('PEXELS_API_KEY', { infer: true });
-    if (!apiKey || !word.meaningEn || !word.pos.includes(WordPos.NOUN)) {
-      return word;
-    }
+    if (!word.meaningEn || !word.pos.includes(WordPos.NOUN)) return word;
     const query = imageQueryFrom(word.meaningEn);
     if (!query) return word;
-    const imageUrl = await searchPexelsImage(query, apiKey);
+    const imageUrl = await searchCommonsImage(query);
     if (!imageUrl) return word;
     await this.prisma.word
       .update({ where: { id: word.id }, data: { imageUrl } })
