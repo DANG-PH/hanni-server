@@ -62,6 +62,7 @@ export class VideosService {
         pinyin: true,
         meaningVi: true,
         hskLevel: true,
+        imageUrl: true,
       },
     });
     this.wordIndex = buildWordIndex(words);

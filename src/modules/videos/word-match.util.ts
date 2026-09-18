@@ -12,6 +12,7 @@ export interface WordMatch {
   pinyin: string;
   meaningVi: string | null;
   hskLevel: number;
+  imageUrl: string | null;
 }
 
 export interface LineToken {
@@ -35,6 +36,7 @@ export function buildWordIndex<T extends { simplified: string } & WordMatch>(
         pinyin: w.pinyin,
         meaningVi: w.meaningVi,
         hskLevel: w.hskLevel,
+        imageUrl: w.imageUrl,
       });
     }
   }

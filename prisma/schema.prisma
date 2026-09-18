@@ -306,6 +306,10 @@ model Word {
   translationStatus TranslationStatus @default(MISSING)
   needsReview       Boolean           @default(true)
   audioUrl          String? // /media/audio/cmn-<hán tự>.mp3 (phục vụ tĩnh)
+  /// ảnh minh hoạ — lấy dần từ Pexels (chỉ danh từ cụ thể), cache lại chứ
+  /// không tự lấy lại; null = chưa lấy HOẶC không hợp để lấy (hư từ, PEXELS
+  /// chưa cấu hình...). Xem WordsService.getOrFetchImage().
+  imageUrl          String?
   /// provenance: nguồn gốc dữ liệu
   source            String?
   /// bài học chứa từ này (lộ trình tuyến tính theo cấp)

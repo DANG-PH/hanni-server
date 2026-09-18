@@ -76,6 +76,10 @@ export const envSchema = z.object({
   PAYOS_CLIENT_ID: z.string().default(''),
   PAYOS_API_KEY: z.string().default(''),
   PAYOS_CHECKSUM_KEY: z.string().default(''),
+
+  // Ảnh minh hoạ từ vựng (chỉ danh từ cụ thể) — để trống thì tự bỏ qua,
+  // không chặn app khởi động (giống các key ở trên).
+  PEXELS_API_KEY: z.string().default(''),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -1,12 +1,36 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
+import { Prisma, WordPos, type Word } from '@prisma/client';
+import type { Env } from '../../config/env.validation';
 import { paginate, type Paginated } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import type { WordQueryDto } from './dto/word-query.dto';
+import { imageQueryFrom, searchPexelsImage } from './word-image.util';
 
 @Injectable()
 export class WordsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService<Env, true>,
+  ) {}
+
+  /** Lấy ảnh minh hoạ nếu chưa có sẵn — chỉ cho danh từ cụ thể, chỉ khi đã
+   * cấu hình PEXELS_API_KEY. Không chặn caller lâu nếu Pexels lỗi/chậm. */
+  private async attachImage<T extends Word>(word: T): Promise<T> {
+    if (word.imageUrl) return word;
+    const apiKey = this.config.get('PEXELS_API_KEY', { infer: true });
+    if (!apiKey || !word.meaningEn || !word.pos.includes(WordPos.NOUN)) {
+      return word;
+    }
+    const query = imageQueryFrom(word.meaningEn);
+    if (!query) return word;
+    const imageUrl = await searchPexelsImage(query, apiKey);
+    if (!imageUrl) return word;
+    await this.prisma.word
+      .update({ where: { id: word.id }, data: { imageUrl } })
+      .catch(() => undefined);
+    return { ...word, imageUrl };
+  }
 
   async list(query: WordQueryDto): Promise<Paginated<unknown>> {
     const where: Prisma.WordWhereInput = {};
@@ -47,7 +71,7 @@ export class WordsService {
       include: { examples: { orderBy: { orderIndex: 'asc' } } },
     });
     if (!word) throw new NotFoundException('Không tìm thấy từ');
-    return word;
+    return this.attachImage(word);
   }
 
   /** "Từ vựng hôm nay": chọn CỐ ĐỊNH theo ngày (giống nhau cho mọi user, đổi
@@ -71,6 +95,6 @@ export class WordsService {
       include: { examples: { orderBy: { orderIndex: 'asc' } } },
     });
     if (!word) throw new NotFoundException('Chưa có dữ liệu từ vựng');
-    return word;
+    return this.attachImage(word);
   }
 }

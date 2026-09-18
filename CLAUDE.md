@@ -57,6 +57,20 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `ParseUUIDPipe` nuốt mất — xem `vocabulary.controller.ts`): 1 từ CỐ ĐỊNH theo ngày (đổi lúc 0h
   UTC), giống nhau cho mọi user, không lưu DB — xoay vòng theo `frequencyRank` (chỉ từ có nghĩa
   + có `frequencyRank`, tránh rơi vào từ hiếm) bằng `dayIndex % tổng số từ hợp lệ`.
+- **Ảnh minh hoạ từ vựng** (`word-image.util.ts`, `WordsService.attachImage()`, từ 2026-09-18) —
+  research xác nhận KHÔNG có dataset ảnh mở nào sẵn có cho từ vựng HSK (giống tình huống dataset
+  hội thoại trước đó). Giải pháp: lấy DẦN qua Pexels API (miễn phí, dùng thương mại được, không
+  bắt buộc ghi nguồn — khác Unsplash) mỗi khi 1 từ lần đầu được xem qua `GET /words/:id` hoặc
+  `/words/of-the-day`, cache vào `Word.imageUrl` để không gọi lại — KHÔNG cào hàng loạt vì hạn
+  mức Pexels thấp (200 lượt/giờ). CHỈ áp dụng cho danh từ cụ thể (`pos` có `NOUN`) — hư từ/động
+  từ trừu tượng không có gì để minh hoạ, gọi API cho chúng chỉ tốn hạn mức vô ích. Query tìm ảnh
+  lấy từ `meaningEn` (rút gọn qua `imageQueryFrom()` — bỏ tiền tố loại từ như "det.:", lấy cụm
+  đầu trước dấu `/,;(`) chứ không phải `meaningVi`, vì Pexels tìm tiếng Anh chính xác hơn nhiều.
+  Cần `PEXELS_API_KEY` (để trống thì tự bỏ qua, không chặn app khởi động, giống
+  GEMINI_API_KEY/PAYOS_*) — **CHƯA có key thật, cần bạn tự đăng ký tại pexels.com/api rồi điền
+  vào `.env.production.local`**. `GET /videos/:id`'s `tokens` (bấm từ trong video) cũng trả
+  `imageUrl` nếu từ đó ĐÃ có sẵn trong cache — không tự fetch mới trong luồng xem video (tránh
+  gọi API tốn hạn mức cho từng token của từng dòng phụ đề).
 - **SRS**: `SchedulerRegistry.get(name)` chọn `Sm2Scheduler` | `FsrsScheduler` theo
   `UserSettings.srsScheduler`. `UserWordProgress` có cả trường SM-2 (easeFactor/intervalDays)
   lẫn FSRS (stability/difficulty) → đổi thuật toán không cần migration.
