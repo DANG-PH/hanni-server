@@ -471,6 +471,28 @@ tiếng Trung từ YouTube + dịch máy NỀN (`translate.util.ts`: Google free
 thuật ngữ tu tiên, cache). Không cần API key. `MYMEMORY_EMAIL` nâng hạn mức ngày.
 `youtube-transcript.util.ts` có timeout 20s/ngôn ngữ (tránh treo vô thời hạn nếu 1 video lỗi).
 
+**Bấm từ trong bản chép video để xem nghĩa + lưu vào SRS** (`word-match.util.ts`, từ 2026-09-18)
+— research đối chiếu các app học tiếng Trung qua video mạnh nhất thị trường (Dong Chinese,
+FluentU, Migaku, Language Reactor...) xác nhận đây là tính năng gần như BẮT BUỘC phải có,
+Hanni trước đó chỉ cho xem/nghe chứ không tra được nghĩa từng từ ngay tại chỗ. `GET
+/videos/:id` giờ trả thêm `tokens` cho mỗi `VideoLine` — tách câu thành từ khớp CHÍNH XÁC với
+`Word` (khớp dài nhất trước, tối đa 6 ký tự — KHÔNG dùng `pinyin-pro`'s `segment()` vì mỗi đoạn
+khớp cần trỏ thẳng tới 1 dòng từ điển thật có nghĩa tiếng Việt, không phải chỉ tách âm tiết) và
+đoạn không khớp (giữ nguyên, không bấm được). Bảng từ (10.912 dòng) cache trong tiến trình 1
+giờ (`VideosService.getWordIndex()`) — không build lại mỗi request, không cần Redis vì bảng từ
+hiếm khi đổi.
+**Lưu từ vào SRS mà KHÔNG qua review()** (`POST /study/add-word`, `ReviewService.addWord()`) —
+tạo thẳng `UserWordProgress` ở `state: LEARNING` (KHÔNG phải `NEW` — `NEW` trong hệ SRS này là
+ẢO, nghĩa là "chưa có dòng nào" chứ không phải 1 giá trị lưu thật, xem `getQueue()`'s `newRows`
+lọc theo `progress: {none}`) với `dueAt` = ngay bây giờ + field mặc định giống hệt trạng thái
+trước lần review đầu tiên — để từ xuất hiện ngay trong `dueRows` của `getQueue()` ở lượt gọi
+tiếp theo, KHÔNG cần sửa `getQueue()`/`newRows` (vốn chỉ quét theo lessonId/hskLevel chứ không
+theo từ người dùng tự chọn tuỳ ý). Đánh đổi đã cân nhắc: lần review ĐẦU TIÊN của từ này sẽ tính
+`reviewType: REVIEW` thay vì `LEARN` (vì `before.state` không phải `NEW`) — sai lệch nhỏ trong
+thống kê "số từ mới học hôm nay", chấp nhận được để đổi lấy việc không đụng vào logic
+`getQueue()`/`review()` dùng chung cho toàn bộ SRS. Idempotent — từ đã có tiến độ (bất kỳ
+state nào) thì bỏ qua, không ghi đè.
+
 **Ngữ pháp HSK 4–9**: 349 mục từ đại cương chính thức, chia 2 loại —
 (1) mẫu câu/cấu trúc thật (句子的类型/句子成分/固定格式/特殊表达法/语段) → đã soạn giải thích +
 ví dụ tay trong `prisma/seed/grammar-explained-hsk{4,5,6,7}.ts` (63+38+24+70 = 195 mục, khớp

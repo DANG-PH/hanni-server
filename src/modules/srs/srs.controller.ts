@@ -10,7 +10,12 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../../common/types';
-import { QueueQueryDto, ReviewDto, StartSessionDto } from './dto/srs.dto';
+import {
+  AddWordDto,
+  QueueQueryDto,
+  ReviewDto,
+  StartSessionDto,
+} from './dto/srs.dto';
 import { ReviewService } from './review.service';
 import { StudySessionService } from './study-session.service';
 
@@ -36,6 +41,11 @@ export class SrsController {
   @Post('review')
   review(@CurrentUser() user: AuthUser, @Body() dto: ReviewDto) {
     return this.reviews.review(user.id, dto);
+  }
+
+  @Post('add-word')
+  addWord(@CurrentUser() user: AuthUser, @Body() dto: AddWordDto) {
+    return this.reviews.addWord(user.id, dto.wordId);
   }
 
   @Post('session')

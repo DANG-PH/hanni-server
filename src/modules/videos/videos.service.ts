@@ -14,6 +14,7 @@ import type {
 import { pinyin } from 'pinyin-pro';
 import { parseTranscript, type ParsedLine } from './transcript.util';
 import { translateLinesToVi } from './translate.util';
+import { buildWordIndex, segmentLine, type WordMatch } from './word-match.util';
 import {
   fetchTimedTranscript,
   type TimedLine,
@@ -45,6 +46,28 @@ function buildAutoDescription(
 @Injectable()
 export class VideosService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Cache trong tiến trình — bảng từ ít khi đổi, không cần build lại mỗi
+   * request. Tự build lại nếu rỗng (khởi động lại server) hoặc sau 1 giờ. */
+  private wordIndex: Map<string, WordMatch> | null = null;
+  private wordIndexAt = 0;
+  private async getWordIndex(): Promise<Map<string, WordMatch>> {
+    if (this.wordIndex && Date.now() - this.wordIndexAt < 3_600_000) {
+      return this.wordIndex;
+    }
+    const words = await this.prisma.word.findMany({
+      select: {
+        id: true,
+        simplified: true,
+        pinyin: true,
+        meaningVi: true,
+        hskLevel: true,
+      },
+    });
+    this.wordIndex = buildWordIndex(words);
+    this.wordIndexAt = Date.now();
+    return this.wordIndex;
+  }
 
   async list(userId: string, q: VideoQueryDto) {
     const where: Prisma.VideoWhereInput = {};
@@ -107,19 +130,25 @@ export class VideosService {
       include: { lines: { orderBy: { index: 'asc' } } },
     });
     if (!video) throw new NotFoundException('Không tìm thấy video');
-    const [progress, likeCount, myLike, commentCount] = await Promise.all([
-      this.prisma.userVideoProgress.findUnique({
-        where: { userId_videoId: { userId, videoId: id } },
-      }),
-      this.prisma.videoLike.count({ where: { videoId: id } }),
-      this.prisma.videoLike.findUnique({
-        where: { userId_videoId: { userId, videoId: id } },
-      }),
-      this.prisma.videoComment.count({ where: { videoId: id } }),
-    ]);
-    const { createdById, ...safe } = video;
+    const [progress, likeCount, myLike, commentCount, wordIndex] =
+      await Promise.all([
+        this.prisma.userVideoProgress.findUnique({
+          where: { userId_videoId: { userId, videoId: id } },
+        }),
+        this.prisma.videoLike.count({ where: { videoId: id } }),
+        this.prisma.videoLike.findUnique({
+          where: { userId_videoId: { userId, videoId: id } },
+        }),
+        this.prisma.videoComment.count({ where: { videoId: id } }),
+        this.getWordIndex(),
+      ]);
+    const { createdById, lines, ...safe } = video;
     return {
       ...safe,
+      lines: lines.map((line) => ({
+        ...line,
+        tokens: segmentLine(line.zh, wordIndex),
+      })),
       isOwner: createdById === userId,
       likeCount,
       likedByMe: Boolean(myLike),

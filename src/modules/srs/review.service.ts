@@ -192,6 +192,46 @@ export class ReviewService {
     };
   }
 
+  /**
+   * Người dùng chủ động "lưu" 1 từ (vd. bấm vào từ trong bản chép video) —
+   * KHÔNG đi qua bộ lịch SM2/FSRS (chưa review thật lần nào). Tạo thẳng
+   * `UserWordProgress` ở state LEARNING (không phải NEW — NEW trong hệ này
+   * là ảo, nghĩa là "chưa có dòng nào", không phải 1 giá trị lưu thật) với
+   * `dueAt` = ngay bây giờ, cùng các field mặc định giống hệt trạng thái
+   * "trước lần review đầu tiên" (xem `before` mặc định ở review() phía
+   * trên) — để nó xuất hiện ngay trong `dueRows` của getQueue() ở lượt gọi
+   * tiếp theo mà không phải sửa logic getQueue()/newRows vốn chỉ quét theo
+   * lessonId/hskLevel chứ không theo từ người dùng tự chọn. Idempotent: đã
+   * có dòng progress (bất kỳ state nào) thì bỏ qua, không ghi đè tiến độ
+   * đã có.
+   */
+  async addWord(userId: string, wordId: string) {
+    const word = await this.prisma.word.findUnique({ where: { id: wordId } });
+    if (!word) throw new NotFoundException('Không tìm thấy từ');
+
+    const existing = await this.prisma.userWordProgress.findUnique({
+      where: { userId_wordId: { userId, wordId } },
+    });
+    if (existing) return { added: false };
+
+    await this.prisma.userWordProgress.create({
+      data: {
+        userId,
+        wordId,
+        hskLevel: word.hskLevel,
+        state: SrsState.LEARNING,
+        dueAt: new Date(),
+        reps: 0,
+        lapses: 0,
+        easeFactor: 2.5,
+        intervalDays: 0,
+        stability: null,
+        difficulty: null,
+      },
+    });
+    return { added: true };
+  }
+
   // ---------- hàng đợi ôn ----------
 
   async getQueue(userId: string, query: QueueQueryDto) {
