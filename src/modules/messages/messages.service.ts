@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { pinyin } from 'pinyin-pro';
@@ -13,6 +14,8 @@ const USER_SELECT = { id: true, displayName: true, avatarUrl: true } as const;
 
 @Injectable()
 export class MessagesService {
+  private readonly logger = new Logger(MessagesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly gateway: NotificationsGateway,
@@ -207,7 +210,8 @@ export class MessagesService {
     let translated: string | null = null;
     try {
       translated = await translateSimple(text, sl, tl);
-    } catch {
+    } catch (err) {
+      this.logger.warn(`translateForCompose lỗi: ${(err as Error).message}`);
       translated = null;
     }
     if (!translated) {

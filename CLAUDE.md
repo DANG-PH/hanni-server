@@ -313,6 +313,20 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   có glossary/cache/gộp lô không phù hợp tin nhắn thường). Hướng dịch (`targetLang: 'zh'|'vi'`)
   do CLIENT tự nhận diện qua có chữ Hán trong nội dung hay không, gửi kèm trong request — server
   không tự đoán hướng.
+
+  **Đã sửa 2026-09-18** (audit chủ động phát hiện qua research, không phải user báo lỗi):
+  (1) race condition thật — trước đây chỉ nút "Dịch" bị disable lúc đang dịch, ô nhập + nút Gửi
+  vẫn bấm được bình thường, nên bấm Gửi giữa lúc đang dịch sẽ gửi bản CHƯA dịch, rồi bản dịch
+  trả về SAU đó ghi đè lung tung vào ô nhập đã bị xoá — giờ ô nhập + nút Gửi đều disable khi
+  `translating`, và `send()`/`translateInput()` đều tự chặn lẫn nhau qua điều kiện đầu hàm;
+  (2) `translateSimple()` giờ áp `decodeTerms()` dọn kết quả (bỏ thẻ HTML lạc/khoảng trắng
+  thừa) giống `translateLinesToVi()`, trước đó bỏ sót bước này; (3) lỗi trong
+  `translateForCompose()` giờ có log (`this.logger.warn`) thay vì nuốt lỗi im lặng.
+  **`googleDead` sửa thành cooldown 10 phút** (`videos/translate.util.ts`, ảnh hưởng CHUNG cả
+  dịch video lẫn dịch nhắn tin vì dùng chung `callGoogle()`) — trước đây 1 lần Google bị chặn IP
+  là tắt VĨNH VIỄN tới khi restart server, dồn hết lưu lượng sang MyMemory (hạn mức ngày thấp
+  hơn nhiều) một cách không cần thiết nếu lỗi chỉ tạm thời.
+
   **Kết nối trước khi nhắn tin**: `getOrCreateWith()` chỉ tự tạo hội thoại MỚI nếu 2 người đã
   theo dõi nhau (1 trong 2 chiều, `Follow`) — hội thoại ĐÃ CÓ sẵn vẫn mở lại được bình thường dù
   sau đó bỏ theo dõi. Ném `ForbiddenException` (403) nếu chưa kết nối, để tránh cảm giác nhắn

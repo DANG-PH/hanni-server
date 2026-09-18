@@ -112,7 +112,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * giả nội bộ (MyMemory không kiểm tra tính hợp lệ, chỉ dùng để tách hạn mức).
  */
 const MM_EMAIL = process.env.MYMEMORY_EMAIL || 'video-import@hanni.local';
-let googleDead = false; // endpoint free của Google hay bị chặn theo IP máy chủ
+/** endpoint free của Google hay bị chặn theo IP máy chủ — hỏng thì tắt tạm
+ * (cooldown) thay vì tắt vĩnh viễn tới lúc restart, để tự phục hồi khi IP
+ * hết bị chặn hoặc lỗi chỉ là tạm thời. */
+let googleDeadUntil = 0;
+const GOOGLE_COOLDOWN_MS = 10 * 60_000;
 
 /**
  * Bộ dịch CHÍNH: endpoint free của Google (không key). Nhanh + chất lượng hơn
@@ -126,7 +130,7 @@ async function callGoogle(
   sl = 'zh-CN',
   tl = 'vi',
 ): Promise<string | null> {
-  if (googleDead) return null;
+  if (Date.now() < googleDeadUntil) return null;
   const url =
     'https://translate.googleapis.com/translate_a/single?client=gtx' +
     `&sl=${sl}&tl=${tl}&dt=t&q=` +
@@ -134,13 +138,13 @@ async function callGoogle(
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
     if (!res.ok) {
-      googleDead = true;
+      googleDeadUntil = Date.now() + GOOGLE_COOLDOWN_MS;
       return null;
     }
     const data = (await res.json()) as [Array<[string]>, ...unknown[]];
     return (data[0] ?? []).map((seg) => seg[0]).join('');
   } catch {
-    googleDead = true;
+    googleDeadUntil = Date.now() + GOOGLE_COOLDOWN_MS;
     return null;
   }
 }
@@ -203,7 +207,8 @@ export async function translateSimple(
   sl: string,
   tl: string,
 ): Promise<string | null> {
-  return callTranslate(text, sl, tl);
+  const raw = await callTranslate(text, sl, tl);
+  return raw ? decodeTerms(raw) : null;
 }
 
 /**
