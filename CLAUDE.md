@@ -73,6 +73,15 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `meaningVi`, vì tìm bằng tiếng Anh chính xác hơn nhiều. **Đã hoạt động thật, không cần bạn làm
   gì thêm** (khác payOS/GEMINI cần đăng ký). `GET /videos/:id`'s `tokens` (bấm từ trong video)
   cũng trả `imageUrl` nếu từ đó ĐÃ có sẵn trong cache — không tự fetch mới trong luồng xem video.
+  **Giới hạn đã biết (best-effort, không hoàn hảo)**: khi `meaningEn` liệt kê NHIỀU nghĩa cách
+  nhau bởi dấu phẩy (dữ liệu CEDICT gốc đôi khi không xếp nghĩa phổ biến lên đầu), code luôn lấy
+  nghĩa ĐẦU TIÊN — gặp thật khi test: 苹果 (táo) có `meaningEn: "mincemeat, pome, apple, Empire"`
+  nên lấy nhầm "mincemeat" ra ảnh bánh nhân thịt băm thay vì táo (đã xoá `imageUrl` sai này khỏi
+  DB). Không có cách chọn đúng nghĩa đáng tin cậy mà không giải bài toán word-sense
+  disambiguation (phức tạp, không xứng đáng cho 1 tính năng minh hoạ phụ) — chấp nhận đây là
+  đánh đổi của 1 tính năng tự động miễn phí, đa số từ đơn nghĩa vẫn ra ảnh đúng (đã test 苹果,
+  书, 八 đều đúng khi query rõ ràng). Nếu thấy ảnh sai ở từ nào, xoá tay `Word.imageUrl` của
+  từ đó (set về `null`) để lần xem sau tự lấy lại — KHÔNG tự retry logic phức tạp hơn.
 - **SRS**: `SchedulerRegistry.get(name)` chọn `Sm2Scheduler` | `FsrsScheduler` theo
   `UserSettings.srsScheduler`. `UserWordProgress` có cả trường SM-2 (easeFactor/intervalDays)
   lẫn FSRS (stability/difficulty) → đổi thuật toán không cần migration.
