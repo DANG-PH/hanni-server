@@ -140,17 +140,38 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   nhận +1 "lá chắn" streak qua `StreakService.grantFreeze()` (tách khỏi mốc 7-ngày tự động ở
   `advanceStreak()`, cùng chung mức trần `MAX_STREAK_FREEZE`, nay `export` để dùng chéo module).
   `GET /referrals/me` trả số liệu cho trang "Mời bạn bè".
-- **Ví xu (`src/modules/wallet`, model `UserWallet` + `CoinTransaction`)**: soft currency, KHÔNG
-  quy đổi tiền thật (xem `FEATURES.md` ở gốc repo — mục đánh giá rủi ro tỷ giá 1 VNĐ = 1 xu ban
-  đầu, đã đổi hướng dùng xu không neo giá thật để tránh vướng quy định trung gian thanh toán).
-  Mọi thay đổi số dư đi qua `WalletService.credit()`/`debit()` — LUÔN ghi kèm 1 dòng
-  `CoinTransaction` để đối soát; `debit()` dùng `prisma.userWallet.updateMany({where: {balance:
-  {gte: amount}}})` (atomic, có điều kiện) thay vì đọc-rồi-ghi, tránh ví âm khi nhiều request
-  cùng lúc. Nguồn thu: minigame (xem dưới) + **điểm danh hằng ngày** (`WalletListener` lắng
-  ĐÚNG `AppEvent.StreakUpdated` — sự kiện này chỉ phát khi có hoạt động NGÀY MỚI, khớp nghĩa
-  "điểm danh" mà không cần dựng hệ theo dõi riêng). Nơi tiêu đầu tiên (sink):
-  `POST /wallet/buy/streak-freeze` (300 xu/lá chắn, chặn nếu đã đạt `MAX_STREAK_FREEZE`, kiểm
-  tra TRƯỚC khi trừ xu để không mất xu oan nếu không mua được).
+- **Ví xu (`src/modules/wallet`, model `UserWallet` + `CoinTransaction`)**: soft currency —
+  KHÔNG hoàn tiền, KHÔNG chuyển nhượng giữa user, KHÔNG quy đổi ngược lại tiền mặt, chỉ tiêu
+  được trong chính các tính năng của Hanni (xem `FEATURES.md` mục đánh giá rủi ro). Mọi thay đổi
+  số dư đi qua `WalletService.credit()`/`debit()` — LUÔN ghi kèm 1 dòng `CoinTransaction` để đối
+  soát; `debit()` dùng `prisma.userWallet.updateMany({where: {balance: {gte: amount}}})` (atomic,
+  có điều kiện) thay vì đọc-rồi-ghi, tránh ví âm khi nhiều request cùng lúc. Nguồn thu: minigame
+  (xem dưới) + **điểm danh hằng ngày** (`WalletListener` lắng ĐÚNG `AppEvent.StreakUpdated` — sự
+  kiện này chỉ phát khi có hoạt động NGÀY MỚI, khớp nghĩa "điểm danh" mà không cần dựng hệ theo
+  dõi riêng) + **nạp tiền thật qua payOS** (`src/modules/payments`, xem dưới). Nơi tiêu đầu tiên
+  (sink): `POST /wallet/buy/streak-freeze` (300 xu/lá chắn, chặn nếu đã đạt `MAX_STREAK_FREEZE`,
+  kiểm tra TRƯỚC khi trừ xu để không mất xu oan nếu không mua được).
+- **Nạp tiền thật (`src/modules/payments`, model `PaymentOrder`)**: Giai đoạn 5 minigame — dùng
+  **payOS** (mô hình A2A qua VietQR/chuyển khoản, `@payos/node` SDK), KHÔNG dùng VNPay/MoMo vì
+  payOS có gói MIỄN PHÍ không giới hạn giao dịch cho cá nhân/hộ kinh doanh (từ 01/2026, eKYC
+  ngân hàng Kiên Long ~5 phút, không cần đăng ký doanh nghiệp đầy đủ) và tiền về THẲNG tài khoản
+  ngân hàng (không qua ví trung gian giữ hộ) — đây là điểm khác biệt quan trọng so với lo ngại
+  pháp lý ban đầu về "trung gian thanh toán": Hanni ở đây đóng vai người bán hàng hoá/dịch vụ số
+  của CHÍNH MÌNH (bán xu để dùng trong app), không phải bên giữ/chuyển tiền hộ người khác. Tỷ
+  giá 1 VNĐ = 1 xu (`VND_PER_XU`, đúng đề xuất gốc). `PaymentsService` tự vô hiệu hoá gọn gàng
+  (`ServiceUnavailableException`) nếu thiếu `PAYOS_CLIENT_ID`/`PAYOS_API_KEY`/`PAYOS_CHECKSUM_KEY`
+  — KHÔNG chặn app khởi động, giống hệt `GEMINI_API_KEY`/VAPID. `POST /payments/topup` tạo
+  `PaymentOrder` (PENDING) + gọi payOS tạo payment link, trả `checkoutUrl` cho FE redirect thẳng
+  sang (không tự dựng UI thanh toán). `orderCode` là cột `Int @unique @default(autoincrement())`
+  RIÊNG (không phải `id` UUID) vì payOS yêu cầu mã đơn dạng số. `POST /payments/webhook/payos`
+  (`@Public()`, payOS gọi trực tiếp không qua cookie đăng nhập) xác thực bằng
+  `payos.webhooks.verify()` (HMAC-SHA256 với checksum key, SDK tự lo) rồi mới cộng xu — idempotent
+  theo `status !== PENDING` vì payOS có thể gọi lại webhook nhiều lần cho cùng giao dịch, và so
+  khớp lại `amount` với `PaymentOrder.amountVnd` trước khi cộng (không tin thẳng payload dù đã
+  qua verify). **CHƯA thể test luồng thật** (chưa có tài khoản merchant payOS thật) — cần bạn tự
+  đăng ký ở my.payos.vn, hoàn tất eKYC, lấy `clientId`/`apiKey`/`checksumKey` rồi điền vào
+  `.env.production.local`, và khai báo webhook URL
+  (`https://<domain>/api/payments/webhook/payos`) trong dashboard payOS.
 - **Minigame "Dịch tốc độ" + "Nghe đoán từ" + "Ghép cặp" + "Chọn pinyin đúng"
   (`src/modules/minigame`, model `MinigameSession`)**: Giai đoạn 1 theo lộ trình 5 giai đoạn
   trong `FEATURES.md` — chơi 1 mình, tính giờ, bảng xếp hạng ngày/tuần RIÊNG theo từng mode (gộp

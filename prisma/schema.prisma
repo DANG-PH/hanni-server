@@ -174,6 +174,7 @@ model User {
   duelsAsA            DuelMatch[]          @relation("DuelPlayerA")
   duelsAsB            DuelMatch[]          @relation("DuelPlayerB")
   duelSeasonResults   DuelSeasonResult[]
+  paymentOrders       PaymentOrder[]
 
   @@index([lastActiveAt])
 }
@@ -877,6 +878,36 @@ model CoinTransaction {
   @@index([userId, createdAt])
 }
 
+enum PaymentOrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+  EXPIRED
+}
+
+/// Giai đoạn 5 minigame (FEATURES.md) — nạp tiền thật lấy xu qua payOS
+/// (mô hình A2A, tiền về THẲNG tài khoản ngân hàng của Hanni, không qua ví
+/// trung gian giữ tiền hộ — khác lo ngại pháp lý ban đầu về "trung gian
+/// thanh toán"). `orderCode` là số nguyên RIÊNG (không phải `id` UUID) vì
+/// payOS yêu cầu mã đơn hàng dạng số; dùng `@default(autoincrement())` cho
+/// đơn giản, không cần tự sinh + kiểm tra trùng.
+model PaymentOrder {
+  id                 String             @id @default(uuid()) @db.Uuid
+  userId             String             @db.Uuid
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderCode          Int                @unique @default(autoincrement())
+  amountVnd          Int
+  /// = amountVnd (tỷ giá 1 VNĐ = 1 xu) — tách cột riêng để nếu sau này đổi
+  /// tỷ giá khuyến mãi thì không cần suy ngược từ amountVnd.
+  xuAmount           Int
+  status             PaymentOrderStatus @default(PENDING)
+  payosPaymentLinkId String?
+  createdAt          DateTime           @default(now())
+  paidAt             DateTime?
+
+  @@index([userId, createdAt])
+}
+
 /// Điểm ELO cho "Đấu 1v1" — Giai đoạn 2 minigame (xem FEATURES.md). CHƯA có
 /// rank tier (Sắt→Thách Đấu)/mùa giải, chỉ 1 con số ELO thô để kiểm chứng
 /// ghép trận + tính điểm hoạt động ổn trước khi thêm lớp rank ở giai đoạn 3.
@@ -895,21 +926,21 @@ model UserRating {
 /// Lịch sử 1 trận đấu đơn — lưu lại kết quả + biến động ELO của cả 2 bên để
 /// tra cứu/đối soát (không lưu chi tiết từng câu, chỉ tổng điểm).
 model DuelMatch {
-  id         String   @id @default(uuid()) @db.Uuid
-  playerAId  String   @db.Uuid
-  playerA    User     @relation("DuelPlayerA", fields: [playerAId], references: [id], onDelete: Cascade)
-  playerBId  String   @db.Uuid
-  playerB    User     @relation("DuelPlayerB", fields: [playerBId], references: [id], onDelete: Cascade)
-  scoreA     Int
-  scoreB     Int
-  winnerId   String?  @db.Uuid
+  id              String   @id @default(uuid()) @db.Uuid
+  playerAId       String   @db.Uuid
+  playerA         User     @relation("DuelPlayerA", fields: [playerAId], references: [id], onDelete: Cascade)
+  playerBId       String   @db.Uuid
+  playerB         User     @relation("DuelPlayerB", fields: [playerBId], references: [id], onDelete: Cascade)
+  scoreA          Int
+  scoreB          Int
+  winnerId        String?  @db.Uuid
   /// khác null nếu trận kết thúc do 1 bên rớt mạng quá lâu (forfeit) thay vì
   /// đấu hết vòng — bằng playerAId hoặc playerBId, KHÔNG có quan hệ FK riêng
   /// vì đã trùng 1 trong 2 cột trên (chỉ để hiển thị lý do kết thúc).
-  forfeitedUserId String? @db.Uuid
-  eloChangeA Int
-  eloChangeB Int
-  createdAt  DateTime @default(now())
+  forfeitedUserId String?  @db.Uuid
+  eloChangeA      Int
+  eloChangeB      Int
+  createdAt       DateTime @default(now())
 
   @@index([playerAId])
   @@index([playerBId])

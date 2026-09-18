@@ -69,6 +69,13 @@ export const envSchema = z.object({
   // không chặn app khởi động.
   GEMINI_API_KEY: z.string().default(''),
   AI_SYSTEM_PROMPT: z.string().default(''),
+
+  // Nạp xu qua payOS (A2A, tiền về thẳng tài khoản ngân hàng, không qua ví
+  // trung gian) — để trống thì PaymentsService tự báo lỗi rõ ràng khi gọi,
+  // không chặn app khởi động (giống GEMINI_API_KEY/VAPID ở trên).
+  PAYOS_CLIENT_ID: z.string().default(''),
+  PAYOS_API_KEY: z.string().default(''),
+  PAYOS_CHECKSUM_KEY: z.string().default(''),
 });
 
 export type Env = z.infer<typeof envSchema>;
