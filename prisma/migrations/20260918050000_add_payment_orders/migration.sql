@@ -7,7 +7,7 @@ CREATE SEQUENCE "PaymentOrder_orderCode_seq";
 CREATE TABLE "PaymentOrder" (
     "id" UUID NOT NULL,
     "userId" UUID NOT NULL,
-    "orderCode" INTEGER NOT NULL DEFAULT nextval('PaymentOrder_orderCode_seq'),
+    "orderCode" INTEGER NOT NULL DEFAULT nextval('"PaymentOrder_orderCode_seq"'),
     "amountVnd" INTEGER NOT NULL,
     "xuAmount" INTEGER NOT NULL,
     "status" "PaymentOrderStatus" NOT NULL DEFAULT 'PENDING',
