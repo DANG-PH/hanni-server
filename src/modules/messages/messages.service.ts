@@ -200,9 +200,18 @@ export class MessagesService {
     targetLang: 'zh' | 'vi',
   ): Promise<{ translated: string }> {
     const [sl, tl] = targetLang === 'zh' ? ['vi', 'zh-CN'] : ['zh-CN', 'vi'];
-    const translated = await translateSimple(text, sl, tl);
+    // callMyMemory() ném lỗi khi hết hạn mức ngày (khác trả về null như các
+    // lỗi khác) — bắt lại để trả 400 gọn gàng thay vì lộ 500 khi bộ dịch dự
+    // phòng cũng hết lượt (đã từng xảy ra thật khi Google bị chặn IP VÀ
+    // MyMemory hết hạn mức cùng lúc).
+    let translated: string | null = null;
+    try {
+      translated = await translateSimple(text, sl, tl);
+    } catch {
+      translated = null;
+    }
     if (!translated) {
-      throw new BadRequestException('Chưa dịch được, thử lại nhé');
+      throw new BadRequestException('Chưa dịch được, thử lại sau nhé');
     }
     return { translated };
   }
