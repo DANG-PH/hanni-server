@@ -4,6 +4,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   Min,
 } from 'class-validator';
@@ -16,6 +17,11 @@ export class WordQueryDto extends PaginationDto {
   @Min(1)
   @Max(9)
   level?: number;
+
+  /** lọc theo đúng 1 bài học (thay vì toàn bộ cấp HSK) */
+  @IsOptional()
+  @IsUUID()
+  lessonId?: string;
 
   /** tìm theo Hán tự / pinyin / nghĩa tiếng Việt */
   @IsOptional()

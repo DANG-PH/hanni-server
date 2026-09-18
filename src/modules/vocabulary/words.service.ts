@@ -11,6 +11,7 @@ export class WordsService {
   async list(query: WordQueryDto): Promise<Paginated<unknown>> {
     const where: Prisma.WordWhereInput = {};
     if (query.level) where.hskLevel = query.level;
+    if (query.lessonId) where.lessonId = query.lessonId;
     if (query.needsReview === 'true') where.needsReview = true;
     if (query.needsReview === 'false') where.needsReview = false;
     if (query.q) {
@@ -28,7 +29,9 @@ export class WordsService {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.word.findMany({
         where,
-        orderBy: [{ frequencyRank: 'asc' }, { simplified: 'asc' }],
+        orderBy: query.lessonId
+          ? [{ lessonOrder: 'asc' }, { simplified: 'asc' }]
+          : [{ frequencyRank: 'asc' }, { simplified: 'asc' }],
         skip: query.skip,
         take: query.take,
       }),

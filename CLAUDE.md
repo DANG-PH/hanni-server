@@ -481,6 +481,16 @@ dùng bảng từ khoá tay `MANUAL_TOKENS` (titleZh của chúng không theo kh
 — trang `/grammar` đọc 2 param này lúc mount (lazy initializer, KHÔNG dùng `useEffect`+setState
 để tránh cảnh báo `react-hooks/set-state-in-effect`) để tự mở đúng điểm ngữ pháp đó.
 
+**Luyện tập gắn theo bài học** (cùng đợt trên): trước đây `/listening`/`/pronunciation` chỉ
+cho chọn cấp HSK rồi luyện ngẫu nhiên TOÀN BỘ từ của cấp đó, không liên quan gì tới bài đang
+học. `GET /words` giờ nhận thêm `lessonId` (query, `WordQueryDto`) — lọc đúng từ của 1 bài học,
+tự đổi `orderBy` sang `lessonOrder` thay vì `frequencyRank` khi có `lessonId`. Client:
+`/learn/[lessonId]` có 2 nút "Luyện nghe"/"Luyện phát âm" → `/listening?lesson=<id>` (component
+dùng chung `PracticeLibrary` nhận prop `lessonId`, tự ẩn phần chọn cấp độ và tự fetch tên bài
+qua `useLesson()` khi có `lessonId`, có link "luyện tự do theo cấp độ" để thoát ra). `/writing`
+KHÔNG dùng chung cơ chế này (đọc file tĩnh `hanzi-strokes/index.json` theo ký tự, không có khái
+niệm lessonId) — gắn bài học cho `/writing` là việc riêng, chưa làm.
+
 **Quiz** (`src/modules/gamification/quiz/quiz.service.ts`): `generate()` trộn 2 dạng câu —
 `listening` (~`LISTENING_RATIO` 40% số câu, chỉ lấy từ có `audioUrl`, xếp trước) và `reading`
 (còn lại) — mô phỏng thứ tự nghe-trước-đọc-sau của đề thi thật. Field `mode`/`audioUrl` trả về
