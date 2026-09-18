@@ -478,8 +478,13 @@ dùng bảng từ khoá tay `MANUAL_TOKENS` (titleZh của chúng không theo kh
 động dễ sai); 195 điểm HSK4-9 dùng tách tự động theo dấu `/`, `…`, `+`. Client:
 `/learn/[lessonId]` hiện thẻ "Ngữ pháp liên quan" ở sidebar (chỉ khi có kết quả khớp — không
 ép làm đầy nếu bài không có ngữ pháp nào liên quan thật), link sang `/grammar?level=N&open=slug`
-— trang `/grammar` đọc 2 param này lúc mount (lazy initializer, KHÔNG dùng `useEffect`+setState
-để tránh cảnh báo `react-hooks/set-state-in-effect`) để tự mở đúng điểm ngữ pháp đó.
+— trang `/grammar` đọc 2 param này qua `useSearchParams()` thật (bọc `<Suspense>`) + `key`
+trên component con để ép remount mỗi khi đổi param, tự mở đúng điểm ngữ pháp đó. Lúc đầu dùng
+lazy initializer (`useState(() => window.location.search...)`) để né `<Suspense>`, nhưng
+`/grammar` được vào chủ yếu bằng `<Link>` từ `/learn/[lessonId]` (client-side navigation) —
+Next.js có thể tái dùng instance component cũ khi chỉ đổi query string nên lazy initializer
+không đọc lại được param mới (bug thật, phát hiện bằng Playwright test click Link — xem
+`hanni-client/CLAUDE.md` mục Convention).
 
 **Luyện tập gắn theo bài học** (cùng đợt trên): trước đây `/listening`/`/pronunciation` chỉ
 cho chọn cấp HSK rồi luyện ngẫu nhiên TOÀN BỘ từ của cấp đó, không liên quan gì tới bài đang
