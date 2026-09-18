@@ -847,6 +847,9 @@ enum GameMode {
   /// "Ghép cặp" — lật thẻ tìm đúng cặp Hán tự ↔ nghĩa, khác cơ chế trắc
   /// nghiệm của 2 mode trên nên `finish()` nhận `mistakes` thay vì `answers`.
   MATCH
+  /// "Chọn pinyin đúng" — dùng CHUNG engine trắc nghiệm với TRANSLATE, chỉ
+  /// khác đáp án đúng là pinyin thay vì nghĩa tiếng Việt.
+  PINYIN
 }
 
 /// Ví xu (soft currency) — KHÔNG quy đổi tiền thật, chỉ kiếm được qua

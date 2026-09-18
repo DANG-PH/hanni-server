@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -6,7 +7,7 @@ import {
 import { pinyin } from 'pinyin-pro';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
-import { translateLinesToVi } from '../videos/translate.util';
+import { translateLinesToVi, translateSimple } from '../videos/translate.util';
 
 const USER_SELECT = { id: true, displayName: true, avatarUrl: true } as const;
 
@@ -188,6 +189,22 @@ export class MessagesService {
       pinyin: pinyin(text, { toneType: 'symbol', nonZh: 'consecutive' }),
       vi,
     };
+  }
+
+  /** "Dịch trước khi gửi" — dịch nội dung ĐANG SOẠN sang ngôn ngữ đích, để
+   * FE điền lại vào ô nhập cho người dùng xem/sửa trước khi thật sự gửi
+   * (khác `translateText()` ở trên, dịch 1 tin ĐÃ gửi để đọc). Không lưu
+   * lại DB — chỉ là bước soạn thảo, không phải nội dung tin nhắn thật. */
+  async translateForCompose(
+    text: string,
+    targetLang: 'zh' | 'vi',
+  ): Promise<{ translated: string }> {
+    const [sl, tl] = targetLang === 'zh' ? ['vi', 'zh-CN'] : ['zh-CN', 'vi'];
+    const translated = await translateSimple(text, sl, tl);
+    if (!translated) {
+      throw new BadRequestException('Chưa dịch được, thử lại nhé');
+    }
+    return { translated };
   }
 
   async unreadCount(userId: string): Promise<{ count: number }> {

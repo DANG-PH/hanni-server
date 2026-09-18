@@ -14,6 +14,7 @@ import type { AuthUser } from '../../common/types';
 import {
   MessagesPageQuery,
   SendMessageDto,
+  TranslateComposeDto,
   TranslateMessageDto,
 } from './dto/messages.dto';
 import { MessagesService } from './messages.service';
@@ -72,6 +73,13 @@ export class MessagesController {
   @Post('translate')
   translate(@Body() dto: TranslateMessageDto) {
     return this.messages.translateText(dto.text);
+  }
+
+  /** "Dịch trước khi gửi" — dịch nội dung đang soạn, KHÔNG lưu DB. */
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Post('translate-compose')
+  translateCompose(@Body() dto: TranslateComposeDto) {
+    return this.messages.translateForCompose(dto.text, dto.targetLang);
   }
 
   @Post('conversations/:id/read')

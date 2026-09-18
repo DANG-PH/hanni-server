@@ -151,19 +151,20 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   "điểm danh" mà không cần dựng hệ theo dõi riêng). Nơi tiêu đầu tiên (sink):
   `POST /wallet/buy/streak-freeze` (300 xu/lá chắn, chặn nếu đã đạt `MAX_STREAK_FREEZE`, kiểm
   tra TRƯỚC khi trừ xu để không mất xu oan nếu không mua được).
-- **Minigame "Dịch tốc độ" + "Nghe đoán từ" + "Ghép cặp" (`src/modules/minigame`, model
-  `MinigameSession`)**: Giai đoạn 1 theo lộ trình 5 giai đoạn trong `FEATURES.md` — chơi 1 mình,
-  tính giờ, bảng xếp hạng ngày/tuần RIÊNG theo từng mode (gộp chung sẽ không công bằng vì độ khó
-  khác nhau). TRANSLATE/LISTENING dùng CHUNG engine trắc nghiệm —
-  `MinigameService.start(userId, mode)` chỉ khác nguồn từ (LISTENING lọc `audioUrl: {not:null}`)
-  và trả thêm `audioUrl` mỗi câu; server luôn trả đủ Hán tự + pinyin + audio cho MỌI mode, FE tự
-  quyết định ẩn/hiện theo mode (LISTENING ẩn Hán tự/pinyin, tự phát audio — y hệt cách
-  `QuizService`/`quiz-runner.tsx` đã làm cho câu nghe). Khác `QuizService` (tin thẳng `isCorrect`
-  client tự báo cáo) — ở đây `POST /minigame/start` LƯU SẴN đáp án đúng trong
-  `MinigameSession.questions` (JSON, không trả `correctIndex` về client), `POST
-  /minigame/:id/finish` tự so khớp `chosenIndex` với đáp án đã lưu — cần thiết vì kết quả game
-  này quy đổi thành xu thật, không thể tin client tự báo điểm như quiz thường. Thưởng 1 xu/câu
-  đúng.
+- **Minigame "Dịch tốc độ" + "Nghe đoán từ" + "Ghép cặp" + "Chọn pinyin đúng"
+  (`src/modules/minigame`, model `MinigameSession`)**: Giai đoạn 1 theo lộ trình 5 giai đoạn
+  trong `FEATURES.md` — chơi 1 mình, tính giờ, bảng xếp hạng ngày/tuần RIÊNG theo từng mode (gộp
+  chung sẽ không công bằng vì độ khó khác nhau). TRANSLATE/LISTENING/PINYIN dùng CHUNG engine
+  trắc nghiệm — `MinigameService.start(userId, mode)`: `answerOf(w)` chọn đáp án đúng là
+  `meaningVi` (TRANSLATE/LISTENING) hay `pinyin` (PINYIN); LISTENING lọc thêm `audioUrl:
+  {not:null}`; server luôn trả đủ Hán tự + pinyin + audio cho MỌI mode, FE tự quyết định ẩn/hiện
+  theo mode (LISTENING ẩn Hán tự/pinyin tự phát audio; PINYIN ẩn RIÊNG caption pinyin vì đó
+  chính là đáp án đang cho chọn — y hệt cách `QuizService`/`quiz-runner.tsx` đã làm cho câu
+  nghe). Khác `QuizService` (tin thẳng `isCorrect` client tự báo cáo) — ở đây `POST
+  /minigame/start` LƯU SẴN đáp án đúng trong `MinigameSession.questions` (JSON, không trả
+  `correctIndex` về client), `POST /minigame/:id/finish` tự so khớp `chosenIndex` với đáp án đã
+  lưu — cần thiết vì kết quả game này quy đổi thành xu thật, không thể tin client tự báo điểm
+  như quiz thường. Thưởng 1 xu/câu đúng.
   **"Ghép cặp" (MATCH)**: khác hẳn 2 mode trên — `startMatchGame()` chọn `MATCH_PAIRS` (8) từ,
   tạo 2 thẻ/từ (mặt Hán tự + mặt nghĩa, `MatchCard{cardId,wordId,kind,content}`), trộn vị trí rồi
   trả về NGUYÊN mảng thẻ CÓ `wordId` — không giấu được "đáp án" như `correctIndex` vì việc so
@@ -281,6 +282,16 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `translateLinesToVi()` (module videos, dịch máy free có sẵn) thay vì xây bộ dịch riêng. Không
   lưu kết quả (khác cache dịch video — 1 hội thoại chỉ 2 người xem, không đáng cache DB), FE chỉ
   hiện nút "Dịch" khi tin nhắn có chữ Hán và tự cache trong state khi đã dịch 1 lần.
+  **"Dịch trước khi gửi"** (`POST /messages/translate-compose`, throttle 20/60s,
+  `MessagesService.translateForCompose()`) — KHÁC `translateText()` ở trên (dịch 1 tin ĐÃ gửi để
+  đọc): dịch nội dung ĐANG SOẠN sang ngôn ngữ còn lại, KHÔNG tự gửi — trả `{translated}` để FE
+  điền lại vào ô nhập cho người dùng xem/sửa rồi tự bấm Gửi (máy dịch không phải lúc nào cũng
+  đúng, nhất là câu ngắn/khẩu ngữ). Tái dùng `translateSimple()` (mới tách ra ở
+  `videos/translate.util.ts`, tổng quát hoá `callGoogle()`/`callMyMemory()` nhận tham số
+  `sl`/`tl` thay vì cố định `zh-CN→vi`) — khác `translateLinesToVi()` (dành riêng bản chép video,
+  có glossary/cache/gộp lô không phù hợp tin nhắn thường). Hướng dịch (`targetLang: 'zh'|'vi'`)
+  do CLIENT tự nhận diện qua có chữ Hán trong nội dung hay không, gửi kèm trong request — server
+  không tự đoán hướng.
   **Kết nối trước khi nhắn tin**: `getOrCreateWith()` chỉ tự tạo hội thoại MỚI nếu 2 người đã
   theo dõi nhau (1 trong 2 chiều, `Follow`) — hội thoại ĐÃ CÓ sẵn vẫn mở lại được bình thường dù
   sau đó bỏ theo dõi. Ném `ForbiddenException` (403) nếu chưa kết nối, để tránh cảm giác nhắn

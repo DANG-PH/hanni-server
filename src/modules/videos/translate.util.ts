@@ -117,13 +117,19 @@ let googleDead = false; // endpoint free của Google hay bị chặn theo IP m�
 /**
  * Bộ dịch CHÍNH: endpoint free của Google (không key). Nhanh + chất lượng hơn
  * MyMemory. Thường chạy trên server thật, nhưng bị chặn ở nhiều IP datacenter —
- * hỏng 1 lần thì tắt hẳn, chuyển sang MyMemory.
+ * hỏng 1 lần thì tắt hẳn, chuyển sang MyMemory. `sl`/`tl` mặc định zh-CN→vi
+ * (dùng cho bản chép video) nhưng nhận tham số để tái dùng 2 chiều cho tính
+ * năng "dịch trước khi gửi" ở nhắn tin (xem `translateSimple()`).
  */
-async function callGoogle(text: string): Promise<string | null> {
+async function callGoogle(
+  text: string,
+  sl = 'zh-CN',
+  tl = 'vi',
+): Promise<string | null> {
   if (googleDead) return null;
   const url =
     'https://translate.googleapis.com/translate_a/single?client=gtx' +
-    '&sl=zh-CN&tl=vi&dt=t&q=' +
+    `&sl=${sl}&tl=${tl}&dt=t&q=` +
     encodeURIComponent(text);
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
@@ -140,9 +146,13 @@ async function callGoogle(text: string): Promise<string | null> {
 }
 
 /** Bộ dịch DỰ PHÒNG: MyMemory. Ném lỗi khi hết hạn mức ngày. */
-async function callMyMemory(text: string): Promise<string | null> {
+async function callMyMemory(
+  text: string,
+  sl = 'zh-CN',
+  tl = 'vi',
+): Promise<string | null> {
   const url =
-    'https://api.mymemory.translated.net/get?langpair=zh-CN|vi' +
+    `https://api.mymemory.translated.net/get?langpair=${sl}|${tl}` +
     `&de=${encodeURIComponent(MM_EMAIL)}&q=` +
     encodeURIComponent(text);
   const res = await fetch(url, { signal: AbortSignal.timeout(20_000) });
@@ -163,8 +173,12 @@ async function callMyMemory(text: string): Promise<string | null> {
 }
 
 /** Dịch 1 đoạn text: thử Google trước, rồi MyMemory. */
-async function callTranslate(text: string): Promise<string | null> {
-  return (await callGoogle(text)) ?? (await callMyMemory(text));
+async function callTranslate(
+  text: string,
+  sl = 'zh-CN',
+  tl = 'vi',
+): Promise<string | null> {
+  return (await callGoogle(text, sl, tl)) ?? (await callMyMemory(text, sl, tl));
 }
 
 /** Dịch 1 câu (đã fallback từ lô hỏng). */
@@ -175,6 +189,21 @@ async function translateOne(zh: string): Promise<string | null> {
     await sleep(500);
   }
   return null;
+}
+
+/**
+ * Dịch 1 đoạn text bất kỳ giữa 2 ngôn ngữ (`sl`/`tl` dạng mã Google, vd
+ * `vi`/`zh-CN`) — dùng cho tính năng "dịch trước khi gửi" ở nhắn tin
+ * (`MessagesService.translateForCompose()`). KHÁC `translateLinesToVi()`:
+ * không có glossary/cache/gộp lô (chỉ dành cho bản chép video tu tiên,
+ * không hợp với tin nhắn thường), chỉ gọi thẳng Google → MyMemory 1 lần.
+ */
+export async function translateSimple(
+  text: string,
+  sl: string,
+  tl: string,
+): Promise<string | null> {
+  return callTranslate(text, sl, tl);
 }
 
 /**

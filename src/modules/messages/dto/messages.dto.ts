@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -28,4 +29,17 @@ export class TranslateMessageDto {
   @MinLength(1)
   @MaxLength(2000)
   text!: string;
+}
+
+/** "Dịch trước khi gửi" — dịch nội dung đang soạn sang ngôn ngữ đích TRƯỚC
+ * khi thực sự gửi tin (khác `TranslateMessageDto`, vốn dịch 1 tin nhắn ĐÃ
+ * gửi để đọc). */
+export class TranslateComposeDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(2000)
+  text!: string;
+
+  @IsIn(['zh', 'vi'])
+  targetLang!: 'zh' | 'vi';
 }

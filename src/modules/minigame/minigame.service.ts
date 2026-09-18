@@ -43,19 +43,22 @@ export interface MatchCard {
 }
 
 /**
- * 3 minigame — "Dịch tốc độ" (TRANSLATE), "Nghe đoán từ" (LISTENING),
- * "Ghép cặp" (MATCH) — Giai đoạn 1 theo lộ trình trong FEATURES.md: chơi 1
- * mình, tính giờ, có bảng xếp hạng ngày/tuần RIÊNG theo từng mode.
+ * 4 minigame — "Dịch tốc độ" (TRANSLATE), "Nghe đoán từ" (LISTENING),
+ * "Ghép cặp" (MATCH), "Chọn pinyin đúng" (PINYIN) — Giai đoạn 1 theo lộ
+ * trình trong FEATURES.md: chơi 1 mình, tính giờ, có bảng xếp hạng
+ * ngày/tuần RIÊNG theo từng mode.
  *
- * TRANSLATE/LISTENING dùng CHUNG engine trắc nghiệm, chỉ khác nguồn từ
- * (LISTENING bắt buộc có `audioUrl`) và việc client có ẩn Hán tự/pinyin hay
- * không (server luôn trả đủ cả 2 trường, FE tự quyết định ẩn/hiện theo
- * mode — y hệt cách `QuizService`/`quiz-runner.tsx` đã làm cho câu nghe).
- * Khác `QuizService` (tin thẳng `isCorrect` client tự báo): ở đây server
- * LƯU SẴN đáp án đúng lúc bắt đầu (`MinigameSession.questions`), và tự so
- * khớp lúc nộp bài — cần thiết vì kết quả game này quy đổi ra xu thật.
+ * TRANSLATE/LISTENING/PINYIN dùng CHUNG engine trắc nghiệm (đáp án đúng là
+ * `meaningVi` cho 2 mode đầu, `pinyin` cho PINYIN — xem `answerOf()`), chỉ
+ * khác nguồn từ (LISTENING bắt buộc có `audioUrl`) và việc client có ẩn Hán
+ * tự/pinyin hay không (server luôn trả đủ Hán tự + pinyin + audio cho MỌI
+ * mode, FE tự quyết định ẩn/hiện — y hệt cách `QuizService`/`quiz-runner.tsx`
+ * đã làm cho câu nghe). Khác `QuizService` (tin thẳng `isCorrect` client tự
+ * báo): ở đây server LƯU SẴN đáp án đúng lúc bắt đầu
+ * (`MinigameSession.questions`), và tự so khớp lúc nộp bài — cần thiết vì
+ * kết quả game này quy đổi ra xu thật.
  *
- * MATCH (lật thẻ tìm cặp) khác hẳn 2 mode trên — không có "đáp án bí mật"
+ * MATCH (lật thẻ tìm cặp) khác hẳn các mode trên — không có "đáp án bí mật"
  * để giấu (việc so khớp 2 thẻ vốn công khai ngay khi tải dữ liệu, bản chất
  * trò chơi trí nhớ), nên `finish()` chỉ chặn được báo cáo gian dối LỘ LIỄU
  * nhất (thời gian hoàn thành nhanh hơn mức vật lý có thể), xem
@@ -87,20 +90,26 @@ export class MinigameService {
       0,
       Math.min(QUESTION_COUNT, pool.length),
     );
-    const allMeanings = pool.map((w) => w.meaningVi!).filter(Boolean);
+    // PINYIN: đáp án đúng là pinyin thay vì nghĩa tiếng Việt — dùng chung
+    // hết phần còn lại của engine (trộn đáp án, tính điểm...).
+    const answerOf = (w: (typeof pool)[number]) =>
+      mode === GameMode.PINYIN ? w.pinyin : w.meaningVi!;
+    const allAnswers = pool.map(answerOf).filter(Boolean);
 
     const questions: StoredQuestion[] = picked.map((w) => {
-      const distractors = shuffle(
-        allMeanings.filter((m) => m !== w.meaningVi),
-      ).slice(0, 3);
-      const options = shuffle([w.meaningVi!, ...distractors]);
+      const answer = answerOf(w);
+      const distractors = shuffle(allAnswers.filter((a) => a !== answer)).slice(
+        0,
+        3,
+      );
+      const options = shuffle([answer, ...distractors]);
       return {
         wordId: w.id,
         prompt: w.simplified,
         pinyin: w.pinyin,
         audioUrl: w.audioUrl,
         options,
-        correctIndex: options.indexOf(w.meaningVi!),
+        correctIndex: options.indexOf(answer),
       };
     });
 
