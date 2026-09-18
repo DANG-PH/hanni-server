@@ -465,6 +465,22 @@ trong các file đó); (2) danh sách từ vựng theo từ loại (词类/短�
 giải thích riêng từng mục. Field `flat` (tính trong grammar.service.ts) tự bật/tắt theo
 `explanationVi` có rỗng hay không — không cần sửa gì ở FE khi thêm giải thích mới.
 
+**Ngữ pháp liên quan tới bài học** (`src/modules/grammar/grammar-match.util.ts`, từ
+2026-09-18): trước đây `/grammar` là danh mục hoàn toàn tách biệt khỏi `/learn` — user phản
+ánh app "trông rất loạn" vì các tính năng không liên kết với nhau. `GET /learn/lessons/:id`
+giờ trả thêm `relatedGrammar` (điểm ngữ pháp ĐÃ có giải thích thật, cùng hskLevel với bài, có
+từ khoá Hán tự khớp CHÍNH XÁC — không phải khớp chuỗi con — với 1 từ vựng thật trong bài).
+Khớp chuỗi con bị loại bỏ có chủ đích: hầu hết `titleZh` chỉ có 1 hư từ (的/了/吗/把...), khớp
+chuỗi con sẽ dính rất nhiều từ ghép không liên quan (vd. "了" là 1 phần của vô số từ khác) —
+khớp chính xác theo từ đứng riêng lại chuẩn vì các hư từ này vốn dĩ CŨNG là từ vựng thật trong
+bộ dữ liệu (的/了/吗/呢/在/有/和/几/多少/太... đều có trong Word). 40 điểm HSK1-3 (grammar.ts)
+dùng bảng từ khoá tay `MANUAL_TOKENS` (titleZh của chúng không theo khuôn mẫu chung, tách tự
+động dễ sai); 195 điểm HSK4-9 dùng tách tự động theo dấu `/`, `…`, `+`. Client:
+`/learn/[lessonId]` hiện thẻ "Ngữ pháp liên quan" ở sidebar (chỉ khi có kết quả khớp — không
+ép làm đầy nếu bài không có ngữ pháp nào liên quan thật), link sang `/grammar?level=N&open=slug`
+— trang `/grammar` đọc 2 param này lúc mount (lazy initializer, KHÔNG dùng `useEffect`+setState
+để tránh cảnh báo `react-hooks/set-state-in-effect`) để tự mở đúng điểm ngữ pháp đó.
+
 **Quiz** (`src/modules/gamification/quiz/quiz.service.ts`): `generate()` trộn 2 dạng câu —
 `listening` (~`LISTENING_RATIO` 40% số câu, chỉ lấy từ có `audioUrl`, xếp trước) và `reading`
 (còn lại) — mô phỏng thứ tự nghe-trước-đọc-sau của đề thi thật. Field `mode`/`audioUrl` trả về

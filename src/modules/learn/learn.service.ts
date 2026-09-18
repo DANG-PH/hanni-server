@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { SrsState } from '@prisma/client';
+import { relatedGrammarForWords } from '../grammar/grammar-match.util';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 
 const LEARNED_INTERVAL_DAYS = 21;
@@ -170,6 +171,23 @@ export class LearnService {
     });
     const pBy = new Map(progress.map((p) => [p.wordId, p]));
 
+    const grammarPoints = await this.prisma.grammarPoint.findMany({
+      // chỉ lấy mục ĐÃ có giải thích thật — mục "đại cương" rút gọn (explanationVi
+      // rỗng) không mở rộng được trên trang /grammar, gợi ý sẽ dẫn tới ngõ cụt.
+      where: { hskLevel: lesson.hskLevel, NOT: { explanationVi: '' } },
+      select: {
+        slug: true,
+        hskLevel: true,
+        titleVi: true,
+        titleZh: true,
+        summaryVi: true,
+      },
+    });
+    const relatedGrammar = relatedGrammarForWords(
+      grammarPoints,
+      words.map((w) => w.simplified),
+    );
+
     return {
       lesson: {
         id: lesson.id,
@@ -183,6 +201,7 @@ export class LearnService {
         progressState: pBy.get(w.id)?.state ?? 'NEW',
         learnedAt: pBy.get(w.id)?.learnedAt ?? null,
       })),
+      relatedGrammar,
     };
   }
 }
