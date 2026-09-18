@@ -8,7 +8,8 @@ export class RecordAttemptDto {
   @IsEnum(PracticeSkill)
   skill!: PracticeSkill;
 
-  /** Chỉ áp dụng cho LISTENING — PRONUNCIATION bỏ trống (chưa có chấm điểm). */
+  /** LISTENING: đúng/sai theo lựa chọn. PRONUNCIATION: đúng/sai theo nhận
+   * diện giọng nói ở client (nếu trình duyệt không hỗ trợ thì bỏ trống). */
   @IsOptional()
   @IsBoolean()
   isCorrect?: boolean;

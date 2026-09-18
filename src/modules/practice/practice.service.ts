@@ -19,10 +19,13 @@ export class PracticeService {
     });
     if (!word) throw new NotFoundException('Không tìm thấy từ');
 
-    const isCorrect =
-      dto.skill === PracticeSkill.LISTENING ? (dto.isCorrect ?? null) : null;
     const attempt = await this.prisma.practiceAttempt.create({
-      data: { userId, wordId: dto.wordId, skill: dto.skill, isCorrect },
+      data: {
+        userId,
+        wordId: dto.wordId,
+        skill: dto.skill,
+        isCorrect: dto.isCorrect ?? null,
+      },
     });
 
     const payload: PracticeAttemptedPayload = {
@@ -46,11 +49,9 @@ export class PracticeService {
     const distinctWordsCount = new Set(rows.map((r) => r.wordId)).size;
     const graded = rows.filter((r) => r.isCorrect !== null);
     const correctCount =
-      skill === PracticeSkill.LISTENING
-        ? graded.filter((r) => r.isCorrect).length
-        : null;
+      graded.length > 0 ? graded.filter((r) => r.isCorrect).length : null;
     const accuracyPct =
-      skill === PracticeSkill.LISTENING && graded.length > 0
+      graded.length > 0
         ? Math.round(((correctCount as number) / graded.length) * 100)
         : null;
     return { totalAttempts, distinctWordsCount, correctCount, accuracyPct };

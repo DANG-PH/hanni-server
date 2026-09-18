@@ -329,9 +329,16 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   COUNT(DISTINCT senderId) >= 2` — phân biệt với hội thoại chỉ tạo ra rồi bỏ đó) — thêm để có
   căn cứ đánh giá tính năng nhắn tin có thực sự được dùng hay không, thay vì đoán.
 - **Luyện nghe/phát âm (`src/modules/practice`)**: `POST /practice/attempts` ghi 1 lượt luyện
-  (`wordId`, `skill: LISTENING|PRONUNCIATION`, `isCorrect?` — chỉ dùng cho LISTENING vì
-  PRONUNCIATION chưa có chấm điểm tự động, luôn lưu `null`). `GET /practice/stats?skill=` trả
-  tổng lượt luyện + số từ khác nhau + (LISTENING) tỉ lệ đúng. Phát `AppEvent.PracticeAttempted`
+  (`wordId`, `skill: LISTENING|PRONUNCIATION`, `isCorrect?`). LISTENING: đúng/sai theo lựa chọn.
+  PRONUNCIATION (từ 2026-09-18): client tự nhận diện giọng nói qua Web Speech API của trình
+  duyệt (`webkitSpeechRecognition`, `lang: zh-CN`) rồi so văn bản nhận diện được với
+  `word.simplified` (bỏ khoảng trắng/dấu câu) để tự chấm đúng/sai — server chỉ nhận kết quả
+  `isCorrect` đã tính sẵn từ client, không tự chấm. Đây KHÔNG phải chấm thanh điệu/ngữ điệu thật
+  (chỉ kiểm tra nói đúng từ chưa), và chỉ chạy được trên trình duyệt hỗ trợ Web Speech API
+  (Chrome/Edge; Firefox/Safari không hỗ trợ `zh-CN` nên tự rơi về hành vi cũ — ghi nhận lượt
+  luyện nhưng để `isCorrect = null`, không báo sai). `GET /practice/stats?skill=` trả tổng lượt
+  luyện + số từ khác nhau + tỉ lệ đúng (tính trên các lượt CÓ chấm được, bất kể skill nào). Phát
+  `AppEvent.PracticeAttempted`
   khi ghi nhận nhưng CHƯA có listener nào tiêu thụ (giống `QuizCompleted`) — chừa chỗ cho sau
   này (huy hiệu luyện tập, tính vào streak...), không tự ý gộp vào mục tiêu ngày hiện tại vì đó
   là quyết định sản phẩm cần bàn riêng.
