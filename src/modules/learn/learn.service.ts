@@ -162,6 +162,7 @@ export class LearnService {
     const words = await this.prisma.word.findMany({
       where: { lessonId },
       orderBy: { lessonOrder: 'asc' },
+      include: { examples: { orderBy: { orderIndex: 'asc' } } },
     });
     const progress = await this.prisma.userWordProgress.findMany({
       where: { userId, wordId: { in: words.map((w) => w.id) } },

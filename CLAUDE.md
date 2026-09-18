@@ -473,11 +473,26 @@ theo từng câu, client tự quyết định ẩn/hiện Hán tự.
 **Luyện nghe/phát âm lưu server** (`src/modules/practice`): trước đây `/listening` và
 `/pronunciation` thuần client, kết quả mất khi rời trang. Giờ mỗi lần kiểm tra đáp án (nghe)
 hoặc ghi âm xong (phát âm) đều gọi `POST /practice/attempts`; `GET /practice/stats?skill=`
-cho tổng lượt luyện + số từ khác nhau + tỉ lệ đúng (chỉ LISTENING). Xem thêm ở mục "Bình luận +
+cho tổng lượt luyện + số từ khác nhau + tỉ lệ đúng (cả LISTENING lẫn PRONUNCIATION từ
+2026-09-18 — xem mục "Rank tier/season..." hoặc CLAUDE.md gốc). Xem thêm ở mục "Bình luận +
 thích video + thông báo" phía trên.
 
-Chưa làm (roadmap, chừa chỗ): câu ví dụ cho từ vựng, cấu trúc đề thi HSK
+**Câu ví dụ cho từ vựng** (`WordExample`, `scripts/seed-word-examples.ts`): HSK1 (300/300 từ)
+đã có câu ví dụ do Hanni tự soạn (không qua dịch máy, tránh phụ thuộc quỹ MyMemory) —
+`prisma/seed/data/word-examples-hsk1.json` (mảng `[simplified, pinyinNumeric, zh, vi]`, pinyin
+sinh tự động bằng `pinyin-pro` lúc chạy script, không lưu tay để tránh sai dấu thanh). Script
+CHUẨN — khớp Word theo `(simplified, pinyinNumeric)`, xoá ví dụ cũ của đúng các từ trong file rồi
+tạo lại (idempotent, không đụng Word hay từ khác) — chạy tay `npx tsx
+scripts/seed-word-examples.ts`, KHÔNG nằm trong `db:seed` mặc định (giống
+`migrate-lesson-themes.ts`, phải chạy riêng sau khi seed Word lần đầu). Đã include ở
+`GET /words/:id`, `/words/of-the-day`, và `GET /learn/lessons/:id` (learn.service.ts — trước đó
+BỊ THIẾU include, đã sửa 2026-09-18). HSK2-9 (10.612 từ còn lại) CHƯA làm — cùng cách nếu làm
+tiếp, tạo thêm `word-examples-hsk{N}.json` rồi gọi `seedFile()` cho từng file trong
+`seed-word-examples.ts`.
+
+Chưa làm (roadmap, chừa chỗ): câu ví dụ HSK2-9, cấu trúc đề thi HSK
 thật đầy đủ (nhiều phần nghe/đọc/viết đúng số câu + thời gian từng cấp — hiện mới có câu
-nghe/đọc trộn vào quiz từ vựng, chưa đúng cấu trúc thật), minigame giai đoạn 4 (đấu đôi 2v2 +
-thêm currency sink) và giai đoạn 5 (nạp tiền thật đổi xu, cần tư vấn pháp lý/kế toán trước —
-xem FEATURES.md).
+nghe/đọc trộn vào quiz từ vựng, chưa đúng cấu trúc thật), hội thoại luyện nói với AI theo tình
+huống (kiểu Duolingo Video Call/Roleplay — trợ lý AI hiện tại chỉ hỏi-đáp + điều hướng, chưa
+phải luyện hội thoại thực hành), ngữ pháp dẫn dắt theo bài học. Xem FEATURES.md mục 10 cho phân
+tích đầy đủ + chiến lược tăng trưởng.
