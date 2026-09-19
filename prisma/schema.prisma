@@ -176,6 +176,7 @@ model User {
   duelSeasonResults   DuelSeasonResult[]
   paymentOrders       PaymentOrder[]
   leagueEntries       LeagueEntry[]
+  dailyQuestClaims    DailyQuestClaim[]
 
   @@index([lastActiveAt])
 }
@@ -501,6 +502,23 @@ model UserDailyActivity {
 
   @@unique([userId, localDate])
   @@index([userId, localDate(sort: Desc)])
+}
+
+/// Đánh dấu nhiệm vụ hàng ngày ĐÃ NHẬN THƯỞNG — tiến độ mỗi nhiệm vụ tính
+/// TRỰC TIẾP (live) từ ReviewLog/QuizAttempt/PracticeAttempt trong ngày,
+/// bảng này CHỈ để chống thưởng xu 2 lần cho cùng 1 nhiệm vụ (xem
+/// QuestsService.getToday()). `questKey` gồm cả khoá đặc biệt "all_done".
+model DailyQuestClaim {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  localDate DateTime @db.Date
+  questKey  String
+  xu        Int
+  createdAt DateTime @default(now())
+
+  @@unique([userId, localDate, questKey])
+  @@index([userId, localDate])
 }
 
 /// Denormalize chuỗi streak để đọc nhanh (1-1 User).

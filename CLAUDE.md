@@ -305,6 +305,30 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `/leaderboard` (khác hẳn cấu trúc dữ liệu — nhóm theo bậc + vùng thăng/giáng, không phải 1
   bảng metric đơn giản) để tránh phải sửa `components/leaderboard.tsx` đang được dev FE khác
   chỉnh song song.
+- **Nhiệm vụ hàng ngày** (`src/modules/quests`, `QuestsService`, từ 2026-09-19) — mục tiêu
+  chính là LIÊN KẾT các tính năng đang đứng riêng lẻ (user từng phản ánh app "quá nhiều chức
+  năng rời rạc, không liên kết"): mỗi nhiệm vụ trong 3 nhiệm vụ/ngày lấy tiêu chí từ 1 tính năng
+  KHÁC NHAU đã có sẵn — ôn từ vựng (`ReviewLog`), làm quiz (`QuizAttempt.completedAt`), luyện
+  nghe đúng (`PracticeAttempt` skill LISTENING + `isCorrect: true`), luyện phát âm (cùng bảng,
+  skill PRONUNCIATION — KHÔNG lọc `isCorrect: true` như listening vì phát âm chỉ tự chấm được
+  trên Chrome/Edge qua Web Speech API, trình duyệt khác `isCorrect` luôn `null` nên lọc theo
+  đúng/sai sẽ khiến nhiệm vụ KHÔNG BAO GIỜ hoàn thành được trên trình duyệt đó — tính theo lượt
+  LUYỆN là đủ công bằng), và học từ mới (`ReviewLog` với `reviewType: 'LEARN'`). **Tiến độ tính
+  TRỰC TIẾP (live) mỗi lần gọi `GET /quests/today`, KHÔNG lưu counter riêng** — giống hệt cách
+  `LeagueService` tính điểm tuần, tránh lệch dữ liệu và không cần nghe sự kiện từ nhiều nơi dù
+  các sự kiện `AppEvent.WordReviewed`/`QuizCompleted`/`PracticeAttempted` đã có sẵn. Chọn 3
+  nhiệm vụ mỗi ngày bằng hash xác định (`selectDailyQuests()` trong `quest.util.ts`, seed =
+  `userId:ngày`) — KHÔNG lưu DB, tính lại luôn ra đúng 3 nhiệm vụ giống hệt trong cùng 1 ngày mà
+  không cần bảng lưu lựa chọn. Model `DailyQuestClaim` (unique `[userId, localDate, questKey]`)
+  CHỈ để chống thưởng xu 2 lần cho cùng 1 nhiệm vụ — server tự cộng xu ngay lần đầu phát hiện
+  nhiệm vụ đạt đủ target (không cần client gọi "nhận thưởng" riêng), dùng lại `WalletService.
+  credit()` đã có sẵn (giống cơ chế điểm danh) nên KHÔNG phải quyết định sản phẩm mới về kinh tế
+  xu. Thưởng thêm `ALL_DONE_BONUS_XU` (10 xu) khi xong cả 3, ghi nhận qua `questKey` đặc biệt
+  `"all_done"`. Ngày tính theo timezone user + `STREAK_DAY_CUTOFF_HOUR` (dùng lại
+  `startOfLocalDayInstant()`/`localStudyDate()` ở `time.util.ts`, đúng như streak/League).
+  Client: `components/daily-quest-card.tsx` ở dashboard, cạnh thẻ Giải đấu tuần (lưới 2 cột
+  Tailwind riêng trong `page.tsx`, KHÔNG dùng chung `.dailyGrid` có sẵn — cùng lý do tránh sửa
+  CSS grid dùng chung với thẻ Giải đấu tuần).
 - **Đấu đôi 2v2 (`src/modules/duel/team-duel.service.ts`, `TeamDuelService`)**: Giai đoạn 4
   minigame — kiến trúc SONG SONG với `DuelService` (hàng đợi/trạng thái trận RIÊNG, cùng "sống"
   trong `NotificationsModule` với cùng lý do `forwardRef()` tránh vòng lặp module), nhưng dùng
