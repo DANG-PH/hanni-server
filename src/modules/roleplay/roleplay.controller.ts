@@ -51,6 +51,14 @@ export class RoleplayController {
     return this.roleplay.reply(user.id, sessionId, dto.message);
   }
 
+  @Post('sessions/:sessionId/hint')
+  hint(
+    @CurrentUser() user: AuthUser,
+    @Param('sessionId', ParseUUIDPipe) sessionId: string,
+  ) {
+    return this.roleplay.hint(user.id, sessionId);
+  }
+
   @Delete('sessions/:sessionId')
   async remove(
     @CurrentUser() user: AuthUser,

@@ -83,3 +83,17 @@ const COMMON_RULES =
 export function buildSystemPrompt(scenario: RoleplayScenario): string {
   return scenario.systemPrompt + COMMON_RULES;
 }
+
+/** Prompt riêng cho "Gợi ý" — KHÁC hẳn buildSystemPrompt() ở trên (đóng vai
+ * AI trong hội thoại), đây là nhờ Gemini đứng NGOÀI hội thoại gợi ý câu
+ * người HỌC có thể dùng, kèm nghĩa tiếng Việt để không phải chép mù. Yêu
+ * cầu format cố định để parse đơn giản (2 dòng, không cần JSON schema). */
+export function buildHintPrompt(scenario: RoleplayScenario): string {
+  return (
+    `Bạn đang hỗ trợ người học tiếng Trung trong 1 bài tập đóng vai. Tình huống: "${scenario.titleVi}" — đối phương trong hội thoại đang đóng vai ${scenario.persona}. ` +
+    `Dựa vào đoạn hội thoại, gợi ý MỘT câu tiếng Trung giản thể NGẮN GỌN, TỰ NHIÊN, phù hợp trình độ HSK${scenario.hskLevel} mà NGƯỜI HỌC (không phải đối phương) có thể dùng để trả lời tiếp. ` +
+    'CHỈ trả lời đúng 2 dòng theo format sau, không thêm chữ nào khác:\n' +
+    '中文：<câu gợi ý bằng tiếng Trung>\n' +
+    'Nghĩa：<nghĩa tiếng Việt của câu đó>'
+  );
+}

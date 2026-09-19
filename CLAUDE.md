@@ -592,9 +592,22 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   quyết định giá/phạm vi MỚI cần hỏi lại. Client: `/roleplay` — màn chọn tình huống (lưới thẻ +
   danh sách hội thoại gần đây) và màn chat (bong bóng tin nhắn, pinyin hiện dưới câu AI, gửi tin
   nhắn optimistic-update qua `mutate()` của SWR). Thêm mục "Luyện nói với AI" vào
-  `components/sidebar.tsx` (nhóm "LUYỆN TẬP MỖI NGÀY"). **Chưa làm**: chấm điểm/phản hồi lỗi
-  ngữ pháp sau khi kết thúc hội thoại (hiện chỉ luyện phản xạ thuần, không có "kết quả buổi
-  luyện" như `/listening`/`/pronunciation`), gợi ý câu trả lời khi người học bí từ.
+  `components/sidebar.tsx` (nhóm "LUYỆN TẬP MỖI NGÀY").
+  **Gợi ý câu trả lời** (`POST /roleplay/sessions/:id/hint`, `RoleplayService.hint()`, từ
+  2026-09-19) — giải quyết mục "chưa làm" ghi ngay lúc mới xong tính năng: người học bí từ giữa
+  chừng thì bấm nút gợi ý (icon `spark` cạnh ô nhập) thay vì bế tắc rồi thoát. Dùng prompt RIÊNG
+  (`buildHintPrompt()`, khác `buildSystemPrompt()` ở trên) — nhờ Gemini đứng NGOÀI vai diễn, gợi
+  ý câu NGƯỜI HỌC (không phải đối phương) có thể nói tiếp, kèm nghĩa tiếng Việt. Yêu cầu Gemini
+  trả đúng format 2 dòng cố định (`中文：`/`Nghĩa：`) để parse đơn giản bằng regex thay vì cấu
+  hình `responseSchema` JSON của Gemini (đơn giản hoá — parse lỗi thì rơi về coi cả đoạn là câu
+  gợi ý, bỏ trống nghĩa, không throw lỗi cho 1 tính năng phụ). **KHÔNG lưu gợi ý vào lịch sử hội
+  thoại** (`RoleplayMessage`) — chỉ là gợi ý tạm, không phải lượt nói thật; dùng lại CHÍNH
+  `checkDailyQuota()` của `reply()` (đã hết hạn mức/ngày thì gợi ý cũng bị chặn) thay vì dựng bộ
+  đếm riêng — chấp nhận đánh đổi là spam gợi ý không tự làm hết hạn mức nhanh hơn (quy mô nhỏ,
+  chưa đáng lo). Client: bấm "Dùng câu này" điền thẳng gợi ý vào ô nhập để người học TỰ xem/sửa
+  trước khi gửi (không tự động gửi luôn), giống đúng tinh thần nút "Dịch" ở `/messages`.
+  **Vẫn chưa làm**: chấm điểm/phản hồi lỗi ngữ pháp sau khi kết thúc hội thoại (hiện chỉ luyện
+  phản xạ thuần, không có "kết quả buổi luyện" như `/listening`/`/pronunciation`).
 
 ## Lệnh
 `npm run start:dev` · `npm run build` · `npm run prisma:migrate` · `npm run db:seed` ·

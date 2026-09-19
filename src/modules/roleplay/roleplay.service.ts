@@ -16,6 +16,7 @@ import { PrismaService } from '../../infra/prisma/prisma.service';
 import { CHAT_MODELS } from '../assistant/gemini-models';
 import { isPremiumActive } from '../premium/premium-plans';
 import {
+  buildHintPrompt,
   buildSystemPrompt,
   ROLEPLAY_SCENARIOS,
   type RoleplayScenario,
@@ -153,6 +154,67 @@ export class RoleplayService {
       data: { updatedAt: new Date() },
     });
     return saved;
+  }
+
+  /** Gợi ý 1 câu người học có thể trả lời tiếp — KHÔNG lưu vào lịch sử hội
+   * thoại (chỉ là gợi ý tạm thời, không phải lượt nói thật của người học).
+   * Dùng CHUNG hạn mức/ngày với `reply()` (gọi lại `checkDailyQuota()`) —
+   * nếu đã hết lượt AI hôm nay thì gợi ý cũng bị chặn, đơn giản hơn dựng bộ
+   * đếm riêng cho 1 tính năng phụ. */
+  async hint(userId: string, sessionId: string) {
+    await this.checkDailyQuota(userId);
+    const session = await this.requireOwnSession(userId, sessionId);
+    const scenario = this.scenarioOf(session.scenarioKey);
+
+    if (!this.genAI) {
+      throw new BadRequestException(
+        'Luyện nói với AI chưa được bật — cần cấu hình GEMINI_API_KEY trước đã.',
+      );
+    }
+
+    const history = await this.prisma.roleplayMessage.findMany({
+      where: { sessionId },
+      orderBy: { createdAt: 'desc' },
+      take: HISTORY_LIMIT,
+    });
+    history.reverse();
+    const contents: Content[] = history.map((h) => ({
+      role: h.role === ChatRole.USER ? ('user' as const) : ('model' as const),
+      parts: [{ text: h.text }],
+    }));
+
+    const systemInstruction = buildHintPrompt(scenario);
+    for (const model of CHAT_MODELS) {
+      try {
+        const response = await this.genAI.models.generateContent({
+          model,
+          contents,
+          config: { systemInstruction },
+        });
+        const text = response.text?.trim();
+        if (text) return this.parseHint(text);
+      } catch (err) {
+        this.logger.warn(
+          `[Roleplay] hint model ${model} lỗi: ${(err as Error).message}`,
+        );
+      }
+    }
+    throw new BadRequestException('Chưa tạo được gợi ý, thử lại nhé.');
+  }
+
+  /** Format mong đợi 2 dòng "中文：..." / "Nghĩa：..." — nếu Gemini trả sai
+   * format (không tuân thủ hoàn hảo) thì rơi về coi cả đoạn là câu gợi ý,
+   * bỏ trống nghĩa, còn hơn báo lỗi cho 1 tính năng phụ không quan trọng. */
+  private parseHint(text: string): { suggestionZh: string; meaningVi: string } {
+    const zhMatch = text.match(/中文[：:]\s*(.+)/);
+    const viMatch = text.match(/Nghĩa[：:]\s*(.+)/);
+    if (zhMatch) {
+      return {
+        suggestionZh: zhMatch[1].trim(),
+        meaningVi: viMatch?.[1]?.trim() ?? '',
+      };
+    }
+    return { suggestionZh: text, meaningVi: '' };
   }
 
   private async generateReply(
