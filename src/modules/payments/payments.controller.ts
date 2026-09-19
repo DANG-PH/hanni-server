@@ -57,7 +57,16 @@ export class PaymentsController {
 
   /** payOS gọi thẳng endpoint này từ máy chủ của họ — không có cookie đăng
    * nhập của Hanni nên phải @Public(); xác thực thật sự nằm ở
-   * `handleWebhook()` qua chữ ký HMAC, không phải qua JwtAuthGuard. */
+   * `handleWebhook()` qua chữ ký HMAC, không phải qua JwtAuthGuard.
+   * CỐ Ý dùng interface `Webhook` của SDK thay vì DTO class-validator (khác
+   * quy ước chung của dự án) — `ValidationPipe` toàn cục bật `whitelist:
+   * true`, nếu khai DTO thiếu field so với payload payOS gửi thật thì
+   * `class-transformer` sẽ ÂM THẦM CẮT BỚT field trước khi tới
+   * `webhooks.verify()`, có nguy cơ làm sai lệch dữ liệu chữ ký HMAC được
+   * tính trên — rủi ro làm HỎNG xác thực payload thật còn nguy hiểm hơn
+   * việc thiếu validate hình thức (đằng nào cũng bị chặn bởi verify() nếu
+   * giả mạo). Giữ nguyên interface cho tới khi có tài khoản payOS thật để
+   * kiểm chứng đủ field trước khi đổi. */
   @Public()
   @HttpCode(200)
   @Post('webhook/payos')

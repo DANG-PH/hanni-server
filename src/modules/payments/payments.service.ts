@@ -235,7 +235,7 @@ export class PaymentsService {
       );
       return;
     }
-    if (order.status !== PaymentOrderStatus.PENDING) return; // đã xử lý rồi
+    if (order.status !== PaymentOrderStatus.PENDING) return; // đã xử lý rồi (đọc nhanh, tránh việc thừa — xem chặn thật ở dưới)
 
     // So khớp số tiền — phòng payload bị chỉnh sửa dù đã qua verify() (vd
     // lỗi tích hợp phía payOS), không tin thẳng verified.amount để cộng xu.
@@ -246,26 +246,46 @@ export class PaymentsService {
       return;
     }
 
-    await this.prisma.paymentOrder.update({
-      where: { id: order.id },
+    // Chuyển PENDING -> PAID bằng updateMany có ĐIỀU KIỆN status: PENDING
+    // (atomic ở tầng DB) thay vì đọc-rồi-ghi — payOS xác nhận có gọi lại
+    // webhook nhiều lần cho cùng giao dịch, 2 lượt gọi trùng nhau chạy gần
+    // như đồng thời đều có thể đọc thấy PENDING trước khi bên nào commit
+    // xong PAID (lỗi thật, cộng xu/gia hạn Premium 2 lần cho 1 giao dịch).
+    // `updateMany` với where lọc theo status CHỈ 1 request thắng được điều
+    // kiện này dù chạy song song, `count === 0` nghĩa là request khác đã
+    // xử lý xong (hoặc đang xử lý) — bỏ qua an toàn.
+    const claimed = await this.prisma.paymentOrder.updateMany({
+      where: { id: order.id, status: PaymentOrderStatus.PENDING },
       data: { status: PaymentOrderStatus.PAID, paidAt: new Date() },
     });
+    if (claimed.count === 0) return;
 
-    if (order.kind === 'PREMIUM') {
-      const user = await this.prisma.user.findUniqueOrThrow({
-        where: { id: order.userId },
-        select: { premiumUntil: true },
-      });
-      const newUntil = extendPremiumUntil(
-        user.premiumUntil,
-        order.premiumPlanKey!,
+    try {
+      if (order.kind === 'PREMIUM') {
+        const user = await this.prisma.user.findUniqueOrThrow({
+          where: { id: order.userId },
+          select: { premiumUntil: true },
+        });
+        const newUntil = extendPremiumUntil(
+          user.premiumUntil,
+          order.premiumPlanKey!,
+        );
+        await this.prisma.user.update({
+          where: { id: order.userId },
+          data: { premiumUntil: newUntil },
+        });
+      } else {
+        await this.wallet.credit(order.userId, order.xuAmount, 'topup');
+      }
+    } catch (err) {
+      // Đơn đã chắc chắn PAID (đã thanh toán thật) nhưng cộng xu/gia hạn
+      // Premium thất bại — KHÔNG lùi lại PENDING (payOS gọi lại webhook sẽ
+      // bị chặn bởi guard ở trên, không tự sửa được) — log ERROR rõ ràng để
+      // đối soát/cộng bù thủ công, còn hơn nuốt lỗi im lặng khiến user mất
+      // tiền thật mà không ai biết.
+      this.logger.error(
+        `Webhook payOS: đơn #${order.orderCode} đã PAID nhưng cộng thưởng thất bại — cần đối soát thủ công: ${err}`,
       );
-      await this.prisma.user.update({
-        where: { id: order.userId },
-        data: { premiumUntil: newUntil },
-      });
-    } else {
-      await this.wallet.credit(order.userId, order.xuAmount, 'topup');
     }
   }
 }

@@ -243,6 +243,26 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   **CHƯA thể test luồng thanh toán thật** (giống nạp xu ở trên — chưa có tài khoản merchant
   payOS thật), chỉ verify được qua `GET /premium/status` + `/payments/configured` trả đúng và
   UI tự ẩn nút thanh toán gọn gàng khi chưa cấu hình.
+  **3 lỗi thật đã phát hiện + sửa qua code review chủ động (2026-09-19, không phải user báo)**:
+  (1) `extendPremiumUntil()` cộng tháng bằng `Date#setMonth` bị TRÀN NGÀY khi ngày gốc không
+  tồn tại ở tháng đích (vd 31/1 + 1 tháng ra 3/3 thay vì 28/2 — verify bằng chạy thử thật) — sửa
+  bằng `addMonthsClamped()` (đặt ngày về 1 trước khi đổi tháng, tính lại ngày cuối tháng đích
+  rồi kẹp về đó, dùng mốc UTC vì `premiumUntil` là 1 thời điểm tuyệt đối không phụ thuộc
+  timezone tiến trình Node). (2) Mua thêm gói CÓ HẠN khi đang TRỌN ĐỜI làm `premiumUntil` cộng
+  vượt qua mốc `PREMIUM_LIFETIME_UNTIL`, khiến `isLifetimePremium()` sai lệch và Premium hiện
+  sai thành "còn hạn tới ngày X" thay vì trọn đời — sửa bằng early-return giữ nguyên trọn đời
+  nếu đang trọn đời. (3) `handleWebhook()` đọc `order.status` rồi mới ghi PAID ở bước riêng
+  (không atomic) — payOS xác nhận có gọi lại webhook nhiều lần cho cùng giao dịch, 2 lượt gọi
+  trùng nhau chạy gần đồng thời đều có thể đọc thấy PENDING trước khi bên nào commit xong PAID,
+  cộng xu/gia hạn Premium 2 lần cho 1 giao dịch thật — sửa bằng `updateMany({where: {id, status:
+  PENDING}})` (atomic ở tầng DB, `count === 0` nghĩa là request khác đã xử lý, bỏ qua an toàn),
+  cộng thêm log ERROR rõ ràng nếu bước cộng thưởng thất bại SAU KHI đã chắc chắn PAID (không
+  lùi lại PENDING vì payOS sẽ không gọi lại nữa — cần đối soát thủ công thay vì nuốt lỗi im
+  lặng). **Còn 1 rủi ro hẹp CHƯA sửa (chấp nhận, không đáng công sức)**: 2 ĐƠN Premium khác
+  nhau của CÙNG 1 user xử lý gần như đồng thời (2 lần thanh toán thật liên tiếp) vẫn đọc-rồi-ghi
+  không atomic trên `User.premiumUntil` — có thể mất 1 lần gia hạn nếu trùng đúng khung thời
+  gian rất hẹp này; khắc phục triệt để cần khoá dòng (`SELECT ... FOR UPDATE`) hoặc tính atomic
+  bằng SQL thô, không xứng đáng độ phức tạp cho 1 tình huống cực hiếm ở quy mô hiện tại.
 - **Minigame "Dịch tốc độ" + "Nghe đoán từ" + "Ghép cặp" + "Chọn pinyin đúng"
   (`src/modules/minigame`, model `MinigameSession`)**: Giai đoạn 1 theo lộ trình 5 giai đoạn
   trong `FEATURES.md` — chơi 1 mình, tính giờ, bảng xếp hạng ngày/tuần RIÊNG theo từng mode (gộp
@@ -369,6 +389,13 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   Client: `components/daily-quest-card.tsx` ở dashboard, cạnh thẻ Giải đấu tuần (lưới 2 cột
   Tailwind riêng trong `page.tsx`, KHÔNG dùng chung `.dailyGrid` có sẵn — cùng lý do tránh sửa
   CSS grid dùng chung với thẻ Giải đấu tuần).
+  **Rủi ro nhỏ đã biết, CHẤP NHẬN không sửa** (phát hiện qua code review chủ động, quy mô hiện
+  tại chưa đáng công sức sửa): `tryClaim()` tạo `DailyQuestClaim` (bản ghi DUY NHẤT xác nhận đã
+  thưởng) TRƯỚC khi gọi `wallet.credit()` — nếu `credit()` lỗi đúng lúc ngay sau khi claim
+  commit (vd lỗi DB tạm thời), nhiệm vụ bị đánh dấu đã nhận thưởng vĩnh viễn mà không có xu,
+  không có đường thử lại. Khác hẳn rủi ro ở `PaymentsService`/`ShopService` (tiền thật/mua bán)
+  — đây chỉ là vài xu nhỏ (5-8 xu) và cần đúng 1 lỗi DB xảy ra đúng khoảnh khắc hiếm, chấp nhận
+  đánh đổi thay vì bọc `$transaction` phức tạp cho 1 tính năng phụ giá trị nhỏ.
 - **Cửa hàng trang trí — khung avatar** (`src/modules/shop`, `ShopService`, `frame-catalog.ts`,
   từ 2026-09-19) — sink xu THỨ HAI sau lá chắn streak (300 xu): ví xu trước đó gần như không có
   gì đáng mua thêm dù đã có nhiều nguồn kiếm (điểm danh, minigame, nhiệm vụ hàng ngày). 4 khung
@@ -391,6 +418,15 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   bản này — **CHƯA thread khung vào Avatar ở leaderboard/tin nhắn/bình luận** (cần API trả thêm
   field cho từng dòng ở nhiều endpoint khác nhau, để dành làm sau nếu tính năng được đón nhận
   tốt), hiện khung chỉ thấy được ở `/account` (xem trước) và hồ sơ công khai `/u/[id]`.
+  **Lỗi thật đã phát hiện + sửa qua code review chủ động (2026-09-19)**: `ShopService.buy()`
+  BAN ĐẦU trừ xu TRƯỚC rồi mới tạo `UserFrame` — 2 request mua trùng 1 khung chạy song song
+  (bấm đúp/client tự retry) đều qua được kiểm tra "chưa sở hữu" TRƯỚC khi ai kịp tạo bản ghi,
+  cả 2 đều trừ xu thành công nhưng chỉ 1 request tạo `UserFrame` thành công (bên còn lại dính
+  lỗi unique constraint) — trừ oan 1 lần xu không hoàn lại. Sửa bằng cách ĐẢO THỨ TỰ: tạo
+  `UserFrame` TRƯỚC (bắt lỗi P2002 → báo "đã sở hữu" thay vì trừ xu oan), CHỈ trừ xu SAU KHI
+  tạo bản ghi thành công, và HOÀN TÁC (xoá) bản ghi vừa tạo nếu bước trừ xu thất bại (vd không
+  đủ xu) — tránh phát sinh khung miễn phí. Đúng mẫu `QuestsService.tryClaim()` đã làm sẵn trong
+  cùng đợt code này (tạo bản ghi dựa vào unique constraint TRƯỚC, thưởng SAU).
 - **Đấu đôi 2v2 (`src/modules/duel/team-duel.service.ts`, `TeamDuelService`)**: Giai đoạn 4
   minigame — kiến trúc SONG SONG với `DuelService` (hàng đợi/trạng thái trận RIÊNG, cùng "sống"
   trong `NotificationsModule` với cùng lý do `forwardRef()` tránh vòng lặp module), nhưng dùng
@@ -608,6 +644,13 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   trước khi gửi (không tự động gửi luôn), giống đúng tinh thần nút "Dịch" ở `/messages`.
   **Vẫn chưa làm**: chấm điểm/phản hồi lỗi ngữ pháp sau khi kết thúc hội thoại (hiện chỉ luyện
   phản xạ thuần, không có "kết quả buổi luyện" như `/listening`/`/pronunciation`).
+  **Rủi ro nhỏ đã biết, CHẤP NHẬN không sửa**: `checkDailyQuota()` đếm `RoleplayMessage` hiện
+  có rồi so với `FREE_ROLEPLAY_DAILY_LIMIT` TRƯỚC khi lưu lượt hiện tại — nhiều request gửi dồn
+  dập/đồng thời gần chạm hạn mức đều đọc cùng số đếm cũ, có thể vượt hạn mức vài lượt gọi
+  Gemini. Không lộ ra ngoài tiền thật/xu (chỉ ảnh hưởng quota Gemini free tier dùng chung), và
+  cần đúng kiểu tấn công dồn dập bất thường mới khai thác được — chấp nhận đánh đổi thay vì
+  khoá tầng ứng dụng phức tạp cho 1 tình huống hiếm ở quy mô hiện tại (`AssistantService.
+  checkDailyAskQuota()` có cùng đặc điểm y hệt).
 
 ## Lệnh
 `npm run start:dev` · `npm run build` · `npm run prisma:migrate` · `npm run db:seed` ·
