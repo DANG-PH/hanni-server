@@ -38,6 +38,11 @@ export class SrsController {
     return this.reviews.getStats(user.id);
   }
 
+  @Get('leeches')
+  leeches(@CurrentUser() user: AuthUser) {
+    return this.reviews.getLeeches(user.id);
+  }
+
   @Post('review')
   review(@CurrentUser() user: AuthUser, @Body() dto: ReviewDto) {
     return this.reviews.review(user.id, dto);

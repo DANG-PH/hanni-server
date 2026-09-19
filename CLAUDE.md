@@ -105,6 +105,23 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   hoặc `learnedWords`/`totalWords` lấy từ `UserLevelProgress` (LEVEL — `threshold` ở nhóm này là
   SỐ CẤP HSK 1-9, không phải số từ, nên không dùng thẳng làm mẫu số).
 - **Index quan trọng cho queue SRS**: `UserWordProgress (userId, dueAt)` và `(userId, hskLevel, dueAt)`.
+- **"Từ khó nhớ" (leech, thuật ngữ Anki) — `GET /study/leeches` (từ 2026-09-19)**: phát hiện qua
+  research chủ động (rà lại code, không phải yêu cầu cụ thể của user) — field `UserWordProgress.
+  isLeech` (`out.lapses >= LEECH_LAPSES`, ngưỡng 8 lần sai, `sm2.scheduler.ts`) đã được TÍNH VÀ
+  LƯU ĐÚNG mỗi lần review từ rất lâu (`ReviewService.review()`) nhưng CHƯA TỪNG có API/UI nào đọc
+  lại — field mồ côi hoàn toàn (khác `reminderHour`/`maxReviewsPerDay` từng ghi trước đó, ít
+  nhất 2 field đó còn có 1 đầu dùng tới). Đây là tín hiệu SRS có giá trị thật (Anki coi "leech
+  review" là công cụ quan trọng giúp người học biết chính xác từ nào cần chú ý nhiều hơn), tận
+  dụng ngay vì không tốn gì thêm để tính lại — chỉ cần đọc. `ReviewService.getLeeches()` trả
+  danh sách từ `isLeech: true` kèm thông tin từ, sắp theo `lapses` giảm dần — KHÔNG lọc theo
+  `dueAt` (khác `getQueue()`) vì đây là màn "xem toàn bộ từ khó" để người học biết, không phải
+  hàng đợi ôn hôm nay. `getStats()` cũng trả thêm `leechCount` cho tiện hiện số lượng nhanh.
+  Client: section "Từ khó nhớ" ở `/progress` (chỉ hiện khi có ít nhất 1 từ, không ép hiện rỗng).
+  **Chưa làm**: cơ chế "gỡ leech" khi cuối cùng nhớ được (Anki tự bỏ đánh dấu khi ôn đúng lại
+  nhiều lần liên tiếp — ở đây `isLeech` vẫn `true` mãi trừ khi ghi đè logic trong `review()`,
+  chấp nhận tạm vì set lại về false cần quyết định ngưỡng riêng, để dành sau); chế độ "cram" ôn
+  riêng từ khó bất kể có đến hạn hay không (enum `ReviewType.CRAM` cũng đang mồ côi tương tự,
+  ghi nhận nhưng chưa làm vì cần thiết kế lại `review()` để không ảnh hưởng lịch SRS thật).
 - **Push (`src/modules/push`)**: dùng `web-push` + khóa VAPID (`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`
   trong env, sinh bằng `npx web-push generate-vapid-keys`). Để trống 2 khóa thì API trả 503 rõ ràng,
   không chặn app khởi động. `PushSubscription` xoá tự động khi gửi gặp lỗi 404/410 (thiết bị đã gỡ
@@ -114,7 +131,12 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   giờ địa phương hiện tại (`getLocalHour()` trong `time.util.ts`, theo `User.timezone`) VÀ có ít
   nhất 1 `PushSubscription`, bỏ qua ai đã đạt mục tiêu ngày hôm nay (`UserDailyActivity.goalMet`
   của ngày local — tính bằng `localStudyDate()`/`STREAK_DAY_CUTOFF_HOUR` giống `StreakService`)
-  — tránh nhắc thừa khi đã học đủ. Chạy theo GIỜ (không phải phút) nên chỉ khớp đúng 1 lần/ngày
+  — tránh nhắc thừa khi đã học đủ. **Nội dung CÁ NHÂN HOÁ** (từ 2026-09-19) — trước đó câu nhắc
+  luôn chung chung ("Chỉ vài phút ôn từ vựng..."), giờ đếm số từ đang đến hạn (`UserWordProgress`
+  active states + `dueAt <= now`, CÙNG điều kiện `getStats()`'s `dueNow`) rồi ghi thẳng số vào
+  nội dung ("Bạn có N từ cần ôn hôm nay") — thông báo có số liệu thật ghi nhận hiệu quả hơn nhắc
+  nhở mơ hồ trong nghiên cứu hành vi push notification. Rơi về câu chung chung "Học thêm vài từ
+  mới..." nếu không có từ nào đến hạn (vd user mới, chưa có gì để ôn). Chạy theo GIỜ (không phải phút) nên chỉ khớp đúng 1 lần/ngày
   cho hầu hết user, trừ số ít timezone lệch nửa giờ (vd Asia/Kathmandu) — chấp nhận được, một
   lời nhắc không cần chính xác tới phút. `PushService.sendToUser()` (tách riêng khỏi
   `sendTest()`) không throw nếu chưa bật/chưa có subscription, vì đây là job nền chạy cho nhiều

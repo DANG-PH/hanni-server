@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { SrsState } from '@prisma/client';
 import {
   getLocalHour,
   getLocalWeekday,
@@ -10,6 +11,12 @@ import {
 import type { Env } from '../../config/env.validation';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { PushService } from './push.service';
+
+const ACTIVE_SRS_STATES: SrsState[] = [
+  SrsState.LEARNING,
+  SrsState.REVIEW,
+  SrsState.RELEARNING,
+];
 
 /** Giờ địa phương gửi cảnh báo "sắp mất chuỗi" — cố định (không cho user tự
  * chỉnh như `reminderHour`), chọn buổi tối để còn kịp học trước khi ngày học
@@ -87,10 +94,27 @@ export class ReminderService {
         });
         if (activity?.goalMet) return; // đã học đủ hôm nay, khỏi nhắc
 
+        // Nhắc CỤ THỂ số từ đến hạn thay vì câu chung chung — thông báo có
+        // số liệu thật đã được ghi nhận là hiệu quả hơn nhiều so với nhắc
+        // nhở mơ hồ (nghiên cứu hành vi push notification: cá nhân hoá tăng
+        // tỷ lệ mở đáng kể so với nội dung generic).
+        const dueCount = await this.prisma.userWordProgress.count({
+          where: {
+            userId: user.id,
+            isSuspended: false,
+            state: { in: ACTIVE_SRS_STATES },
+            dueAt: { lte: now },
+          },
+        });
+        const body =
+          dueCount > 0
+            ? `Bạn có ${dueCount} từ cần ôn hôm nay — chỉ mất vài phút thôi!`
+            : 'Học thêm vài từ mới hôm nay để mở rộng vốn từ nhé.';
+
         const sent = await this.push.sendToUser(
           user.id,
           'Đến giờ học tiếng Trung rồi!',
-          'Chỉ vài phút ôn từ vựng hôm nay để giữ chuỗi ngày học của bạn nhé.',
+          body,
         );
         if (sent > 0) sentCount += 1;
       }),

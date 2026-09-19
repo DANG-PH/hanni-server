@@ -339,27 +339,36 @@ export class ReviewService {
     );
     const newPerDay = user.settings?.newCardsPerDay ?? 10;
 
-    const [dueNow, learnedTotal, inProgress, reviewsDoneToday, newDoneToday] =
-      await Promise.all([
-        this.prisma.userWordProgress.count({
-          where: {
-            userId,
-            isSuspended: false,
-            state: { in: ACTIVE_STATES },
-            dueAt: { lte: now },
-          },
-        }),
-        this.prisma.userWordProgress.count({
-          where: { userId, learnedAt: { not: null } },
-        }),
-        this.prisma.userWordProgress.count({ where: { userId } }),
-        this.prisma.reviewLog.count({
-          where: { userId, reviewedAt: { gte: dayStart } },
-        }),
-        this.prisma.reviewLog.count({
-          where: { userId, reviewType: 'LEARN', reviewedAt: { gte: dayStart } },
-        }),
-      ]);
+    const [
+      dueNow,
+      learnedTotal,
+      inProgress,
+      reviewsDoneToday,
+      newDoneToday,
+      leechCount,
+    ] = await Promise.all([
+      this.prisma.userWordProgress.count({
+        where: {
+          userId,
+          isSuspended: false,
+          state: { in: ACTIVE_STATES },
+          dueAt: { lte: now },
+        },
+      }),
+      this.prisma.userWordProgress.count({
+        where: { userId, learnedAt: { not: null } },
+      }),
+      this.prisma.userWordProgress.count({ where: { userId } }),
+      this.prisma.reviewLog.count({
+        where: { userId, reviewedAt: { gte: dayStart } },
+      }),
+      this.prisma.reviewLog.count({
+        where: { userId, reviewType: 'LEARN', reviewedAt: { gte: dayStart } },
+      }),
+      this.prisma.userWordProgress.count({
+        where: { userId, isLeech: true },
+      }),
+    ]);
 
     return {
       dueNow,
@@ -368,7 +377,42 @@ export class ReviewService {
       reviewsDoneToday,
       newDoneToday,
       newRemaining: Math.max(0, newPerDay - newDoneToday),
+      leechCount,
     };
+  }
+
+  /** "Từ khó nhớ" (leech, thuật ngữ Anki) — từ đã sai đủ `LEECH_LAPSES` lần
+   * (8 lần, xem sm2.scheduler.ts). Field `isLeech` đã tính + lưu đúng mỗi
+   * lần review từ trước tới giờ (`review()` ở trên) nhưng CHƯA có API nào
+   * đọc lại — cả 2 phía server/client đều chưa dùng tới, tận dụng ngay vì
+   * đây là tín hiệu SRS giá trị thật (Anki coi đây là công cụ quan trọng
+   * giúp người học biết chính xác từ nào cần chú ý nhiều hơn) mà không tốn
+   * gì thêm để tính lại. Sắp theo `lapses` giảm dần — từ sai nhiều nhất lên
+   * đầu. Không lọc theo `dueAt` (khác `getQueue()`) vì đây là màn "xem toàn
+   * bộ từ khó", không phải hàng đợi ôn hôm nay — từ khó có thể chưa tới hạn
+   * ôn lại nhưng vẫn đáng để người học biết mình từng sai nhiều lần. */
+  async getLeeches(userId: string) {
+    const rows = await this.prisma.userWordProgress.findMany({
+      where: { userId, isLeech: true },
+      orderBy: { lapses: 'desc' },
+      include: {
+        word: {
+          select: {
+            id: true,
+            simplified: true,
+            pinyin: true,
+            meaningVi: true,
+            hskLevel: true,
+            audioUrl: true,
+          },
+        },
+      },
+    });
+    return rows.map((r) => ({
+      word: r.word,
+      lapses: r.lapses,
+      dueAt: r.dueAt,
+    }));
   }
 }
 
