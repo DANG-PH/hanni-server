@@ -29,6 +29,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { PracticeModule } from './modules/practice/practice.module';
+import { PremiumModule } from './modules/premium/premium.module';
 import { ProgressModule } from './modules/progress/progress.module';
 import { PushModule } from './modules/push/push.module';
 import { QuestsModule } from './modules/quests/quests.module';
@@ -98,6 +99,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
     MinigameModule,
     DuelModule,
     PaymentsModule,
+    PremiumModule,
     HealthModule,
   ],
   providers: [

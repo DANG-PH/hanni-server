@@ -11,6 +11,7 @@ import type { Env } from '../../config/env.validation';
 import { PasswordService } from '../auth/password.service';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { AVATAR_FRAMES } from '../shop/frame-catalog';
+import { isPremiumActive } from '../premium/premium-plans';
 
 interface CreateUserInput {
   email: string;
@@ -100,6 +101,7 @@ export class UsersService {
           displayName: true,
           avatarUrl: true,
           createdAt: true,
+          premiumUntil: true,
           settings: { select: { equippedFrame: true } },
         },
       }),
@@ -161,6 +163,7 @@ export class UsersService {
       id: user.id,
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
+      isPremium: isPremiumActive(user.premiumUntil),
       equippedFrame: equippedFrame
         ? { key: equippedFrame.key, colors: equippedFrame.colors }
         : null,

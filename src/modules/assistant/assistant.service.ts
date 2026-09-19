@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   Logger,
   MessageEvent,
@@ -14,7 +15,15 @@ import { ChatRole, SrsState } from '@prisma/client';
 import { Observable } from 'rxjs';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import type { Env } from '../../config/env.validation';
+import { startOfLocalDayInstant } from '../../common/time.util';
+import { isPremiumActive } from '../premium/premium-plans';
 import { EmbeddedChunk, InMemoryVectorStore } from './rag/vector-store';
+
+/** Hạn mức lượt hỏi/ngày cho user MIỄN PHÍ — Premium không giới hạn. Đúng
+ * hướng đã ghi ở TODO(scale) bên dưới: cần hạn mức/ngày trước khi ra mắt
+ * rộng để bảo vệ quota Gemini free tier dùng CHUNG cho mọi user, giờ gắn
+ * luôn với gói Premium thay vì chặn cứng tất cả. */
+export const FREE_ASK_DAILY_LIMIT = 15;
 
 /** Hành động phía client thực hiện được sau khi model gọi 1 tool điều
  * hướng — trợ lý chỉ ĐƯA RA đường dẫn, người dùng tự bấm mở (xem
@@ -198,12 +207,12 @@ export class AssistantService implements OnModuleInit {
   // index trong lúc test, xem README lịch sử buildIndex()). Đã BỎ
   // `@Throttle` ở assistant.controller.ts (chặn cả lúc test lẫn dùng thật,
   // trong khi vẫn KHÔNG bảo vệ được quota chung khi nhiều user thật cùng
-  // dùng) — giới hạn thực tế bây giờ chỉ còn tới từ quota Gemini free tier
-  // dùng chung. Trước khi ra mắt rộng cần: (1) nâng lên gói Gemini trả phí
-  // (bỏ giới hạn free tier) hoặc (2) thêm giới hạn số lượt hỏi/ngày mỗi user
-  // (DB đếm theo ChatMessage.createdAt, kiểu quota giống PracticeAttempt) —
-  // có thể gắn với tính năng nạp tiền/gói trả phí sau này (chưa làm, để
-  // dành bàn riêng khi cần) để user trả phí có hạn mức cao hơn user miễn phí.
+  // dùng). ĐÃ LÀM phương án (2) đề xuất trước đây: `checkDailyAskQuota()`
+  // giới hạn `FREE_ASK_DAILY_LIMIT` lượt/ngày cho user miễn phí, Premium
+  // (`isPremiumActive()`) không giới hạn — xem `hanni-server/CLAUDE.md` mục
+  // Premium. Vẫn còn thiếu phương án (1) (nâng gói Gemini trả phí) nếu quota
+  // CHUNG cho mọi user vẫn hết dù đã giới hạn từng user — cân nhắc sau khi
+  // quan sát mức dùng thật.
 
   constructor(
     private readonly config: ConfigService<Env, true>,
@@ -211,6 +220,35 @@ export class AssistantService implements OnModuleInit {
   ) {
     const apiKey = this.config.get('GEMINI_API_KEY', { infer: true });
     this.genAI = apiKey ? new GoogleGenAI({ apiKey }) : null;
+  }
+
+  /** Ném lỗi nếu user MIỄN PHÍ đã hỏi đủ `FREE_ASK_DAILY_LIMIT` lượt hôm
+   * nay — Premium bỏ qua hoàn toàn. Đếm theo "ngày học" (timezone user +
+   * `STREAK_DAY_CUTOFF_HOUR`) cho nhất quán với streak/nhiệm vụ hàng ngày,
+   * không phải nửa đêm UTC. */
+  private async checkDailyAskQuota(userId: string): Promise<void> {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { premiumUntil: true, timezone: true },
+    });
+    if (isPremiumActive(user.premiumUntil)) return;
+
+    const cutoffHour = this.config.get('STREAK_DAY_CUTOFF_HOUR', {
+      infer: true,
+    });
+    const since = startOfLocalDayInstant(new Date(), user.timezone, cutoffHour);
+    const usedToday = await this.prisma.chatMessage.count({
+      where: {
+        role: ChatRole.USER,
+        createdAt: { gte: since },
+        session: { userId },
+      },
+    });
+    if (usedToday >= FREE_ASK_DAILY_LIMIT) {
+      throw new ForbiddenException(
+        `Bạn đã dùng hết ${FREE_ASK_DAILY_LIMIT} lượt hỏi miễn phí hôm nay. Nâng cấp Premium để hỏi không giới hạn.`,
+      );
+    }
   }
 
   onModuleInit(): void {
@@ -424,6 +462,7 @@ export class AssistantService implements OnModuleInit {
     message: string,
     sessionId?: string,
   ): Promise<{ message: string; sessionId: string; action?: AssistantAction }> {
+    await this.checkDailyAskQuota(userId);
     const session = sessionId
       ? await this.requireOwnSession(userId, sessionId)
       : await this.getOrCreateLatestSession(userId);
@@ -469,6 +508,17 @@ export class AssistantService implements OnModuleInit {
                 delta:
                   'Trợ lý AI chưa được bật — cần cấu hình GEMINI_API_KEY trước đã.',
               }),
+            });
+            subscriber.next({ data: JSON.stringify({ done: true }) });
+            subscriber.complete();
+            return;
+          }
+
+          try {
+            await this.checkDailyAskQuota(userId);
+          } catch (err) {
+            subscriber.next({
+              data: JSON.stringify({ delta: (err as Error).message }),
             });
             subscriber.next({ data: JSON.stringify({ done: true }) });
             subscriber.complete();

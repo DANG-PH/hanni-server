@@ -50,9 +50,9 @@ export class AssistantController {
   }
 
   // Đã bỏ @Throttle theo yêu cầu (chặn cả lúc test lẫn dùng thật) — giới hạn
-  // thực tế hiện chỉ còn tới từ quota Gemini free tier dùng chung, XEM
-  // TODO(scale) ở assistant.service.ts. Cân nhắc thêm lại throttle riêng nếu
-  // sau này thấy có spam/lạm dụng thật.
+  // spam ngắn hạn giờ không còn, nhưng `AssistantService.checkDailyAskQuota()`
+  // đã chặn LẠM DỤNG DÀI HẠN qua hạn mức lượt hỏi/ngày cho user miễn phí
+  // (Premium không giới hạn), xem TODO(scale) ở assistant.service.ts.
   @Post('ask')
   ask(@CurrentUser() user: AuthUser, @Body() dto: AskAssistantDto) {
     return this.assistant.ask(user.id, dto.message, dto.sessionId);

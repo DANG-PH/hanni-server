@@ -6,6 +6,10 @@ export interface AvatarFrame {
    * chép tay lại ở client) giống đúng cách `LeagueTier.color` đã làm, tránh
    * lệch màu giữa 2 nơi khi thêm/sửa khung sau này. */
   colors: [string, string];
+  /** true = khung ĐỘC QUYỀN Premium — không mua được bằng xu (`price` bỏ
+   * qua), tự động "sở hữu" khi đang Premium, mất quyền dùng nếu hết hạn.
+   * Xem `ShopService`. */
+  premiumOnly?: boolean;
 }
 
 /**
@@ -42,5 +46,12 @@ export const AVATAR_FRAMES: AvatarFrame[] = [
     name: 'Rồng Thiêng',
     price: 800,
     colors: ['#dc3526', '#f0d078'],
+  },
+  {
+    key: 'phoenix',
+    name: 'Phượng Hoàng (Premium)',
+    price: 0,
+    colors: ['#8a4fbf', '#f0d078'],
+    premiumOnly: true,
   },
 ];

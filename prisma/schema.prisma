@@ -133,6 +133,11 @@ model User {
   timezone        String    @default("Asia/Ho_Chi_Minh")
   locale          String    @default("vi")
   role            String    @default("user") // user | admin | translator
+  /// Hạn dùng Premium — null = chưa từng mua/đã hết hạn. Mốc xa (năm 2099)
+  /// = gói "trọn đời" (xem PREMIUM_LIFETIME_UNTIL ở premium-plans.ts), KHÔNG
+  /// tự động gia hạn định kỳ (payOS không hỗ trợ thu định kỳ) — mua thêm
+  /// khi đang Premium sẽ NỐI DÀI từ hạn cũ, không phải từ hôm nay.
+  premiumUntil    DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   lastActiveAt    DateTime?
@@ -936,14 +941,25 @@ model PaymentOrder {
   orderCode          Int                @unique @default(autoincrement())
   amountVnd          Int
   /// = amountVnd (tỷ giá 1 VNĐ = 1 xu) — tách cột riêng để nếu sau này đổi
-  /// tỷ giá khuyến mãi thì không cần suy ngược từ amountVnd.
+  /// tỷ giá khuyến mãi thì không cần suy ngược từ amountVnd. 0 với đơn Premium.
   xuAmount           Int
+  /// TOPUP (nạp xu) hay PREMIUM (mua gói Premium) — CÙNG 1 bảng/webhook để
+  /// tái dùng nguyên vẹn logic xác thực chữ ký + idempotent của payOS thay
+  /// vì dựng bảng/webhook riêng cho Premium.
+  kind               PaymentOrderKind   @default(TOPUP)
+  /// Key trong PREMIUM_PLANS (premium-plans.ts) — null nếu kind = TOPUP.
+  premiumPlanKey     String?
   status             PaymentOrderStatus @default(PENDING)
   payosPaymentLinkId String?
   createdAt          DateTime           @default(now())
   paidAt             DateTime?
 
   @@index([userId, createdAt])
+}
+
+enum PaymentOrderKind {
+  TOPUP
+  PREMIUM
 }
 
 /// Điểm ELO cho "Đấu 1v1" — Giai đoạn 2 minigame (xem FEATURES.md). CHƯA có

@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, Max, Min } from 'class-validator';
+import { IsInt, IsString, Max, Min } from 'class-validator';
 
 /** Giới hạn 1 lần nạp — chặn nhầm lẫn/lạm dụng ở giai đoạn đầu (chưa có
  * lịch sử giao dịch thật để tinh chỉnh), không phải giới hạn kỹ thuật của
@@ -13,4 +13,9 @@ export class CreateTopUpDto {
   @Min(MIN_TOPUP_VND)
   @Max(MAX_TOPUP_VND)
   amountVnd!: number;
+}
+
+export class CreatePremiumCheckoutDto {
+  @IsString()
+  planKey!: string;
 }

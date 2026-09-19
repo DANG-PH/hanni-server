@@ -12,6 +12,7 @@ import type { Webhook } from '@payos/node/lib/resources/webhooks/webhook';
 import type { Env } from '../../config/env.validation';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { WalletService } from '../wallet/wallet.service';
+import { extendPremiumUntil, PREMIUM_PLANS } from '../premium/premium-plans';
 
 /** Tỷ giá nạp xu — 1 VNĐ = 1 xu, đúng như đề xuất ban đầu (xem FEATURES.md
  * mục đánh giá rủi ro tài chính: an toàn hơn vì payOS dùng mô hình A2A,
@@ -118,6 +119,60 @@ export class PaymentsService {
     }
   }
 
+  /** Y hệt `createTopUp()` nhưng cho gói Premium — dùng CHUNG bảng
+   * `PaymentOrder`/webhook (phân biệt qua cột `kind`) để tái dùng nguyên
+   * vẹn logic xác thực chữ ký + idempotent của payOS, không dựng luồng
+   * thanh toán thứ 2 song song. */
+  async createPremiumCheckout(
+    userId: string,
+    planKey: string,
+  ): Promise<{ checkoutUrl: string; qrCode: string; orderCode: number }> {
+    const plan = PREMIUM_PLANS.find((p) => p.key === planKey);
+    if (!plan) throw new BadRequestException('Không tìm thấy gói Premium này');
+    const client = this.getClient();
+
+    const order = await this.prisma.paymentOrder.create({
+      data: {
+        userId,
+        amountVnd: plan.priceVnd,
+        xuAmount: 0,
+        kind: 'PREMIUM',
+        premiumPlanKey: planKey,
+      },
+    });
+
+    const frontendUrl = this.config.get('FRONTEND_URL', { infer: true });
+    try {
+      const link = await client.paymentRequests.create({
+        orderCode: order.orderCode,
+        amount: plan.priceVnd,
+        description: `Hanni Premium #${order.orderCode}`,
+        returnUrl: `${frontendUrl}/account?premium=${order.orderCode}`,
+        cancelUrl: `${frontendUrl}/account?premium=${order.orderCode}&cancelled=1`,
+      });
+
+      await this.prisma.paymentOrder.update({
+        where: { id: order.id },
+        data: { payosPaymentLinkId: link.paymentLinkId },
+      });
+
+      return {
+        checkoutUrl: link.checkoutUrl,
+        qrCode: link.qrCode,
+        orderCode: order.orderCode,
+      };
+    } catch (err) {
+      await this.prisma.paymentOrder.update({
+        where: { id: order.id },
+        data: { status: PaymentOrderStatus.CANCELLED },
+      });
+      this.logger.error(`Tạo payment link payOS (Premium) thất bại: ${err}`);
+      throw new BadRequestException(
+        'Chưa tạo được link thanh toán, thử lại nhé',
+      );
+    }
+  }
+
   /** Đọc trạng thái đơn nạp — dùng cho trang /account sau khi payOS
    * redirect về qua `returnUrl`. Đọc thẳng DB (đã được webhook cập nhật)
    * thay vì gọi lại API payOS — nhanh hơn, và tránh phụ thuộc thêm 1 lượt
@@ -133,6 +188,8 @@ export class PaymentsService {
       orderCode: order.orderCode,
       amountVnd: order.amountVnd,
       xuAmount: order.xuAmount,
+      kind: order.kind,
+      premiumPlanKey: order.premiumPlanKey,
       status: order.status,
     };
   }
@@ -147,6 +204,8 @@ export class PaymentsService {
       orderCode: o.orderCode,
       amountVnd: o.amountVnd,
       xuAmount: o.xuAmount,
+      kind: o.kind,
+      premiumPlanKey: o.premiumPlanKey,
       status: o.status,
       createdAt: o.createdAt,
     }));
@@ -191,6 +250,22 @@ export class PaymentsService {
       where: { id: order.id },
       data: { status: PaymentOrderStatus.PAID, paidAt: new Date() },
     });
-    await this.wallet.credit(order.userId, order.xuAmount, 'topup');
+
+    if (order.kind === 'PREMIUM') {
+      const user = await this.prisma.user.findUniqueOrThrow({
+        where: { id: order.userId },
+        select: { premiumUntil: true },
+      });
+      const newUntil = extendPremiumUntil(
+        user.premiumUntil,
+        order.premiumPlanKey!,
+      );
+      await this.prisma.user.update({
+        where: { id: order.userId },
+        data: { premiumUntil: newUntil },
+      });
+    } else {
+      await this.wallet.credit(order.userId, order.xuAmount, 'topup');
+    }
   }
 }

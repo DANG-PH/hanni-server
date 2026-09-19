@@ -203,6 +203,46 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   đăng ký ở my.payos.vn, hoàn tất eKYC, lấy `clientId`/`apiKey`/`checksumKey` rồi điền vào
   `.env.production.local`, và khai báo webhook URL
   (`https://<domain>/api/payments/webhook/payos`) trong dashboard payOS.
+- **Premium (`src/modules/premium`, field `User.premiumUntil`, từ 2026-09-19)** — quyết định
+  SẢN PHẨM QUAN TRỌNG đã hỏi thẳng người dùng trước khi làm (2 câu hỏi qua AskUserQuestion):
+  (1) **KHÔNG khoá bất kỳ nội dung học nào** — toàn bộ 9 cấp HSK/từ vựng/ngữ pháp vẫn miễn phí y
+  hệt hiện tại, khác hẳn app đối thủ tham khảo lúc thiết kế (khoá HSK2-9 sau paywall). Premium ở
+  Hanni CHỈ mở thêm TIỆN ÍCH, KHÔNG đụng tới giá trị giáo dục cốt lõi — tránh rủi ro user hiện
+  tại bị mất quyền truy cập nội dung đang dùng miễn phí. (2) **Trả 1 lần cho N tháng, KHÔNG tự
+  động gia hạn định kỳ** — payOS chỉ hỗ trợ thanh toán 1 lần (không có API thu định kỳ kiểu thẻ
+  tín dụng), nên hết hạn tự rơi về free, không tự trừ tiền tiếp. Bảng giá THAM KHẢO (tự điều
+  chỉnh ở `premium-plans.ts`, cố tình định giá THẤP hơn nhiều so với app đối thủ vì không khoá
+  nội dung): Premium tháng 19k, 3 tháng 49k, 6 tháng 89k, năm 149k, trọn đời 399k.
+  **Dùng CHUNG bảng `PaymentOrder`/webhook payOS với nạp xu** (thêm cột `kind: TOPUP|PREMIUM` +
+  `premiumPlanKey`) thay vì dựng luồng thanh toán riêng — tái dùng nguyên vẹn logic xác thực chữ
+  ký + idempotent đã có. `PaymentsService.createPremiumCheckout()` y hệt `createTopUp()` nhưng
+  `amountVnd` lấy từ giá gói, `xuAmount: 0`; `handleWebhook()` branch theo `order.kind`: TOPUP
+  thì `wallet.credit()` như cũ, PREMIUM thì `extendPremiumUntil()` (premium-plans.ts) rồi ghi
+  `User.premiumUntil`. **Cộng dồn khi mua thêm lúc đang Premium** — nối tiếp từ hạn cũ (nếu còn
+  hiệu lực) thay vì tính lại từ hôm nay, giống chuẩn gia hạn subscription thông thường. Gói
+  "trọn đời" lưu bằng MỐC XA (`PREMIUM_LIFETIME_UNTIL`, năm 2099) thay vì cột boolean riêng —
+  mọi chỗ chỉ cần so `premiumUntil > now()` (`isPremiumActive()`), không cần rẽ nhánh thêm.
+  `PremiumService.getStatus()` (`GET /premium/status`) đọc thẳng `User.premiumUntil`, KHÔNG phụ
+  thuộc `PaymentsService` (tránh vòng lặp module — `PremiumModule` không cần import
+  `PaymentsModule` vì checkout endpoint nằm ở `PaymentsController`, chỉ import 2 hàm thuần từ
+  `premium-plans.ts`).
+  **2 quyền lợi THẬT đã cài** (không hứa suông — chỉ liệt kê đúng những gì có code):
+  (1) **Trợ lý AI không giới hạn lượt hỏi/ngày** — giải quyết đúng `TODO(scale)` đã ghi từ trước
+  ở `assistant.service.ts` (cần hạn mức/ngày trước khi ra mắt rộng, tránh hết chung quota Gemini
+  free tier): `checkDailyAskQuota()` đếm `ChatMessage` role USER trong "ngày học" (timezone user
+  + `STREAK_DAY_CUTOFF_HOUR`, đồng bộ cách tính ngày với streak/nhiệm vụ hàng ngày), free giới
+  hạn `FREE_ASK_DAILY_LIMIT` (15) lượt/ngày, Premium bỏ qua hoàn toàn. Gọi ở CẢ `ask()` (ném
+  `ForbiddenException`, hiện lỗi rõ ràng cho REST) lẫn `askStream()` (bọc try/catch RIÊNG trả về
+  1 dòng `delta` thân thiện qua SSE — nếu để lọt vào catch-all chung của stream sẽ chỉ còn thấy
+  "Có lỗi xảy ra" chung chung, mất hẳn thông điệp mời nâng cấp). (2) **Khung avatar "Phượng
+  Hoàng" độc quyền** — thêm cờ `premiumOnly` vào `AvatarFrame` (`frame-catalog.ts`), khung này
+  KHÔNG mua được bằng xu (`ShopService.buy()` chặn thẳng), tự động coi là "đã sở hữu" khi đang
+  Premium (`getCatalog()`), mất quyền DÙNG (không mất quyền hiển thị nếu đã trót chọn — user tự
+  chọn khung khác) nếu Premium hết hạn (equip() kiểm tra lại `isPremiumActive()`). Hồ sơ công
+  khai (`getPublicProfile()`) trả thêm `isPremium` để hiện huy hiệu "PREMIUM" cạnh tên.
+  **CHƯA thể test luồng thanh toán thật** (giống nạp xu ở trên — chưa có tài khoản merchant
+  payOS thật), chỉ verify được qua `GET /premium/status` + `/payments/configured` trả đúng và
+  UI tự ẩn nút thanh toán gọn gàng khi chưa cấu hình.
 - **Minigame "Dịch tốc độ" + "Nghe đoán từ" + "Ghép cặp" + "Chọn pinyin đúng"
   (`src/modules/minigame`, model `MinigameSession`)**: Giai đoạn 1 theo lộ trình 5 giai đoạn
   trong `FEATURES.md` — chơi 1 mình, tính giờ, bảng xếp hạng ngày/tuần RIÊNG theo từng mode (gộp

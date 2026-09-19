@@ -13,7 +13,7 @@ import type { Webhook } from '@payos/node/lib/resources/webhooks/webhook';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import type { AuthUser } from '../../common/types';
-import { CreateTopUpDto } from './dto/payments.dto';
+import { CreatePremiumCheckoutDto, CreateTopUpDto } from './dto/payments.dto';
 import { PaymentsService } from './payments.service';
 
 @ApiTags('payments')
@@ -44,6 +44,15 @@ export class PaymentsController {
   @Get('history')
   history(@CurrentUser() user: AuthUser) {
     return this.payments.getHistory(user.id);
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('premium-checkout')
+  createPremiumCheckout(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreatePremiumCheckoutDto,
+  ) {
+    return this.payments.createPremiumCheckout(user.id, dto.planKey);
   }
 
   /** payOS gọi thẳng endpoint này từ máy chủ của họ — không có cookie đăng

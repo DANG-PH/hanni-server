@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../infra/prisma/prisma.service';
+import { isPremiumActive } from '../premium/premium-plans';
 import { WalletService } from '../wallet/wallet.service';
 import { AVATAR_FRAMES } from './frame-catalog';
 
@@ -8,6 +9,7 @@ export interface FrameCatalogItem {
   name: string;
   price: number;
   colors: [string, string];
+  premiumOnly: boolean;
   owned: boolean;
   equipped: boolean;
 }
@@ -27,22 +29,27 @@ export class ShopService {
     frames: FrameCatalogItem[];
     balance: number;
   }> {
-    const [owned, settings, balance] = await Promise.all([
+    const [owned, user, balance] = await Promise.all([
       this.prisma.userFrame.findMany({
         where: { userId },
         select: { frameKey: true },
       }),
-      this.prisma.userSettings.findUnique({
-        where: { userId },
-        select: { equippedFrame: true },
+      this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: {
+          premiumUntil: true,
+          settings: { select: { equippedFrame: true } },
+        },
       }),
       this.wallet.getBalance(userId),
     ]);
     const ownedKeys = new Set(owned.map((f) => f.frameKey));
+    const premium = isPremiumActive(user.premiumUntil);
     const frames = AVATAR_FRAMES.map((frame) => ({
       ...frame,
-      owned: ownedKeys.has(frame.key),
-      equipped: settings?.equippedFrame === frame.key,
+      premiumOnly: Boolean(frame.premiumOnly),
+      owned: frame.premiumOnly ? premium : ownedKeys.has(frame.key),
+      equipped: user.settings?.equippedFrame === frame.key,
     }));
     return { frames, balance };
   }
@@ -50,6 +57,11 @@ export class ShopService {
   async buy(userId: string, frameKey: string): Promise<FrameCatalogItem> {
     const frame = AVATAR_FRAMES.find((f) => f.key === frameKey);
     if (!frame) throw new BadRequestException('Không tìm thấy khung này');
+    if (frame.premiumOnly) {
+      throw new BadRequestException(
+        'Khung này chỉ dành cho Premium, không mua được bằng xu',
+      );
+    }
 
     const already = await this.prisma.userFrame.findUnique({
       where: { userId_frameKey: { userId, frameKey } },
@@ -58,16 +70,28 @@ export class ShopService {
 
     await this.wallet.debit(userId, frame.price, `buy_frame:${frameKey}`);
     await this.prisma.userFrame.create({ data: { userId, frameKey } });
-    return { ...frame, owned: true, equipped: false };
+    return { ...frame, premiumOnly: false, owned: true, equipped: false };
   }
 
   /** `frameKey: null` = bỏ khung, dùng avatar trơn. */
   async equip(userId: string, frameKey: string | null): Promise<void> {
     if (frameKey !== null) {
-      const owned = await this.prisma.userFrame.findUnique({
-        where: { userId_frameKey: { userId, frameKey } },
-      });
-      if (!owned) throw new BadRequestException('Bạn chưa mua khung này');
+      const frame = AVATAR_FRAMES.find((f) => f.key === frameKey);
+      if (!frame) throw new BadRequestException('Không tìm thấy khung này');
+      if (frame.premiumOnly) {
+        const user = await this.prisma.user.findUniqueOrThrow({
+          where: { id: userId },
+          select: { premiumUntil: true },
+        });
+        if (!isPremiumActive(user.premiumUntil)) {
+          throw new BadRequestException('Khung này chỉ dành cho Premium');
+        }
+      } else {
+        const owned = await this.prisma.userFrame.findUnique({
+          where: { userId_frameKey: { userId, frameKey } },
+        });
+        if (!owned) throw new BadRequestException('Bạn chưa mua khung này');
+      }
     }
     await this.prisma.userSettings.update({
       where: { userId },
