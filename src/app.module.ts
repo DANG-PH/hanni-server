@@ -33,6 +33,7 @@ import { ProgressModule } from './modules/progress/progress.module';
 import { PushModule } from './modules/push/push.module';
 import { QuestsModule } from './modules/quests/quests.module';
 import { ReferralsModule } from './modules/referrals/referrals.module';
+import { ShopModule } from './modules/shop/shop.module';
 import { SrsModule } from './modules/srs/srs.module';
 import { UsersModule } from './modules/users/users.module';
 import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
@@ -93,6 +94,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
     ReferralsModule,
     WalletModule,
     QuestsModule,
+    ShopModule,
     MinigameModule,
     DuelModule,
     PaymentsModule,

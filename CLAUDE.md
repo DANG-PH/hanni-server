@@ -329,6 +329,28 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   Client: `components/daily-quest-card.tsx` ở dashboard, cạnh thẻ Giải đấu tuần (lưới 2 cột
   Tailwind riêng trong `page.tsx`, KHÔNG dùng chung `.dailyGrid` có sẵn — cùng lý do tránh sửa
   CSS grid dùng chung với thẻ Giải đấu tuần).
+- **Cửa hàng trang trí — khung avatar** (`src/modules/shop`, `ShopService`, `frame-catalog.ts`,
+  từ 2026-09-19) — sink xu THỨ HAI sau lá chắn streak (300 xu): ví xu trước đó gần như không có
+  gì đáng mua thêm dù đã có nhiều nguồn kiếm (điểm danh, minigame, nhiệm vụ hàng ngày). 4 khung
+  avatar (Ngọc Bích 150 / Hoàng Kim 300 / Lửa Hồng 500 / Rồng Thiêng 800 xu), mua ĐỨT (không hết
+  hạn) qua `POST /shop/frames/:key/buy`, chỉ được DÙNG (không nhất thiết đã mua) qua `POST
+  /shop/frames/equip` (`frameKey: null` = gỡ khung). **CỐ Ý KHÔNG dùng cơ chế rương/random
+  reward** dù đã cân nhắc — xu ở đây có thể nạp bằng tiền thật qua payOS (1 VNĐ = 1 xu), gắn may
+  rủi vào tiền có thể quy đổi từ tiền thật sẽ mang màu sắc loot-box nhạy cảm về pháp lý/đạo đức;
+  mua đứt xác định giá rõ ràng an toàn hơn nhiều. Model `UserFrame` (unique `[userId, frameKey]`)
+  chỉ ghi nhận SỞ HỮU; khung ĐANG DÙNG lưu ở `UserSettings.equippedFrame` (field mới, giống chỗ
+  `reminderHour`/`srsScheduler` đã có). Màu khung (`colors: [string,string]`, dùng vẽ viền
+  gradient) LUÔN gửi từ server (catalog + hồ sơ công khai), client KHÔNG chép tay lại — giống
+  đúng cách `LeagueTier.color` đã làm, tránh lệch màu khi catalog đổi sau này. `UsersService.
+  getPublicProfile()` trả thêm `equippedFrame: {key, colors} | null` để `/u/[id]` hiện được khung
+  của người khác. Client: `components/avatar.tsx` thêm prop `frameColors` HOÀN TOÀN tuỳ chọn
+  (mặc định `null` = render y hệt trước đây, không đổi gì cho hàng chục nơi đang gọi `<Avatar>`
+  mà chưa truyền prop này — cố ý viết lại sao cho nhánh không-khung giữ nguyên byte-for-byte
+  logic cũ, tránh rủi ro layout ở những nơi dùng chung như bảng xếp hạng/tin nhắn/bình luận).
+  `components/frame-shop.tsx` (`/account`, ngay dưới thẻ Ví xu) là nơi DUY NHẤT mua/đổi khung ở
+  bản này — **CHƯA thread khung vào Avatar ở leaderboard/tin nhắn/bình luận** (cần API trả thêm
+  field cho từng dòng ở nhiều endpoint khác nhau, để dành làm sau nếu tính năng được đón nhận
+  tốt), hiện khung chỉ thấy được ở `/account` (xem trước) và hồ sơ công khai `/u/[id]`.
 - **Đấu đôi 2v2 (`src/modules/duel/team-duel.service.ts`, `TeamDuelService`)**: Giai đoạn 4
   minigame — kiến trúc SONG SONG với `DuelService` (hàng đợi/trạng thái trận RIÊNG, cùng "sống"
   trong `NotificationsModule` với cùng lý do `forwardRef()` tránh vòng lặp module), nhưng dùng

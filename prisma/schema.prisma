@@ -177,6 +177,7 @@ model User {
   paymentOrders       PaymentOrder[]
   leagueEntries       LeagueEntry[]
   dailyQuestClaims    DailyQuestClaim[]
+  frames              UserFrame[]
 
   @@index([lastActiveAt])
 }
@@ -244,6 +245,7 @@ model UserSettings {
   targetRetention     Float    @default(0.9) // chỉ dùng cho FSRS
   reminderHour        Int? // 0-23, giờ địa phương (cho push sau)
   weeklyDigestEnabled Boolean  @default(true) // email tổng kết tuần
+  equippedFrame       String? // key trong AVATAR_FRAMES (frame-catalog.ts), null = không dùng khung
   updatedAt           DateTime @updatedAt
 }
 
@@ -519,6 +521,19 @@ model DailyQuestClaim {
 
   @@unique([userId, localDate, questKey])
   @@index([userId, localDate])
+}
+
+/// Khung avatar ĐÃ MUA — thuần trang trí, xem AVATAR_FRAMES (frame-catalog.ts).
+/// Khung ĐANG DÙNG lưu ở `UserSettings.equippedFrame`, bảng này chỉ ghi
+/// nhận đã sở hữu (mua đứt, không hết hạn) để chặn mua lại 1 khung 2 lần.
+model UserFrame {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  frameKey  String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, frameKey])
 }
 
 /// Denormalize chuỗi streak để đọc nhanh (1-1 User).

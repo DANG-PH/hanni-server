@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import type { Env } from '../../config/env.validation';
 import { PasswordService } from '../auth/password.service';
 import { PrismaService } from '../../infra/prisma/prisma.service';
+import { AVATAR_FRAMES } from '../shop/frame-catalog';
 
 interface CreateUserInput {
   email: string;
@@ -99,6 +100,7 @@ export class UsersService {
           displayName: true,
           avatarUrl: true,
           createdAt: true,
+          settings: { select: { equippedFrame: true } },
         },
       }),
       this.prisma.userStreak.findUnique({ where: { userId: targetId } }),
@@ -151,11 +153,17 @@ export class UsersService {
       }),
     ]);
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+    const equippedFrame = AVATAR_FRAMES.find(
+      (f) => f.key === user.settings?.equippedFrame,
+    );
 
     return {
       id: user.id,
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
+      equippedFrame: equippedFrame
+        ? { key: equippedFrame.key, colors: equippedFrame.colors }
+        : null,
       joinedAt: user.createdAt,
       currentStreak: streak?.currentStreak ?? 0,
       longestStreak: streak?.longestStreak ?? 0,
