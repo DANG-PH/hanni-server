@@ -11,6 +11,7 @@ import type { Env } from '../../config/env.validation';
 import { PasswordService } from '../auth/password.service';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { AVATAR_FRAMES } from '../shop/frame-catalog';
+import { TITLE_CATALOG } from '../shop/title-catalog';
 import { isPremiumActive } from '../premium/premium-plans';
 
 interface CreateUserInput {
@@ -102,7 +103,7 @@ export class UsersService {
           avatarUrl: true,
           createdAt: true,
           premiumUntil: true,
-          settings: { select: { equippedFrame: true } },
+          settings: { select: { equippedFrame: true, equippedTitle: true } },
         },
       }),
       this.prisma.userStreak.findUnique({ where: { userId: targetId } }),
@@ -158,6 +159,9 @@ export class UsersService {
     const equippedFrame = AVATAR_FRAMES.find(
       (f) => f.key === user.settings?.equippedFrame,
     );
+    const equippedTitle = TITLE_CATALOG.find(
+      (t) => t.key === user.settings?.equippedTitle,
+    );
 
     return {
       id: user.id,
@@ -167,6 +171,7 @@ export class UsersService {
       equippedFrame: equippedFrame
         ? { key: equippedFrame.key, colors: equippedFrame.colors }
         : null,
+      equippedTitle: equippedTitle?.label ?? null,
       joinedAt: user.createdAt,
       currentStreak: streak?.currentStreak ?? 0,
       longestStreak: streak?.longestStreak ?? 0,

@@ -226,7 +226,8 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   thuộc `PaymentsService` (tránh vòng lặp module — `PremiumModule` không cần import
   `PaymentsModule` vì checkout endpoint nằm ở `PaymentsController`, chỉ import 2 hàm thuần từ
   `premium-plans.ts`).
-  **2 quyền lợi THẬT đã cài** (không hứa suông — chỉ liệt kê đúng những gì có code):
+  **Các quyền lợi THẬT đã cài** (không hứa suông — chỉ liệt kê đúng những gì có code, xem thêm
+  mục "Nhân đôi xu" ở phần Danh hiệu bên dưới cho quyền lợi mới nhất):
   (1) **Trợ lý AI không giới hạn lượt hỏi/ngày** — giải quyết đúng `TODO(scale)` đã ghi từ trước
   ở `assistant.service.ts` (cần hạn mức/ngày trước khi ra mắt rộng, tránh hết chung quota Gemini
   free tier): `checkDailyAskQuota()` đếm `ChatMessage` role USER trong "ngày học" (timezone user
@@ -426,7 +427,27 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `UserFrame` TRƯỚC (bắt lỗi P2002 → báo "đã sở hữu" thay vì trừ xu oan), CHỈ trừ xu SAU KHI
   tạo bản ghi thành công, và HOÀN TÁC (xoá) bản ghi vừa tạo nếu bước trừ xu thất bại (vd không
   đủ xu) — tránh phát sinh khung miễn phí. Đúng mẫu `QuestsService.tryClaim()` đã làm sẵn trong
-  cùng đợt code này (tạo bản ghi dựa vào unique constraint TRƯỚC, thưởng SAU).
+  cùng đợt code này (tạo bản ghi dựa vào unique constraint TRƯỚC, thưởng SAU). Đã verify TRỰC
+  TIẾP trên production cả 2 nhánh: mua thành công (168→18 xu, đúng 150) và mua lại khung đã sở
+  hữu (báo lỗi rõ ràng, không trừ xu lần 2).
+- **Danh hiệu (`title-catalog.ts`, `TitleService`, model `UserTitle`, từ 2026-09-19)** — sink xu
+  THỨ BA (sau lá chắn streak + khung avatar), theo yêu cầu mở rộng "xu cần mua được nhiều thứ
+  hơn". 6 danh hiệu (Chăm chỉ/Cú đêm 100 xu, Mọt sách/Ngôi sao mới nổi 200 xu, Bậc thầy từ vựng
+  400 xu, Huyền thoại 800 xu) — hiện dạng CHỮ cạnh tên trên hồ sơ công khai, KHÁC khung avatar
+  (viền quanh ảnh). CỐ TÌNH tách `TitleService` RIÊNG khỏi `ShopService` dù cơ chế mua/dùng
+  giống hệt nhau (đã áp dụng ĐÚNG NGAY TỪ ĐẦU thứ tự tạo-trước-trừ-xu-sau đã sửa ở khung avatar,
+  không lặp lại lỗi cũ) — không gộp thành 1 "cosmetic system" tổng quát vì mới có 2 loại vật
+  phẩm, gộp sớm là abstraction thừa. `equippedTitle` lưu ở `UserSettings` (giống `equippedFrame`),
+  `getPublicProfile()` trả thêm field này (chuỗi label, không phải object như frame vì không cần
+  màu sắc gì thêm).
+  **Quyền lợi Premium mới: NHÂN ĐÔI xu** (`PREMIUM_XU_MULTIPLIER = 2`, `applyPremiumMultiplier()`
+  ở `premium-plans.ts`) — áp dụng cho xu kiếm từ minigame (`MinigameService.creditMinigameReward()`,
+  dùng chung cho cả trắc nghiệm lẫn "Ghép cặp") và nhiệm vụ hàng ngày (`QuestsService.getToday()`'s
+  `xuOf()` — nhân TRƯỚC khi hiển thị lẫn khi thưởng, tránh UI hiện số gốc rồi thực nhận nhiều hơn
+  không giải thích được). KHÔNG áp dụng cho điểm danh hằng ngày (`DAILY_CHECKIN_REWARD`) — đó là
+  thưởng thói quen cố định, không nên tăng theo hoạt động. Tạo vòng lặp giữ chân có chủ đích: mua
+  Premium kiếm xu nhanh hơn → nhiều xu hơn để mua khung/danh hiệu mới → Premium càng đáng giá hơn
+  khi có nhiều thứ để mua hơn.
 - **Đấu đôi 2v2 (`src/modules/duel/team-duel.service.ts`, `TeamDuelService`)**: Giai đoạn 4
   minigame — kiến trúc SONG SONG với `DuelService` (hàng đợi/trạng thái trận RIÊNG, cùng "sống"
   trong `NotificationsModule` với cùng lý do `forwardRef()` tránh vòng lặp module), nhưng dùng

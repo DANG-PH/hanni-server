@@ -7,6 +7,7 @@ import {
   startOfLocalDayInstant,
 } from '../../common/time.util';
 import { PrismaService } from '../../infra/prisma/prisma.service';
+import { applyPremiumMultiplier } from '../premium/premium-plans';
 import { WalletService } from '../wallet/wallet.service';
 import {
   ALL_DONE_BONUS_XU,
@@ -50,7 +51,7 @@ export class QuestsService {
   async getToday(userId: string): Promise<TodayQuests> {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { timezone: true },
+      select: { timezone: true, premiumUntil: true },
     });
     const cutoffHour = this.config.get('STREAK_DAY_CUTOFF_HOUR', {
       infer: true,
@@ -72,6 +73,11 @@ export class QuestsService {
     });
     const claimedKeys = new Set(claims.map((c) => c.questKey));
 
+    // Premium x2 xu — hiện luôn số xu THẬT sẽ nhận (đã nhân) thay vì số gốc
+    // rồi âm thầm cộng nhiều hơn, tránh UI/thực nhận lệch nhau.
+    const xuOf = (base: number) =>
+      applyPremiumMultiplier(base, user.premiumUntil);
+
     let justClaimedXu = 0;
     const quests: QuestRow[] = [];
     for (const template of templates) {
@@ -79,17 +85,18 @@ export class QuestsService {
         progressByKey.get(template.key) ?? 0,
         template.target,
       );
+      const xu = xuOf(template.xu);
       let claimed = claimedKeys.has(template.key);
       if (!claimed && progress >= template.target) {
         const rewarded = await this.tryClaim(
           userId,
           localDate,
           template.key,
-          template.xu,
+          xu,
         );
         if (rewarded) {
           claimed = true;
-          justClaimedXu += template.xu;
+          justClaimedXu += xu;
         }
       }
       quests.push({
@@ -97,11 +104,12 @@ export class QuestsService {
         title: template.title,
         progress,
         target: template.target,
-        xu: template.xu,
+        xu,
         claimed,
       });
     }
 
+    const allDoneBonusXu = xuOf(ALL_DONE_BONUS_XU);
     const allDone = quests.every((q) => q.claimed);
     let allDoneClaimed = claimedKeys.has(ALL_DONE_KEY);
     if (allDone && !allDoneClaimed) {
@@ -109,18 +117,18 @@ export class QuestsService {
         userId,
         localDate,
         ALL_DONE_KEY,
-        ALL_DONE_BONUS_XU,
+        allDoneBonusXu,
       );
       if (rewarded) {
         allDoneClaimed = true;
-        justClaimedXu += ALL_DONE_BONUS_XU;
+        justClaimedXu += allDoneBonusXu;
       }
     }
 
     return {
       quests,
       allDone,
-      allDoneBonusXu: ALL_DONE_BONUS_XU,
+      allDoneBonusXu,
       allDoneClaimed,
       justClaimedXu,
     };

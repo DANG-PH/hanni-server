@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { GameMode, type Prisma } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
+import { applyPremiumMultiplier } from '../premium/premium-plans';
 import { WalletService } from '../wallet/wallet.service';
 import type { FinishMinigameDto } from './dto/minigame.dto';
 
@@ -212,14 +213,32 @@ export class MinigameService {
     });
 
     // 1 xu / câu đúng — đơn giản, minh bạch cho giai đoạn kiểm chứng gameplay.
-    const balance = await this.wallet.credit(userId, score, 'minigame');
+    const { coinsEarned, balance } = await this.creditMinigameReward(
+      userId,
+      score,
+    );
 
     return {
       score,
       totalAsked: answers.length,
-      coinsEarned: score,
+      coinsEarned,
       balance,
     };
+  }
+
+  /** Premium nhân đôi xu kiếm được từ minigame (xem `PREMIUM_XU_MULTIPLIER`
+   * ở premium-plans.ts) — dùng chung cho cả trắc nghiệm lẫn "Ghép cặp". */
+  private async creditMinigameReward(
+    userId: string,
+    score: number,
+  ): Promise<{ coinsEarned: number; balance: number }> {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { premiumUntil: true },
+    });
+    const coinsEarned = applyPremiumMultiplier(score, user.premiumUntil);
+    const balance = await this.wallet.credit(userId, coinsEarned, 'minigame');
+    return { coinsEarned, balance };
   }
 
   /** "Ghép cặp": không có gì bí mật để so khớp lại (khác trắc nghiệm — xem
@@ -245,12 +264,15 @@ export class MinigameService {
       },
     });
 
-    const balance = await this.wallet.credit(userId, score, 'minigame');
+    const { coinsEarned, balance } = await this.creditMinigameReward(
+      userId,
+      score,
+    );
 
     return {
       score,
       totalAsked: MATCH_PAIRS,
-      coinsEarned: score,
+      coinsEarned,
       balance,
     };
   }

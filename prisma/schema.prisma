@@ -184,6 +184,7 @@ model User {
   leagueEntries       LeagueEntry[]
   dailyQuestClaims    DailyQuestClaim[]
   frames              UserFrame[]
+  titles              UserTitle[]
 
   @@index([lastActiveAt])
 }
@@ -252,6 +253,7 @@ model UserSettings {
   reminderHour        Int? // 0-23, giờ địa phương (cho push sau)
   weeklyDigestEnabled Boolean  @default(true) // email tổng kết tuần
   equippedFrame       String? // key trong AVATAR_FRAMES (frame-catalog.ts), null = không dùng khung
+  equippedTitle       String? // key trong TITLE_CATALOG (title-catalog.ts), null = không dùng danh hiệu
   updatedAt           DateTime @updatedAt
 }
 
@@ -540,6 +542,19 @@ model UserFrame {
   createdAt DateTime @default(now())
 
   @@unique([userId, frameKey])
+}
+
+/// Danh hiệu (title) — vật phẩm trang trí THỨ HAI mua bằng xu, cùng mô hình
+/// mua-đứt như UserFrame nhưng hiện dạng CHỮ cạnh tên thay vì viền quanh
+/// avatar. Xem TITLE_CATALOG (title-catalog.ts).
+model UserTitle {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  titleKey  String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, titleKey])
 }
 
 /// Denormalize chuỗi streak để đọc nhanh (1-1 User).

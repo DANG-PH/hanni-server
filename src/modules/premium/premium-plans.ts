@@ -100,3 +100,19 @@ export function extendPremiumUntil(
   const base = isPremiumActive(current) ? current! : new Date();
   return addMonthsClamped(base, plan.months);
 }
+
+/** Nhân xu kiếm được từ minigame + nhiệm vụ hàng ngày cho Premium — quyền
+ * lợi MỚI (2026-09-19) tạo vòng lặp: mua Premium kiếm xu nhanh hơn ->
+ * nhiều xu hơn để mua khung/danh hiệu -> Premium càng đáng giá hơn. Không
+ * áp dụng cho điểm danh hằng ngày (`DAILY_CHECKIN_REWARD`, wallet.service.ts)
+ * — đó là thưởng thói quen cố định, không nên tăng theo hoạt động. */
+export const PREMIUM_XU_MULTIPLIER = 2;
+
+export function applyPremiumMultiplier(
+  amount: number,
+  premiumUntil: Date | null,
+): number {
+  return isPremiumActive(premiumUntil)
+    ? amount * PREMIUM_XU_MULTIPLIER
+    : amount;
+}
