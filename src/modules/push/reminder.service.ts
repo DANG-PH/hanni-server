@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import {
   getLocalHour,
+  getLocalWeekday,
   isoDateToUtcDate,
   localStudyDate,
 } from '../../common/time.util';
@@ -16,6 +17,12 @@ import { PushService } from './push.service';
  * lúc đó thì phiền — 21h vẫn còn vài tiếng mà không làm phiền giấc ngủ). */
 const STREAK_RISK_HOUR = 21;
 
+/** Thứ Sáu/Thứ Bảy (ISO: 5, 6) — 2 ngày mất streak nhiều nhất theo research
+ * hành vi Duolingo (bận đi chơi/tụ tập cuối tuần) — nhắc SỚM hơn thêm 1 lần
+ * ngoài lời nhắc `STREAK_RISK_HOUR` thường, để còn kịp học trước khi bận. */
+const WEEKEND_RISK_WEEKDAYS = [5, 6];
+const WEEKEND_EARLY_RISK_HOUR = 17;
+
 /**
  * Nhắc học tự động: mỗi giờ, tìm user có `UserSettings.reminderHour` khớp
  * giờ địa phương hiện tại VÀ chưa đạt mục tiêu ngày hôm nay — gửi push. Chạy
@@ -27,7 +34,10 @@ const STREAK_RISK_HOUR = 21;
  * lúc `STREAK_RISK_HOUR` cho ai có streak > 0 nhưng CHƯA có hoạt động nào
  * hôm nay — khác điều kiện với nhắc thường (dựa vào `goalMet`) vì streak chỉ
  * cần hoạt động ĐẦU TIÊN trong ngày là giữ được (xem `StreakService.
- * recordActivity()`'s `wasNewDay`), không cần đạt đủ mục tiêu.
+ * recordActivity()`'s `wasNewDay`), không cần đạt đủ mục tiêu. Riêng thứ
+ * Sáu/thứ Bảy có thêm `sendWeekendEarlyRiskReminders()` gửi SỚM hơn lúc
+ * `WEEKEND_EARLY_RISK_HOUR` — không thay thế lời nhắc 21h, cả 2 job đều tự
+ * kiểm tra lại `UserDailyActivity` nên không gửi trùng nếu đã học ở giữa.
  */
 @Injectable()
 export class ReminderService {
@@ -139,6 +149,62 @@ export class ReminderService {
 
     if (sentCount > 0) {
       this.logger.log(`Đã gửi cảnh báo mất chuỗi tới ${sentCount} người dùng`);
+    }
+  }
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async sendWeekendEarlyRiskReminders(): Promise<void> {
+    const now = new Date();
+    const cutoffHour = this.config.get('STREAK_DAY_CUTOFF_HOUR', {
+      infer: true,
+    });
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        pushSubscriptions: { some: {} },
+        streak: { currentStreak: { gt: 0 } },
+      },
+      select: {
+        id: true,
+        timezone: true,
+        streak: { select: { currentStreak: true } },
+      },
+    });
+    if (users.length === 0) return;
+
+    let sentCount = 0;
+    await Promise.all(
+      users.map(async (user) => {
+        if (
+          !WEEKEND_RISK_WEEKDAYS.includes(getLocalWeekday(now, user.timezone))
+        )
+          return;
+        if (getLocalHour(now, user.timezone) !== WEEKEND_EARLY_RISK_HOUR)
+          return;
+
+        const todayIso = localStudyDate(now, user.timezone, cutoffHour);
+        const activity = await this.prisma.userDailyActivity.findUnique({
+          where: {
+            userId_localDate: {
+              userId: user.id,
+              localDate: isoDateToUtcDate(todayIso),
+            },
+          },
+        });
+        if (activity) return; // đã có hoạt động hôm nay -> streak đã an toàn
+
+        const streakDays = user.streak?.currentStreak ?? 0;
+        const sent = await this.push.sendToUser(
+          user.id,
+          `Cuối tuần rồi, đừng quên chuỗi ${streakDays} ngày!`,
+          'Cuối tuần dễ bận đi chơi rồi quên mất — học vài phút ngay bây giờ cho chắc nhé.',
+        );
+        if (sent > 0) sentCount += 1;
+      }),
+    );
+
+    if (sentCount > 0) {
+      this.logger.log(`Đã gửi nhắc sớm cuối tuần tới ${sentCount} người dùng`);
     }
   }
 }

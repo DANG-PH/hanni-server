@@ -123,7 +123,13 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   cho user tự chỉnh như `reminderHour`) cho ai có `currentStreak > 0` nhưng CHƯA có bản ghi
   `UserDailyActivity` nào hôm nay — điều kiện khác nhắc thường (`goalMet`) vì streak chỉ cần
   hoạt động ĐẦU TIÊN trong ngày là giữ được (`StreakService.recordActivity()`'s `wasNewDay`),
-  không cần đạt đủ mục tiêu — cơ chế giữ chân người dùng kiểu Duolingo.
+  không cần đạt đủ mục tiêu — cơ chế giữ chân người dùng kiểu Duolingo. **Nhắc sớm cuối tuần**
+  (`sendWeekendEarlyRiskReminders()`, từ 2026-09-19) — research hành vi Duolingo: thứ Sáu/thứ
+  Bảy là 2 ngày mất streak nhiều nhất (bận đi chơi/tụ tập). Thêm 1 job riêng gửi SỚM hơn lúc
+  `WEEKEND_EARLY_RISK_HOUR` (17h local) CHỈ vào 2 ngày này (`getLocalWeekday()` trong
+  `time.util.ts`, ISO 5/6) cho ai chưa có hoạt động — KHÔNG thay thế lời nhắc 21h thường, cả 2
+  job độc lập tự kiểm tra lại `UserDailyActivity` nên không gửi trùng nếu user đã học ở giữa 2
+  mốc giờ.
 - **Bình luận + thích video + thông báo (`src/modules/videos/comments`, `.../likes`,
   `src/modules/notifications`)**: bình luận 1 cấp trả lời (trả lời của trả lời tự gộp vào bình
   luận gốc — xem `CommentsService.create`), thích video kiểu upsert (idempotent). Tạo bình
