@@ -17,6 +17,7 @@ import { PrismaService } from '../../infra/prisma/prisma.service';
 import type { Env } from '../../config/env.validation';
 import { startOfLocalDayInstant } from '../../common/time.util';
 import { isPremiumActive } from '../premium/premium-plans';
+import { CHAT_MODELS } from './gemini-models';
 import { EmbeddedChunk, InMemoryVectorStore } from './rag/vector-store';
 
 /** Hạn mức lượt hỏi/ngày cho user MIỄN PHÍ — Premium không giới hạn. Đúng
@@ -189,16 +190,6 @@ export class AssistantService implements OnModuleInit {
   private lastSyncAt: Date | null = null;
   private lastError: string | null = null;
 
-  private readonly CHAT_MODELS = [
-    'gemini-2.5-flash',
-    'gemini-2.5-flash-lite',
-    'gemini-3-flash-preview',
-    'gemini-3.1-flash-lite-preview',
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-001',
-    'gemini-2.0-flash-lite',
-    'gemini-2.0-flash-lite-001',
-  ];
   private readonly EMBED_MODEL = 'gemini-embedding-001';
   private readonly EMBED_BATCH_SIZE = 20;
 
@@ -546,7 +537,7 @@ export class AssistantService implements OnModuleInit {
             // tránh vòng lặp gọi tool vô hạn.
             for (let round = 0; round < 2; round++) {
               const stream = await this.genAI.models.generateContentStream({
-                model: this.CHAT_MODELS[0],
+                model: CHAT_MODELS[0],
                 contents,
                 config: round === 0 ? { tools: TOOLS } : undefined,
               });
@@ -693,7 +684,7 @@ export class AssistantService implements OnModuleInit {
 
     try {
       const first = await this.genAI.models.generateContent({
-        model: this.CHAT_MODELS[0],
+        model: CHAT_MODELS[0],
         contents,
         config: { tools: TOOLS },
       });
@@ -716,7 +707,7 @@ export class AssistantService implements OnModuleInit {
           },
         ];
         const second = await this.genAI.models.generateContent({
-          model: this.CHAT_MODELS[0],
+          model: CHAT_MODELS[0],
           contents: followUpContents,
         });
         return {
@@ -1071,7 +1062,7 @@ Hướng dẫn trả lời:
   private async generateWithFallback(
     contents: Content[],
   ): Promise<{ text: string; action?: AssistantAction } | null> {
-    for (const modelName of this.CHAT_MODELS) {
+    for (const modelName of CHAT_MODELS) {
       try {
         const response = await this.genAI!.models.generateContent({
           model: modelName,

@@ -542,10 +542,12 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `generateWithFallback()` không streaming). `buildPromptContents()` gộp chung phần dựng
   prompt (RAG/từ vựng/dữ kiện cá nhân) cho cả 2 đường `ask`/`askStream`; `persistTurn()` gộp
   chung phần lưu DB. `GET /assistant/status` chẩn đoán (đã bật chưa, đã đánh index bao nhiêu).
-  **TODO(scale)** ngay trong `assistant.service.ts`: throttle hiện tại chỉ chặn spam 1 user,
-  CHƯA giới hạn tổng quota Gemini free tier khi nhiều user thật cùng dùng — cần nâng gói trả
-  phí hoặc thêm hạn mức/ngày mỗi user trước khi ra mắt rộng (có thể gắn với tính năng nạp
-  tiền/gói trả phí sau này, chưa làm). **Để trống
+  **Hạn mức/ngày cho user miễn phí** (`checkDailyAskQuota()`, từ 2026-09-19 — xem mục Premium):
+  đã giải quyết đúng TODO(scale) từng ghi ở đây (throttle cũ chỉ chặn spam 1 user, CHƯA bảo vệ
+  quota Gemini free tier CHUNG khi nhiều user thật cùng dùng) — free giới hạn
+  `FREE_ASK_DAILY_LIMIT` (15) lượt/ngày, Premium không giới hạn. Vẫn còn phương án (1) nâng gói
+  Gemini trả phí nếu quota CHUNG vẫn hết dù đã giới hạn từng user — cân nhắc sau khi quan sát
+  mức dùng thật. **Để trống
   `GEMINI_API_KEY` thì toàn bộ tự
   báo "chưa bật", không chặn app khởi động** — cần thêm `GEMINI_API_KEY` (+ `AI_SYSTEM_PROMPT`
   tuỳ chọn) vào `.env`/`.env.production.local` (đã có sẵn ở máy dev, cần copy tay lên VPS).
@@ -566,6 +568,33 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   bấm, không tự chuyển trang. Lưu ý: `persistTurn()` ghim `createdAt` của tin nhắn model lệch
   +1ms so với user (2 bản ghi tạo cùng lúc trong 1 transaction dễ trùng mốc thời gian tới từng
   mili-giây, làm `orderBy: createdAt asc` trả sai thứ tự khi tra lịch sử).
+- **Luyện nói với AI theo tình huống (`src/modules/roleplay`, `RoleplayService`, từ
+  2026-09-19)** — mục roadmap "chưa làm" đã ghi từ lâu: hội thoại luyện nói kiểu Duolingo Video
+  Call/Roleplay, KHÁC HẲN trợ lý AI hỏi-đáp ở trên (đó là tra cứu, đây là bài tập PHẢN XẠ đóng
+  vai). 6 tình huống đời thường xếp theo độ khó tăng dần HSK1→HSK4 (`roleplay-scenarios.ts`):
+  làm quen bạn mới, gọi món nhà hàng, hỏi đường, mua sắm, đặt phòng khách sạn, khám bệnh — mỗi
+  tình huống có `systemPrompt` (persona + yêu cầu CHỈ trả lời tiếng Trung, câu ngắn, giữ vai
+  xuyên suốt, không giải thích ngữ pháp/dịch nghĩa giữa chừng) và `openingLineZh` CỐ ĐỊNH (không
+  gọi Gemini để mở đầu — vào là có câu chào ngay, luôn đúng giọng văn mong muốn). Model dùng
+  `config: { systemInstruction }` của Gemini (tách biệt persona khỏi nội dung hội thoại, khác
+  cách trợ lý hỏi-đáp nhét prompt vào lượt `user` đầu) + `CHAT_MODELS` — TÁCH RA
+  `assistant/gemini-models.ts` dùng CHUNG với `AssistantService` (trước đó là field private
+  riêng, tách ra để 2 module không lệch danh sách model theo thời gian).
+  **Model RIÊNG** `RoleplaySession`/`RoleplayMessage` (không dùng chung `ChatSession`/
+  `ChatMessage` của trợ lý) — hội thoại đóng vai không nên trộn vào lịch sử hỏi-đáp.
+  `RoleplayMessage.pinyin` sinh SẴN lúc lưu (bằng `pinyin-pro`, cùng cách `MessagesService`/
+  video transcript đã làm) cho tin nhắn MODEL — người học thấy pinyin ngay dưới câu tiếng Trung
+  của AI, không cần bấm dịch riêng. **Hạn mức/ngày riêng** (`FREE_ASK_DAILY_LIMIT`-tương-tự,
+  `FREE_ROLEPLAY_DAILY_LIMIT` = 15) — đếm ĐỘC LẬP với trợ lý hỏi-đáp dù dùng chung quota Gemini,
+  đơn giản hoá thay vì gộp 2 bộ đếm; Premium bỏ qua hoàn toàn, đúng nhất quán với quyết định
+  "Premium mở tiện ích AI không giới hạn" đã áp dụng cho trợ lý hỏi-đáp — đây là MỞ RỘNG tự
+  nhiên của quyết định cũ (cùng loại quyền lợi, áp dụng thêm cho tính năng AI mới), không phải
+  quyết định giá/phạm vi MỚI cần hỏi lại. Client: `/roleplay` — màn chọn tình huống (lưới thẻ +
+  danh sách hội thoại gần đây) và màn chat (bong bóng tin nhắn, pinyin hiện dưới câu AI, gửi tin
+  nhắn optimistic-update qua `mutate()` của SWR). Thêm mục "Luyện nói với AI" vào
+  `components/sidebar.tsx` (nhóm "LUYỆN TẬP MỖI NGÀY"). **Chưa làm**: chấm điểm/phản hồi lỗi
+  ngữ pháp sau khi kết thúc hội thoại (hiện chỉ luyện phản xạ thuần, không có "kết quả buổi
+  luyện" như `/listening`/`/pronunciation`), gợi ý câu trả lời khi người học bí từ.
 
 ## Lệnh
 `npm run start:dev` · `npm run build` · `npm run prisma:migrate` · `npm run db:seed` ·
@@ -702,7 +731,6 @@ tiếp, tạo thêm `word-examples-hsk{N}.json` rồi gọi `seedFile()` cho t�
 
 Chưa làm (roadmap, chừa chỗ): câu ví dụ HSK2-9, cấu trúc đề thi HSK
 thật đầy đủ (nhiều phần nghe/đọc/viết đúng số câu + thời gian từng cấp — hiện mới có câu
-nghe/đọc trộn vào quiz từ vựng, chưa đúng cấu trúc thật), hội thoại luyện nói với AI theo tình
-huống (kiểu Duolingo Video Call/Roleplay — trợ lý AI hiện tại chỉ hỏi-đáp + điều hướng, chưa
-phải luyện hội thoại thực hành), ngữ pháp dẫn dắt theo bài học. Xem FEATURES.md mục 10 cho phân
-tích đầy đủ + chiến lược tăng trưởng.
+nghe/đọc trộn vào quiz từ vựng, chưa đúng cấu trúc thật), ngữ pháp dẫn dắt theo bài học. Hội
+thoại luyện nói với AI theo tình huống ĐÃ LÀM (`src/modules/roleplay`, xem mục riêng ở trên).
+Xem FEATURES.md mục 10 cho phân tích đầy đủ + chiến lược tăng trưởng.

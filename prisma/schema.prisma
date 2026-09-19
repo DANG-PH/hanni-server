@@ -167,6 +167,7 @@ model User {
   followers           Follow[]             @relation("Following")
   onboarding          OnboardingProfile?
   chatSessions        ChatSession[]
+  roleplaySessions    RoleplaySession[]
   conversationsAsA    Conversation[]       @relation("ConversationUserA")
   conversationsAsB    Conversation[]       @relation("ConversationUserB")
   sentDirectMessages  DirectMessage[]
@@ -1170,6 +1171,38 @@ model ChatMessage {
   role      ChatRole
   text      String      @db.VarChar(4000)
   createdAt DateTime    @default(now())
+
+  @@index([sessionId, createdAt])
+}
+
+/// Hội thoại LUYỆN NÓI theo tình huống với AI (đóng vai phục vụ/nhân viên
+/// bán hàng...) — TÁCH RIÊNG khỏi ChatSession/ChatMessage (trợ lý hỏi-đáp
+/// chung) dù cấu trúc giống hệt, vì đây là bài tập PHẢN XẠ đóng vai chứ
+/// không phải hỏi-đáp, không nên trộn lẫn vào lịch sử chat trợ lý — xem
+/// `src/modules/roleplay`.
+model RoleplaySession {
+  id          String            @id @default(uuid()) @db.Uuid
+  userId      String            @db.Uuid
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// key trong ROLEPLAY_SCENARIOS (roleplay-scenarios.ts)
+  scenarioKey String
+  messages    RoleplayMessage[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([userId, updatedAt(sort: Desc)])
+}
+
+model RoleplayMessage {
+  id        String          @id @default(uuid()) @db.Uuid
+  sessionId String          @db.Uuid
+  session   RoleplaySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      ChatRole
+  text      String          @db.VarChar(2000)
+  /// Pinyin sinh sẵn cho tin nhắn của MODEL (giúp người học đọc ngay, không
+  /// cần bấm dịch riêng) — null cho tin nhắn USER (không cần).
+  pinyin    String?         @db.VarChar(2000)
+  createdAt DateTime        @default(now())
 
   @@index([sessionId, createdAt])
 }
