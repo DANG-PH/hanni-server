@@ -7,6 +7,7 @@ import {
   LeaderboardService,
   type LeaderboardMetric,
 } from './leaderboard.service';
+import { LeagueService } from './league.service';
 
 class LeaderboardQuery {
   @IsOptional()
@@ -22,11 +23,20 @@ class LeaderboardQuery {
 @ApiBearerAuth()
 @Controller('leaderboard')
 export class LeaderboardController {
-  constructor(private readonly leaderboard: LeaderboardService) {}
+  constructor(
+    private readonly leaderboard: LeaderboardService,
+    private readonly league: LeagueService,
+  ) {}
 
   @Get('metrics')
   metrics() {
     return this.leaderboard.metrics();
+  }
+
+  /** Giải đấu học tập theo tuần — khác ELO đấu 1v1, xem league.service.ts. */
+  @Get('league')
+  myLeague(@CurrentUser() user: AuthUser) {
+    return this.league.getMyLeague(user.id);
   }
 
   @Get()

@@ -273,6 +273,32 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   **CHƯA verify được rollover thật** (không mô phỏng được việc đổi tháng trong môi trường dev
   hiện tại) — chỉ verify được qua code review + `GET /duel/season` trả đúng dữ liệu tháng hiện
   tại sau khi deploy; sẽ tự biết đúng/sai vào đầu tháng sau.
+- **Giải đấu học tập theo TUẦN** (`src/modules/leaderboard/league.service.ts`, `LeagueService`,
+  từ 2026-09-19) — research xác nhận thăng/giáng hạng theo tuần là cơ chế GIỮ CHÂN mạnh nhất
+  của Duolingo (streak 7+ ngày giữ chân gấp 2.4 lần, loss aversion tăng ~35% DAU) — bảng xếp
+  hạng cũ ở `leaderboard.service.ts` (5 tiêu chí) đều TĨNH VÔ TẬN, không tạo áp lực quay lại mỗi
+  tuần như cơ chế này. **KHÁC HẲN ELO đấu 1v1** (xếp theo mức độ HỌC TẬP — số lượt ôn SRS hoàn
+  thành trong tuần, tính trực tiếp từ `ReviewLog.reviewedAt`, KHÔNG lưu điểm riêng để tránh
+  trùng lặp dữ liệu — không phải thắng/thua khi đấu), tên bậc CỐ Ý khác ("Đồng→Kim Cương" chủ đề
+  đá quý ở `league.util.ts`, không phải "Sắt→Thách Đấu" của đấu 1v1) để không gây nhầm 2 hệ xếp
+  hạng. Khoá tuần `currentWeekKey()` tự tăng dạng "W123" tính từ 1 mốc thứ Hai cố định (KHÔNG
+  dùng số tuần ISO lịch — tránh phải xử lý các trường hợp biên qua năm, chỉ cần tăng đều đặn mỗi
+  7 ngày). Mỗi user CÙNG bậc xếp chung 1 nhóm (không chia nhiều phòng ~30 người/phòng như
+  Duolingo — quy mô Hanni hiện tại chưa cần, đơn giản hoá cho phù hợp). `@Cron(EVERY_DAY_AT_2AM)`
+  kiểm tra mỗi ngày, chỉ THẬT SỰ rollover khi khoá tuần đổi (idempotent). Lúc rollover: mỗi
+  nhóm-bậc tự xếp hạng theo điểm tuần, top ~20% (tối đa 3, tối thiểu 1) thăng 1 bậc, đáy ~20%
+  giáng 1 bậc, giữa an toàn — nhóm dưới 5 người (`MIN_GROUP_FOR_MOVEMENT`) thì KHÔNG giáng ai
+  (tránh giáng oan lúc còn ít user hoạt động tuần đó). Người chưa từng tham gia bắt đầu ở bậc
+  thấp nhất (Đồng) khi lần đầu xem giải đấu (`getOrCreateMyEntry()`), người tuần trước có tham
+  gia thì MANG NGUYÊN bậc mới (đã thăng/giáng) sang tuần tiếp theo. **KHÔNG có thưởng xu** (khác
+  mùa ELO đấu 1v1 ở trên) — tránh động đến cân bằng kinh tế xu chưa được xác nhận, đây thuần là
+  cơ chế tâm lý (thăng/giáng hạng), không phải kinh tế. **CHƯA verify được rollover thật** (như
+  mùa ELO ở trên, không mô phỏng được đổi tuần trong môi trường hiện tại) — chỉ verify qua
+  `GET /leaderboard/league` trả đúng dữ liệu tuần hiện tại. Client: thẻ "Giải đấu tuần"
+  (`components/weekly-league-card.tsx`) ở dashboard — CỐ Ý không chèn vào hệ thống tab đã có ở
+  `/leaderboard` (khác hẳn cấu trúc dữ liệu — nhóm theo bậc + vùng thăng/giáng, không phải 1
+  bảng metric đơn giản) để tránh phải sửa `components/leaderboard.tsx` đang được dev FE khác
+  chỉnh song song.
 - **Đấu đôi 2v2 (`src/modules/duel/team-duel.service.ts`, `TeamDuelService`)**: Giai đoạn 4
   minigame — kiến trúc SONG SONG với `DuelService` (hàng đợi/trạng thái trận RIÊNG, cùng "sống"
   trong `NotificationsModule` với cùng lý do `forwardRef()` tránh vòng lặp module), nhưng dùng

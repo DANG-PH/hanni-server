@@ -175,6 +175,7 @@ model User {
   duelsAsB            DuelMatch[]          @relation("DuelPlayerB")
   duelSeasonResults   DuelSeasonResult[]
   paymentOrders       PaymentOrder[]
+  leagueEntries       LeagueEntry[]
 
   @@index([lastActiveAt])
 }
@@ -981,6 +982,43 @@ model DuelSeasonResult {
 
   @@unique([seasonId, userId])
   @@index([userId])
+}
+
+/// Giải đấu học tập theo TUẦN (`LeagueService`) — khác hẳn ELO đấu 1v1 ở
+/// trên (đây xếp theo mức độ HỌC TẬP trong tuần, không phải thắng/thua khi
+/// đấu). Reset mỗi tuần, tự thăng/giáng hạng — cơ chế giữ chân người dùng
+/// mạnh nhất theo research (xem FEATURES.md), khác thẳng lên bảng xếp hạng
+/// tĩnh vô tận hiện có ở `leaderboard.service.ts`.
+model LeagueWeek {
+  id        String        @id @default(uuid()) @db.Uuid
+  /// khoá tuần tự tăng dạng "W123" (số tuần kể từ 1 mốc cố định, KHÔNG phải
+  /// số tuần ISO lịch — tránh phải xử lý các trường hợp biên qua năm) — xem
+  /// `currentWeekKey()` trong `league.util.ts`.
+  weekKey   String        @unique
+  startedAt DateTime      @default(now())
+  endedAt   DateTime?
+  entries   LeagueEntry[]
+}
+
+/// 1 người trong 1 tuần — `tier` mang từ tuần trước sang (thăng/giáng đúng
+/// 1 bậc mỗi lần rollover), `finalPoints`/`movement` chỉ có giá trị SAU khi
+/// tuần đó đã kết thúc (null trong lúc tuần đang diễn ra — điểm tính trực
+/// tiếp từ `ReviewLog` lúc hiển thị, không lưu trùng).
+model LeagueEntry {
+  id          String     @id @default(uuid()) @db.Uuid
+  weekId      String     @db.Uuid
+  week        LeagueWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  userId      String     @db.Uuid
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// chỉ số vào LEAGUE_TIERS (0 = thấp nhất)
+  tier        Int
+  finalPoints Int?
+  /// "up" | "down" | "stay" — chỉ set lúc rollover
+  movement    String?
+  createdAt   DateTime   @default(now())
+
+  @@unique([weekId, userId])
+  @@index([weekId, tier])
 }
 
 /// Nhắn tin trực tiếp 1-1 — 1 cặp user chỉ có ĐÚNG 1 cuộc hội thoại
