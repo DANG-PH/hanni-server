@@ -315,6 +315,9 @@ model Word {
   strokeCount       Int?
   meaningVi         String?
   meaningEn         String?
+  /// âm Hán Việt (vd 學生 -> "học sinh") — null nếu thiếu âm cho bất kỳ ký tự
+  /// nào trong từ (xem scripts/import/lib/hanviet.ts)
+  hanViet           String?
   translationStatus TranslationStatus @default(MISSING)
   needsReview       Boolean           @default(true)
   audioUrl          String? // /media/audio/cmn-<hán tự>.mp3 (phục vụ tĩnh)

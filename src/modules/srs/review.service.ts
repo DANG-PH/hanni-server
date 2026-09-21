@@ -402,6 +402,7 @@ export class ReviewService {
             simplified: true,
             pinyin: true,
             meaningVi: true,
+            hanViet: true,
             hskLevel: true,
             audioUrl: true,
           },

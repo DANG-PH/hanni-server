@@ -20,6 +20,7 @@ export interface WordSeedRecord {
   strokeCount?: number | null;
   meaningVi?: string | null;
   meaningEn?: string | null;
+  hanViet?: string | null;
   translationStatus?: string;
   needsReview?: boolean;
   audioUrl?: string | null;
@@ -87,6 +88,7 @@ function toRow(
     strokeCount: rec.strokeCount ?? null,
     meaningVi: rec.meaningVi ?? null,
     meaningEn: rec.meaningEn ?? null,
+    hanViet: rec.hanViet ?? null,
     translationStatus: normStatus(rec.translationStatus),
     needsReview: rec.needsReview ?? !rec.meaningVi,
     audioUrl: rec.audioUrl ?? null,

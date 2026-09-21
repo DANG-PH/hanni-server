@@ -18,6 +18,16 @@ và một liên kết ở footer.
   Giấy phép **CC BY-SA 4.0**. Nghĩa tiếng Việt (dịch từ CC-CEDICT bằng ChatGPT-4o fine-tune,
   rà soát một phần bằng tay — vẫn có thể còn sai sót).
 
+## Âm Hán Việt
+
+- **[Unihan Database](https://www.unicode.org/charts/unihan.html)** — Unicode Consortium.
+  Giấy phép **Unicode License V3** (miễn phí kể cả dùng thương mại, chỉ cần giữ thông báo
+  bản quyền: *"© 1991-2026 Unicode, Inc. All rights reserved."*). Cung cấp field
+  `kVietnamese` — âm Hán Việt tra theo từng ký tự (ưu tiên tra theo chữ phồn thể). Hanni bù
+  thêm ~150 ký tự thông dụng Unihan còn thiếu và sửa một số âm đọc hiếm/không phổ biến
+  (`data/curated/hanviet-supplement.json`, `data/curated/hanviet-overrides.json`, soạn tay
+  bởi Hanni) — xem `scripts/import/lib/hanviet.ts`.
+
 ## Bộ dữ liệu phái sinh của Hanni
 
 `data/processed/words.seed.json` (10.9k từ, 9 cấp) do Hanni tổng hợp từ các nguồn trên,
@@ -32,5 +42,6 @@ tự soạn (CC BY-SA 4.0).
 > Từ vựng, âm đọc và audio phát âm của Hanni lấy từ **krmanik/HSK-3.0** (CC BY-SA 4.0),
 > nghĩa tiếng Việt từ **CVDICT** (CC BY-SA 4.0). Danh sách từ và phân cấp bám theo đại cương
 > HSK 3.0 chính thức (CLEC/CTI, bản 2025-11). Nghĩa tiếng Anh và tần suất từ dựa trên
-> CC-CEDICT, Pleco và SUBTLEX-CH / BCC corpus. Bộ dữ liệu tổng hợp lại được chia sẻ theo
-> giấy phép CC BY-SA 4.0.
+> CC-CEDICT, Pleco và SUBTLEX-CH / BCC corpus. Âm Hán Việt dựa trên **Unihan Database**
+> (Unicode Consortium, Unicode License V3), có bù/sửa thêm bởi Hanni. Bộ dữ liệu tổng hợp
+> lại được chia sẻ theo giấy phép CC BY-SA 4.0.

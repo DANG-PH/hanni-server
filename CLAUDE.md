@@ -53,6 +53,39 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   sang bản "mời quay lại" thay vì bản tổng kết (`weeklyDigestHtml()` trong `templates.ts` tự đổi
   heading/CTA theo `daysStudied > 0`).
 - **Phân cấp HSK dùng số bản 11/2025** (không phải bản nháp 2021). `HskLevel` giữ cả 2 bộ số.
+- **Âm Hán Việt (`Word.hanViet`, `scripts/import/lib/hanviet.ts`, từ 2026-09-21)** — quyết
+  định chủ động sau khi user phản ánh app "thuần là đi làm và copy lại, không có gì đặc thù
+  hút user": 60-70% từ vựng tiếng Việt vay mượn từ tiếng Hán và giữ âm đọc Hán Việt thường
+  TRÙNG khớp nghĩa tiếng Việt hiện đại (vd 學生→"học sinh", 時間→"thời gian", 國家→"quốc gia")
+  — cầu nối ghi nhớ mạnh chỉ người Việt mới khai thác được, không app quốc tế nào (Duolingo,
+  HelloChinese, Du Chinese...) nhắm tới. Nguồn: **Unihan Database** (Unicode Consortium,
+  field `kVietnamese`, Unicode License V3 — miễn phí kể cả thương mại, xem `data/NOTICES.md`).
+  **Ưu tiên tra theo ký tự PHỒN THỂ** (`traditional || simplified`) — verify thật: `kVietnamese`
+  chính xác hơn nhiều khi tra theo phồn thể (學=học, 國=quốc đúng) so với giản thể bị hợp nhất
+  chung ký hiệu (你/好 cho âm hiếm "nể"/"háo"), khớp với việc Hán Việt hình thành từ thời chữ
+  Hán còn viết phồn thể. **2 lớp dữ liệu bù/sửa tay** (soạn dựa trên kiểm chứng thật trên
+  chính bộ 10.9k từ Hanni, không đoán mò):
+  `data/curated/hanviet-supplement.json` (~150 ký tự thông dụng Unihan CHƯA CÓ, vd 面/電/說/問
+  — chỉ bù chỗ thiếu, không ghi đè) và `data/curated/hanviet-overrides.json` (~34 ký tự GHI ĐÈ
+  dù Unihan đã có, cho 2 tình huống phát hiện qua kiểm chứng: (1) Unihan liệt kê NHIỀU âm cách
+  nhau bằng khoảng trắng KHÔNG theo thứ tự phổ biến, vd 校 Unihan ghi "chò giâu hiệu" — âm đúng
+  "hiệu" đứng CUỐI; (2) chỉ 1 âm nhưng hiếm/khác biệt rõ với âm phổ biến, vd 好 Unihan ghi
+  "háo", âm phổ biến là "hảo"). `hanVietOf()` trả `null` cho từ nào THIẾU âm ở BẤT KỲ ký tự nào
+  — "thà thiếu còn hơn hiện âm sai, không đoán mò cho đủ", khớp phong cách "best-effort, có ghi
+  giới hạn" đã áp dụng cho ảnh minh hoạ từ vựng ở dưới. Kết quả: phủ **85.4%** (9.324/10.912
+  từ). **Giới hạn đã biết, CHẤP NHẬN không sửa**: một số ký tự đa âm có 2 nghĩa/2 cách đọc Hán
+  Việt khác nhau tuỳ ngữ cảnh (vd 樂/乐 vừa đọc "lạc" — vui vẻ — vừa đọc "nhạc" — âm nhạc — map
+  1-ký-tự-1-âm không phân biệt được ngữ cảnh) — chọn giữ âm PHỔ BIẾN HƠN trong bộ từ Hanni
+  (khảo sát 22 từ chứa ký tự này: "lạc" chiếm đa số) thay vì đoán mò theo hướng khác, chấp nhận
+  vài từ như 音乐 hiện "âm lạc" thay vì "âm nhạc" đúng nghĩa hơn — tương tự cách 你 (chỉ 2 từ,
+  không đủ tần suất để đáng sửa) cũng cố tình để nguyên âm Unihan gốc "nể" dù hiếm gặp. Backfill
+  cho DB đã seed sẵn: `npx tsx scripts/backfill-hanviet.ts` (UPDATE theo LÔ 500 dòng/câu SQL
+  thay vì 1 updateMany/từ — nhanh hơn nhiều qua tunnel SSH, xem cách làm cũ từng chậm ở
+  `migrate-lesson-themes.ts`). Trả về tự nhiên trong `GET /words/:id`, `/words/of-the-day`,
+  `GET /learn/lessons/:id`, `GET /study/queue` (không cần sửa code — các query này không có
+  `select` giới hạn field nên Prisma tự trả đủ scalar field mới); `GET /study/leeches` có
+  `select` tường minh nên phải thêm field vào tay. Client: hiện ở mặt sau flashcard ôn tập
+  (`components/flashcard.tsx`) và mỗi thẻ từ ở `/vocabulary`.
 - **Từ vựng hôm nay** (`GET /words/of-the-day`, route đăng ký TRƯỚC `words/:id` để tránh
   `ParseUUIDPipe` nuốt mất — xem `vocabulary.controller.ts`): 1 từ CỐ ĐỊNH theo ngày (đổi lúc 0h
   UTC), giống nhau cho mọi user, không lưu DB — xoay vòng theo `frequencyRank` (chỉ từ có nghĩa

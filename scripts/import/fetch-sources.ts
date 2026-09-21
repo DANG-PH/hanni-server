@@ -19,6 +19,7 @@ const RAW = join(__dirname, '..', '..', 'data', 'raw');
 const TMP = join(RAW, '_tmp');
 const KRM = join(RAW, 'krmanik-hsk3');
 const CVD = join(RAW, 'cvdict');
+const UNIHAN = join(RAW, 'unihan');
 
 function git(...args: string[]): void {
   execFileSync('git', args, { stdio: 'inherit' });
@@ -54,6 +55,27 @@ function main(): void {
   console.log('↓ clone ph0ngp/CVDICT …');
   git('clone', '--depth', '1', 'https://github.com/ph0ngp/CVDICT.git', join(TMP, 'c'));
   cpSync(join(TMP, 'c', 'CVDICT.u8'), join(CVD, 'CVDICT.u8'));
+
+  // Âm Hán Việt (kVietnamese) — Unihan Database, Unicode Consortium, giấy
+  // phép Unicode License V3 (miễn phí kể cả dùng thương mại, chỉ cần giữ
+  // thông báo bản quyền — xem data/NOTICES.md). Chỉ cần đúng 1 file
+  // Unihan_Readings.txt (~9MB) trong file zip ~8MB, không cần giữ cả zip.
+  console.log('↓ tải Unihan Database (Unicode Consortium) …');
+  mkdirSync(UNIHAN, { recursive: true });
+  execFileSync('curl', [
+    '-sL',
+    '-o',
+    join(TMP, 'Unihan.zip'),
+    'https://www.unicode.org/Public/UCD/latest/ucd/Unihan.zip',
+  ]);
+  execFileSync('unzip', [
+    '-o',
+    '-q',
+    join(TMP, 'Unihan.zip'),
+    'Unihan_Readings.txt',
+    '-d',
+    UNIHAN,
+  ]);
 
   rmSync(TMP, { recursive: true, force: true });
   console.log('\nXong. Chạy tiếp: npm run data:build-words');

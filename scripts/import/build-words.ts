@@ -14,6 +14,12 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { indexCedict, parseCedict } from './lib/cedict';
 import {
+  hanVietOf,
+  loadHanVietOverrides,
+  loadHanVietSupplement,
+  parseUnihanVietnamese,
+} from './lib/hanviet';
+import {
   parseAllCedict,
   parseFrequency,
   parseSyllabus,
@@ -28,6 +34,7 @@ const CURATED_DIR = join(__dirname, '..', '..', 'data', 'curated');
 const CURATED = join(CURATED_DIR, 'hsk1.json');
 const KRM = join(RAW, 'krmanik-hsk3');
 const CVDICT_FILE = join(RAW, 'cvdict', 'CVDICT.u8');
+const UNIHAN_FILE = join(RAW, 'unihan', 'Unihan_Readings.txt');
 
 interface LessonThemeFile {
   themeOrder: string[];
@@ -77,12 +84,30 @@ interface CuratedEntry {
 function main(): void {
   need(join(KRM, 'syllabus.tsv'), 'Clone krmanik/HSK-3.0.');
   need(CVDICT_FILE, 'Clone ph0ngp/CVDICT.');
+  need(UNIHAN_FILE, 'Chạy fetch-sources.ts để tải Unihan Database.');
 
   const syllabus = parseSyllabus(KRM);
   const tsvByWord = parseWordTsvs(KRM);
   const freq = parseFrequency(KRM);
   const cedict = parseAllCedict(KRM); // simplified -> {traditional, pinyin[], definitions}
   const cvdict = indexCedict(parseCedict(readFileSync(CVDICT_FILE, 'utf8')));
+
+  // Âm Hán Việt: Unihan làm nền, bù thêm ~150 chữ phổ biến Unihan còn thiếu
+  // (xem lib/hanviet.ts) — supplement CHỈ điền chỗ Unihan CHƯA CÓ, không ghi
+  // đè dữ liệu nguồn đã có (tôn trọng nguồn chính, tránh lộn xộn 2 nguồn).
+  const hanVietMap = parseUnihanVietnamese(UNIHAN_FILE);
+  let hanVietFilled = 0;
+  for (const [char, reading] of loadHanVietSupplement(CURATED_DIR)) {
+    if (!hanVietMap.has(char)) {
+      hanVietMap.set(char, reading);
+      hanVietFilled += 1;
+    }
+  }
+  const hanVietOverrides = loadHanVietOverrides(CURATED_DIR);
+  for (const [char, reading] of hanVietOverrides) hanVietMap.set(char, reading);
+  console.log(
+    `  Hán Việt: ${hanVietMap.size} ký tự (${hanVietFilled} từ supplement, ${hanVietOverrides.size} ghi đè)`,
+  );
 
   const audioWords = existsSync(join(KRM, 'audio-words.txt'))
     ? new Set(
@@ -109,6 +134,7 @@ function main(): void {
   let withVi = 0;
   let missingVi = 0;
   let withAudio = 0;
+  let hanVietCount = 0;
   const byKey = new Map<string, Record<string, unknown>>();
   const records: Record<string, unknown>[] = [];
 
@@ -178,6 +204,9 @@ function main(): void {
     const hasAudio = audioWords ? audioWords.has(simp) : true;
     if (hasAudio) withAudio += 1;
 
+    const hanViet = hanVietOf(simp, traditional, hanVietMap);
+    if (hanViet) hanVietCount += 1;
+
     const record: Record<string, unknown> = {
       simplified: simp,
       traditional,
@@ -189,6 +218,7 @@ function main(): void {
       frequencyRank: rankOf.get(simp) ?? null,
       meaningVi,
       meaningEn,
+      hanViet,
       translationStatus,
       needsReview: translationStatus !== 'REVIEWED',
       audioUrl: hasAudio ? `/media/audio/cmn-${simp}.mp3` : null,
@@ -283,6 +313,7 @@ function main(): void {
     `- Có nghĩa tiếng Việt: ${withVi} (${((withVi / records.length) * 100).toFixed(1)}%)`,
     `- Thiếu nghĩa tiếng Việt: ${missingVi}`,
     `- Có audio phát âm: ${withAudio}`,
+    `- Có âm Hán Việt: ${hanVietCount} (${((hanVietCount / records.length) * 100).toFixed(1)}%)`,
     '',
     '## Số từ theo cấp (7 = gộp 7-9)',
     ...[...byLevel.entries()]
