@@ -32,6 +32,11 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 ## Convention
 - Mỗi domain = 1 module NestJS (controller / service / module / dto). Business logic ở service.
 - Validate input bằng `class-validator` trên DTO. `ValidationPipe` bật `whitelist` + `transform` toàn cục.
+  DTO có `get`/computed property (không phải field thật, vd `PaginationDto.skip`/`take`) PHẢI
+  đánh dấu `@Exclude()` (class-transformer) — nếu không, client gửi query trùng tên (vd `?take=`)
+  sẽ khiến `plainToInstance` cố gán giá trị vào getter-only đó và crash 500 (`whitelist` không
+  kịp lọc vì lỗi xảy ra TRƯỚC bước đó, trong lúc transform) — lỗi thật đã gặp ở `GET /words`,
+  phát hiện tình cờ lúc test tính năng khác, không phải do client thật gửi sai.
 - Guard mặc định toàn app là `JwtAuthGuard`; route công khai gắn `@Public()`.
 - Đọc token từ cookie `hanni_access` (fallback `Authorization: Bearer`).
 - Không hardcode connection string — đọc qua `ConfigService` (đã validate bằng zod).
@@ -85,7 +90,11 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `GET /learn/lessons/:id`, `GET /study/queue` (không cần sửa code — các query này không có
   `select` giới hạn field nên Prisma tự trả đủ scalar field mới); `GET /study/leeches` có
   `select` tường minh nên phải thêm field vào tay. Client: hiện ở mặt sau flashcard ôn tập
-  (`components/flashcard.tsx`) và mỗi thẻ từ ở `/vocabulary`.
+  (`components/flashcard.tsx`) và mỗi thẻ từ ở `/vocabulary`. **Tìm kiếm** `GET /words?q=`
+  giờ khớp cả `hanViet` (vd gõ "học hiệu" ra 学校 dù `meaningVi` hiển thị "trường học", không
+  trùng chuỗi). **`GET /words/stats`** (`@Public()`, không cần đăng nhập) trả `{total,
+  withHanViet}` — dùng cho hook thu hút user ngay ở trang chủ (`hanni-client/CLAUDE.md`),
+  trước khi backfill chạy thì `withHanViet = 0` và client tự ẩn số liệu thay vì hiện số sai.
 - **Từ vựng hôm nay** (`GET /words/of-the-day`, route đăng ký TRƯỚC `words/:id` để tránh
   `ParseUUIDPipe` nuốt mất — xem `vocabulary.controller.ts`): 1 từ CỐ ĐỊNH theo ngày (đổi lúc 0h
   UTC), giống nhau cho mọi user, không lưu DB — xoay vòng theo `frequencyRank` (chỉ từ có nghĩa
