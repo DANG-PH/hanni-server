@@ -7,6 +7,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Public } from '../../common/decorators/public.decorator';
 import { WordQueryDto } from './dto/word-query.dto';
 import { HskLevelsService } from './hsk-levels.service';
 import { WordsService } from './words.service';
@@ -38,6 +39,12 @@ export class VocabularyController {
   @Get('words/of-the-day')
   getWordOfTheDay() {
     return this.words.ofTheDay();
+  }
+
+  @Public()
+  @Get('words/stats')
+  getWordStats() {
+    return this.words.stats();
   }
 
   @Get('words/:id')

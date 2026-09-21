@@ -39,6 +39,9 @@ export class WordsService {
         { pinyin: { contains: q } },
         { meaningVi: { contains: q, mode: 'insensitive' } },
         { meaningEn: { contains: q, mode: 'insensitive' } },
+        // tìm bằng âm Hán Việt — vd gõ "học hiệu" ra được 学校 dù nghĩa
+        // tiếng Việt hiển thị là "trường học" (không trùng chuỗi)
+        { hanViet: { contains: q, mode: 'insensitive' } },
       ];
     }
 
@@ -70,6 +73,16 @@ export class WordsService {
    * lúc 0h UTC) — xoay vòng theo `frequencyRank` (chỉ từ phổ biến, có nghĩa)
    * để tránh rơi vào từ hiếm ít ai biết. Không lưu DB, tính trực tiếp mỗi lần
    * gọi nên luôn khớp ngày hiện tại kể cả khi có từ mới được thêm vào. */
+  /** Thống kê công khai cho trang chủ (chưa đăng nhập) — "bạn đã biết trước
+   * bao nhiêu từ nhờ âm Hán Việt", điểm khác biệt cốt lõi của Hanni. */
+  async stats() {
+    const [total, withHanViet] = await this.prisma.$transaction([
+      this.prisma.word.count(),
+      this.prisma.word.count({ where: { hanViet: { not: null } } }),
+    ]);
+    return { total, withHanViet };
+  }
+
   async ofTheDay() {
     const where: Prisma.WordWhereInput = {
       meaningVi: { not: null },
