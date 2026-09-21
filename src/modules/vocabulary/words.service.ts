@@ -69,10 +69,6 @@ export class WordsService {
     return this.attachImage(word);
   }
 
-  /** "Từ vựng hôm nay": chọn CỐ ĐỊNH theo ngày (giống nhau cho mọi user, đổi
-   * lúc 0h UTC) — xoay vòng theo `frequencyRank` (chỉ từ phổ biến, có nghĩa)
-   * để tránh rơi vào từ hiếm ít ai biết. Không lưu DB, tính trực tiếp mỗi lần
-   * gọi nên luôn khớp ngày hiện tại kể cả khi có từ mới được thêm vào. */
   /** Thống kê công khai cho trang chủ (chưa đăng nhập) — "bạn đã biết trước
    * bao nhiêu từ nhờ âm Hán Việt", điểm khác biệt cốt lõi của Hanni. */
   async stats() {
@@ -83,6 +79,53 @@ export class WordsService {
     return { total, withHanViet };
   }
 
+  /** Tra từ CÔNG KHAI theo Hán tự (không cần đăng nhập) — phục vụ trang từ
+   * điển `/tu-dien/[từ]` ở client, mục đích chính là SEO: mỗi từ là 1 trang
+   * Google index được, nhắm đúng truy vấn người Việt hay tìm ("学生 nghĩa là
+   * gì", "âm Hán Việt của 时间"). Trước đây toàn bộ 10.9k từ nằm sau đăng
+   * nhập nên hoàn toàn vô hình với công cụ tìm kiếm.
+   *
+   * Trả về MẢNG vì 1 Hán tự có thể ứng với nhiều mục từ khác pinyin (đa âm).
+   * KHÔNG gọi attachImage() — trang công khai có thể bị bot quét hàng loạt,
+   * không nên kéo theo hàng nghìn request sang Wikimedia. */
+  async lookup(slug: string) {
+    const words = await this.prisma.word.findMany({
+      where: { simplified: slug },
+      include: { examples: { orderBy: { orderIndex: 'asc' } } },
+      orderBy: [{ frequencyRank: 'asc' }, { hskLevel: 'asc' }],
+    });
+    if (words.length === 0) throw new NotFoundException('Không tìm thấy từ');
+
+    // Vài từ cùng cấp để người đọc (và bot) có đường đi tiếp sang trang khác.
+    const related = await this.prisma.word.findMany({
+      where: {
+        hskLevel: words[0].hskLevel,
+        simplified: { not: slug },
+        meaningVi: { not: null },
+      },
+      select: { simplified: true, pinyin: true, meaningVi: true },
+      orderBy: { frequencyRank: 'asc' },
+      take: 12,
+    });
+    return { words, related };
+  }
+
+  /** Danh sách Hán tự công khai cho sitemap (chỉ từ CÓ nghĩa tiếng Việt —
+   * từ thiếu nghĩa thì trang sẽ mỏng, không nên mời Google index). */
+  async publicSlugs() {
+    const rows = await this.prisma.word.findMany({
+      where: { meaningVi: { not: null } },
+      select: { simplified: true, updatedAt: true },
+      orderBy: { frequencyRank: 'asc' },
+      distinct: ['simplified'],
+    });
+    return rows;
+  }
+
+  /** "Từ vựng hôm nay": chọn CỐ ĐỊNH theo ngày (giống nhau cho mọi user, đổi
+   * lúc 0h UTC) — xoay vòng theo `frequencyRank` (chỉ từ phổ biến, có nghĩa)
+   * để tránh rơi vào từ hiếm ít ai biết. Không lưu DB, tính trực tiếp mỗi lần
+   * gọi nên luôn khớp ngày hiện tại kể cả khi có từ mới được thêm vào. */
   async ofTheDay() {
     const where: Prisma.WordWhereInput = {
       meaningVi: { not: null },

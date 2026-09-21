@@ -47,6 +47,20 @@ export class VocabularyController {
     return this.words.stats();
   }
 
+  /** Từ điển công khai (SEO) — xem WordsService.lookup(). Đặt dưới
+   * `dictionary/` thay vì `words/` để không đụng `words/:id` (ParseUUIDPipe). */
+  @Public()
+  @Get('dictionary/slugs')
+  getDictionarySlugs() {
+    return this.words.publicSlugs();
+  }
+
+  @Public()
+  @Get('dictionary/:slug')
+  lookupWord(@Param('slug') slug: string) {
+    return this.words.lookup(slug);
+  }
+
   @Get('words/:id')
   getWord(@Param('id', ParseUUIDPipe) id: string) {
     return this.words.get(id);
