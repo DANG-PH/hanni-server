@@ -95,6 +95,19 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   trùng chuỗi). **`GET /words/stats`** (`@Public()`, không cần đăng nhập) trả `{total,
   withHanViet}` — dùng cho hook thu hút user ngay ở trang chủ (`hanni-client/CLAUDE.md`),
   trước khi backfill chạy thì `withHanViet = 0` và client tự ẩn số liệu thay vì hiện số sai.
+- **Từ điển CÔNG KHAI cho SEO (`GET /dictionary/:slug`, `/dictionary/slugs`, cả 2 `@Public()`,
+  từ 2026-09-21)** — lý do làm: ĐO thật trên production thấy `sitemap.xml` chỉ có **6 URL** toàn
+  trang chức năng (login/register/install), trong khi 10.912 từ + 235 điểm ngữ pháp đều nằm sau
+  đăng nhập (`robots.txt` còn `Disallow` hẳn `/vocabulary`, `/grammar`) → toàn bộ kho nội dung
+  HOÀN TOÀN vô hình với Google. Đây là nguyên nhân lớn nhất khiến app gần như không có người
+  dùng thật (chỉ ~6 tài khoản không phải test). `lookup()` trả **mảng** `words` vì 1 Hán tự có
+  thể ứng nhiều mục từ khác pinyin (đa âm), kèm `related` (12 từ cùng cấp) để bot có đường đi
+  tiếp. **KHÔNG gọi `attachImage()`** (khác `get()`/`ofTheDay()`) — trang công khai có thể bị bot
+  quét hàng loạt, không nên kéo theo hàng nghìn request sang Wikimedia. `publicSlugs()` chỉ trả
+  từ CÓ `meaningVi` (từ thiếu nghĩa thì trang mỏng, không nên mời index) và `distinct` theo
+  `simplified` vì URL là 1 Hán tự → 1 trang. Client: `/tu-dien/[slug]` + `/tu-dien` là **Server
+  Component** (bắt buộc — nội dung phải nằm sẵn trong HTML thì Google mới đọc được), xem
+  `hanni-client/CLAUDE.md`.
 - **Từ vựng hôm nay** (`GET /words/of-the-day`, route đăng ký TRƯỚC `words/:id` để tránh
   `ParseUUIDPipe` nuốt mất — xem `vocabulary.controller.ts`): 1 từ CỐ ĐỊNH theo ngày (đổi lúc 0h
   UTC), giống nhau cho mọi user, không lưu DB — xoay vòng theo `frequencyRank` (chỉ từ có nghĩa
@@ -144,8 +157,24 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   nghỉ) — FE tự dựng đủ chuỗi ngày rồi khớp theo ISO date (`components/activity-calendar.tsx`).
 - **Huy hiệu** (`GET /achievements`, `AchievementsService.list()`): mỗi mục trả kèm
   `progressCurrent`/`progressTarget` — streak hiện tại (nhóm STREAK), số từ đã thuộc (VOLUME),
-  hoặc `learnedWords`/`totalWords` lấy từ `UserLevelProgress` (LEVEL — `threshold` ở nhóm này là
-  SỐ CẤP HSK 1-9, không phải số từ, nên không dùng thẳng làm mẫu số).
+  tổng số lượt ôn (MILESTONE), hoặc `learnedWords`/`totalWords` lấy từ `UserLevelProgress`
+  (LEVEL — `threshold` ở nhóm này là SỐ CẤP HSK 1-9, không phải số từ, nên không dùng thẳng làm
+  mẫu số).
+  **Mốc SỚM (sửa 2026-09-21 sau khi ĐO dữ liệu production thật)**: trước đây mốc thấp nhất là
+  streak 7 ngày / 50 từ "đã thuộc" — mà "đã thuộc" nghĩa là `nowLearned` trong `review.service.ts`
+  (`state=REVIEW && intervalDays >= LEARNED_INTERVAL_DAYS` = 21 ngày), nên người mới KHÔNG THỂ
+  nhận huy hiệu nào trong 3 tuần đầu dù học chăm tới đâu. Đo thật: **0/102 user từng mở khoá huy
+  hiệu, streak dài nhất trong lịch sử app chỉ 3 ngày** (< ngưỡng 7) — tức là chưa ai từng chạm
+  tới phần thưởng đầu tiên. Đã thêm nhóm **MILESTONE** (giá trị enum `AchievementCategory` có sẵn
+  từ lâu nhưng CHƯA AI DÙNG — mồ côi giống `isLeech` trước đây) đếm THẲNG `ReviewLog` nên tăng
+  ngay từ lượt ôn đầu tiên, cộng `STREAK_1`/`STREAK_3` và `WORDS_10`/`WORDS_25`. Người mới ôn
+  xong 1 từ giờ nhận ngay 2 huy hiệu ("Bước đầu tiên" + "Ngày đầu tiên") kèm thông báo realtime
+  có sẵn. **Ngưỡng kiểm tra đọc thẳng từ `ACHIEVEMENT_CATALOG`** qua `thresholdsOf(category)` —
+  trước đây hardcode `[7,30,100]`/`[50,100,500,1000]` trong `onStreakUpdated`/`onWordReviewed`,
+  thêm huy hiệu vào catalog mà quên sửa 2 mảng đó thì huy hiệu vĩnh viễn không mở khoá được mà
+  KHÔNG báo lỗi gì. Huy hiệu mới `INSERT` qua **migration** (`20260921120000_add_early_achievements`,
+  `ON CONFLICT DO NOTHING`) chứ không chỉ qua seed — vì CI/CD chỉ chạy `prisma migrate deploy`,
+  KHÔNG chạy `db:seed`, nên sửa seed thôi sẽ không bao giờ lên tới production.
 - **Index quan trọng cho queue SRS**: `UserWordProgress (userId, dueAt)` và `(userId, hskLevel, dueAt)`.
 - **"Từ khó nhớ" (leech, thuật ngữ Anki) — `GET /study/leeches` (từ 2026-09-19)**: phát hiện qua
   research chủ động (rà lại code, không phải yêu cầu cụ thể của user) — field `UserWordProgress.
