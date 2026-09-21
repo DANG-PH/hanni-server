@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Exclude, Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
 
 export class PaginationDto {
@@ -15,10 +15,15 @@ export class PaginationDto {
   @Max(100)
   pageSize = 20;
 
+  // getter-only — nếu client lỡ gửi query trùng tên ("skip"/"take"),
+  // class-transformer sẽ cố gán giá trị lên đây và crash vì không có setter.
+  // @Exclude() chặn class-transformer đụng vào 2 property này khi transform.
+  @Exclude()
   get skip(): number {
     return (this.page - 1) * this.pageSize;
   }
 
+  @Exclude()
   get take(): number {
     return this.pageSize;
   }
