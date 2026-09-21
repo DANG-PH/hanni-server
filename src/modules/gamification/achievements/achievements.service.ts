@@ -32,6 +32,7 @@ export class AchievementsService {
       learnedWordsCount,
       levelProgress,
       totalByLevel,
+      reviewCount,
     ] = await Promise.all([
       this.prisma.achievement.findMany({ orderBy: { threshold: 'asc' } }),
       this.prisma.userAchievement.findMany({ where: { userId } }),
@@ -44,6 +45,7 @@ export class AchievementsService {
         select: { hskLevel: true, learnedWords: true, totalWords: true },
       }),
       this.prisma.word.groupBy({ by: ['hskLevel'], _count: { _all: true } }),
+      this.prisma.reviewLog.count({ where: { userId } }),
     ]);
     const unlocked = new Map(mine.map((m) => [m.achievementId, m]));
     const levelMap = new Map(levelProgress.map((l) => [l.hskLevel, l]));
@@ -58,6 +60,8 @@ export class AchievementsService {
         progressCurrent = streak?.currentStreak ?? 0;
       } else if (a.category === AchievementCategory.VOLUME) {
         progressCurrent = learnedWordsCount;
+      } else if (a.category === AchievementCategory.MILESTONE) {
+        progressCurrent = reviewCount;
       } else if (a.category === AchievementCategory.LEVEL) {
         // threshold ở nhóm LEVEL là SỐ CẤP HSK (1-9), không phải số từ.
         const lp = levelMap.get(a.threshold);
@@ -99,9 +103,19 @@ export class AchievementsService {
     }
   }
 
+  /** Ngưỡng lấy THẲNG từ ACHIEVEMENT_CATALOG thay vì chép tay — trước đây
+   * hardcode [7,30,100]/[50,100,500,1000] ở 2 hàm dưới, thêm huy hiệu mới vào
+   * catalog mà quên sửa 2 mảng này thì huy hiệu đó vĩnh viễn không mở khoá
+   * được (im lặng, không lỗi gì). */
+  private thresholdsOf(category: AchievementCategory): number[] {
+    return ACHIEVEMENT_CATALOG.filter((a) => a.category === category)
+      .map((a) => a.threshold)
+      .sort((a, b) => a - b);
+  }
+
   /** Gọi khi có sự kiện streak.updated. */
   async onStreakUpdated(userId: string, currentStreak: number): Promise<void> {
-    for (const t of [7, 30, 100]) {
+    for (const t of this.thresholdsOf(AchievementCategory.STREAK)) {
       if (currentStreak >= t)
         await this.unlock(userId, `STREAK_${t}`, currentStreak);
     }
@@ -112,13 +126,22 @@ export class AchievementsService {
     await this.unlock(userId, `HSK${hskLevel}_COMPLETE`, hskLevel);
   }
 
-  /** Gọi khi có sự kiện word.reviewed — kiểm mốc số từ đã thuộc. */
+  /** Gọi khi có sự kiện word.reviewed — kiểm mốc số từ đã thuộc (VOLUME) VÀ
+   * tổng số lượt ôn (MILESTONE). MILESTONE là nhóm cho người MỚI: đếm thẳng
+   * `ReviewLog` nên tăng ngay từ lượt ôn đầu tiên, trong khi VOLUME đo
+   * `learnedAt` (cần interval >= 21 ngày) nên luôn trễ hàng tuần. */
   async onWordReviewed(userId: string): Promise<void> {
-    const learned = await this.prisma.userWordProgress.count({
-      where: { userId, learnedAt: { not: null } },
-    });
-    for (const t of [50, 100, 500, 1000]) {
+    const [learned, reviews] = await Promise.all([
+      this.prisma.userWordProgress.count({
+        where: { userId, learnedAt: { not: null } },
+      }),
+      this.prisma.reviewLog.count({ where: { userId } }),
+    ]);
+    for (const t of this.thresholdsOf(AchievementCategory.VOLUME)) {
       if (learned >= t) await this.unlock(userId, `WORDS_${t}`, learned);
+    }
+    for (const t of this.thresholdsOf(AchievementCategory.MILESTONE)) {
+      if (reviews >= t) await this.unlock(userId, `REVIEWS_${t}`, reviews);
     }
   }
 
