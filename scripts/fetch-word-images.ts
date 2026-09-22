@@ -31,6 +31,9 @@ function argOf(name: string): string | undefined {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Trần cấp HSK còn lấy ảnh — xem ghi chú trong main(). */
+const IMAGE_MAX_HSK_LEVEL = 5;
+
 async function main() {
   const prisma = new PrismaClient();
   const levels = argOf('level')
@@ -42,11 +45,31 @@ async function main() {
   // sang tra Wikipedia theo Hán tự) và muốn thay ảnh cũ kém chính xác.
   const refresh = process.argv.includes('--refresh');
 
+  // Trần HSK5 giống `WordsService.attachImage()` — đo thật trên 15 danh từ
+  // HSK6: khoảng MỘT NỬA ra ảnh sai hẳn nghĩa (真相 "sự thật" -> que diêm,
+  // 著作 "viết" -> đầm phá) vì từ càng lên cao càng trừu tượng. Dạy sai liên
+  // tưởng hại hơn là không có ảnh. Muốn thử lại thì `--max-level=` tường
+  // minh, đừng để mặc định cào bừa.
+  const maxLevel = Number(argOf('max-level') ?? IMAGE_MAX_HSK_LEVEL);
+  // `--level=` cũng bị chặn bởi trần: nếu không, gõ `--level=6` là lách được
+  // đúng cái vừa chặn ở trên mà không hề báo gì.
+  const picked = levels?.length ? levels.filter((l) => l <= maxLevel) : null;
+  if (levels?.length && !picked?.length) {
+    console.log(
+      `Các cấp ${levels.join(',')} đều vượt trần HSK${maxLevel} — xem lý do trong file này. ` +
+        'Muốn chạy thật thì thêm --max-level= tường minh.',
+    );
+    await prisma.$disconnect();
+    return;
+  }
+
   const words = await prisma.word.findMany({
     where: {
       ...(refresh ? {} : { imageUrl: null }),
       pos: { has: WordPos.NOUN },
-      ...(levels?.length ? { hskLevel: { in: levels } } : {}),
+      ...(picked?.length
+        ? { hskLevel: { in: picked } }
+        : { hskLevel: { lte: maxLevel } }),
     },
     select: { id: true, simplified: true, meaningEn: true, hskLevel: true },
     // từ thông dụng trước: nếu dừng giữa chừng thì phần đã lấy vẫn là phần
