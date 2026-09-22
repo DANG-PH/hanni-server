@@ -11,10 +11,14 @@
  * Nghĩa trong file do Hanni soạn tay dựa trên nghĩa tiếng Anh sẵn có +
  * đối chiếu từ điển, KHÔNG qua dịch máy (cùng cách làm câu ví dụ HSK1).
  *
- * 2 mục có thêm `pinyin`: `那` và `草` bị ETL chọn nhầm CÁCH ĐỌC HIẾM
- * (那 nǎ thay vì nà, 草 cào — biến thể tục — thay vì cǎo). Chỉ sửa cột
- * `pinyin` HIỂN THỊ, KHÔNG đụng `pinyinNumeric` vì đó là khoá khớp của
- * `seed-word-examples.ts`.
+ * Mục có thêm `pinyin` là ca ETL CHỌN NHẦM CÁCH ĐỌC: với chữ đa âm, nếu
+ * pinyin trong đại cương không khớp được với CC-CEDICT thì `build-words.ts`
+ * rơi về `ced.pinyin[0]` — đôi khi đúng vào cách đọc hiếm, và nghĩa tiếng
+ * Việt kéo theo cũng lệch. Nặng nhất là 个: đang lưu `gě` với nghĩa "dùng
+ * trong 自个儿" trong khi đây là LƯỢNG TỪ THÔNG DỤNG NHẤT tiếng Trung (gè).
+ * Tương tự 那 (nǎ thay vì nà), 草 (cào — biến thể tục — thay vì cǎo), 压, 并,
+ * 扎, 挣, 恶, 嘛, 尽快. Chỉ sửa cột `pinyin` HIỂN THỊ, KHÔNG đụng
+ * `pinyinNumeric` vì đó là khoá khớp của `seed-word-examples.ts`.
  *
  * Idempotent, chạy lại vô hại. Chạy: npx tsx scripts/apply-meaning-fixes.ts
  */
