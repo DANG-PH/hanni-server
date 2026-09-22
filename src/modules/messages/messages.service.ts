@@ -8,6 +8,7 @@ import {
 import { pinyin } from 'pinyin-pro';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { PushService } from '../push/push.service';
 import { translateLinesToVi, translateSimple } from '../videos/translate.util';
 
 const USER_SELECT = { id: true, displayName: true, avatarUrl: true } as const;
@@ -19,6 +20,7 @@ export class MessagesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly gateway: NotificationsGateway,
+    private readonly push: PushService,
   ) {}
 
   /** Chuẩn hoá thứ tự cặp user (userAId luôn nhỏ hơn) để 1 cặp chỉ có ĐÚNG
@@ -155,7 +157,38 @@ export class MessagesService {
       conversationId,
       message,
     });
+
+    // Push cho người nhận — phần từng THIẾU HẲN: trước 2026-09-22 tin nhắn
+    // chỉ đẩy qua WebSocket nên người nhận phải đang MỞ SẴN app mới biết,
+    // đóng app là im lặng hoàn toàn. Không await để không làm chậm việc gửi.
+    void this.sendMessagePush(userId, otherUserId, content);
     return message;
+  }
+
+  /** Tên người gửi + trích nội dung cho thông báo đẩy. Tin nhắn có thể dài
+   * hoặc là chữ Hán — cắt ngắn để thông báo không tràn. */
+  private async sendMessagePush(
+    senderId: string,
+    receiverId: string,
+    content: string,
+  ): Promise<void> {
+    try {
+      const sender = await this.prisma.user.findUnique({
+        where: { id: senderId },
+        select: { displayName: true },
+      });
+      const preview =
+        content.length > 80 ? `${content.slice(0, 80)}…` : content;
+      await this.push.sendToUser(
+        receiverId,
+        `Tin nhắn từ ${sender?.displayName ?? 'một người bạn'}`,
+        preview,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Không gửi được push tin nhắn: ${(err as Error).message}`,
+      );
+    }
   }
 
   async markRead(

@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import type { NotificationType } from '@prisma/client';
+import { Injectable, Logger } from '@nestjs/common';
+import { NotificationType } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
+import { PushService } from '../push/push.service';
 import type { NotificationQueryDto } from './dto/notifications.dto';
 import { NotificationsGateway } from './notifications.gateway';
 
@@ -21,14 +22,60 @@ interface CreateNotificationInput {
   achievementId?: string | null;
 }
 
+/** Nội dung push cho từng loại thông báo. `actor` là tên người gây ra (đã
+ * lọc trường hợp tự tác động lên mình ở `create()`). */
+function pushTextFor(
+  type: NotificationType,
+  actor: string,
+): { title: string; body: string } {
+  switch (type) {
+    case NotificationType.COMMENT_REPLY:
+      return {
+        title: 'Có người trả lời bạn',
+        body: `${actor} đã trả lời bình luận của bạn.`,
+      };
+    case NotificationType.VIDEO_COMMENT:
+      return {
+        title: 'Bình luận mới',
+        body: `${actor} đã bình luận vào video bạn thêm.`,
+      };
+    case NotificationType.VIDEO_LIKE:
+      return {
+        title: 'Video của bạn được thích',
+        body: `${actor} đã thích video bạn thêm.`,
+      };
+    case NotificationType.NEW_FOLLOWER:
+      return {
+        title: 'Bạn có người theo dõi mới',
+        body: `${actor} vừa theo dõi bạn.`,
+      };
+    case NotificationType.ACHIEVEMENT_UNLOCKED:
+      return {
+        title: 'Mở khoá huy hiệu mới',
+        body: 'Bạn vừa đạt một huy hiệu — xem ngay nhé!',
+      };
+    default:
+      return { title: 'Hanni', body: 'Bạn có thông báo mới.' };
+  }
+}
+
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly gateway: NotificationsGateway,
+    private readonly push: PushService,
   ) {}
 
-  /** Tạo thông báo + đẩy realtime. Bỏ qua nếu người gây ra chính là người nhận. */
+  /** Tạo thông báo + đẩy realtime + GỬI PUSH. Bỏ qua nếu người gây ra chính
+   * là người nhận.
+   *
+   * Push ở đây là phần từng THIẾU HẲN: trước 2026-09-22 `PushService` chỉ
+   * được `ReminderService` dùng (nhắc học theo lịch), nên mọi thông báo
+   * tương tác chỉ tới được người đang MỞ SẴN app qua WebSocket — đóng app là
+   * không biết gì, kể cả có người trả lời bình luận hay theo dõi mình. */
   async create(input: CreateNotificationInput) {
     if (input.actorId && input.actorId === input.userId) return null;
     const notification = await this.prisma.notification.create({
@@ -43,6 +90,17 @@ export class NotificationsService {
       include: INCLUDE,
     });
     this.gateway.emitToUser(input.userId, 'notification:new', notification);
+
+    // Không await: push chậm/lỗi không được làm chậm luồng tạo thông báo.
+    const { title, body } = pushTextFor(
+      notification.type,
+      notification.actor?.displayName ?? 'Ai đó',
+    );
+    void this.push
+      .sendToUser(input.userId, title, body)
+      .catch((err: Error) =>
+        this.logger.warn(`Không gửi được push: ${err.message}`),
+      );
     return notification;
   }
 

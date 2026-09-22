@@ -5,6 +5,7 @@ import { NotificationsController } from './notifications.controller';
 import { NotificationsGateway } from './notifications.gateway';
 import { NotificationsListener } from './notifications.listener';
 import { NotificationsService } from './notifications.service';
+import { PushModule } from '../push/push.module';
 
 // DuelService "sống" ở đây (không phải module duel/) để
 // NotificationsGateway gọi thẳng được (xử lý sự kiện WebSocket
@@ -12,7 +13,7 @@ import { NotificationsService } from './notifications.service';
 // chỉ import NotificationsModule để lấy lại 2 service này cho phần REST
 // (rating/leaderboard/queue-size), không đi chiều ngược lại.
 @Module({
-  imports: [JwtModule.register({})],
+  imports: [PushModule, JwtModule.register({})],
   controllers: [NotificationsController],
   providers: [
     NotificationsGateway,
@@ -20,10 +21,6 @@ import { NotificationsService } from './notifications.service';
     NotificationsService,
     DuelService,
   ],
-  exports: [
-    NotificationsService,
-    NotificationsGateway,
-    DuelService,
-  ],
+  exports: [NotificationsService, NotificationsGateway, DuelService],
 })
 export class NotificationsModule {}
