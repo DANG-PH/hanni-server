@@ -36,11 +36,25 @@ export interface AssistantAction {
 }
 
 /** Trang tĩnh trợ lý có thể gợi ý mở — khớp route thật ở client. */
+/** Trang trợ lý được phép dẫn người dùng tới.
+ *
+ * Bỏ sót ở đây là tính năng đó gần như tàng hình với trợ lý: hỏi "luyện nói
+ * ở đâu" thì model không có đường nào để trỏ. Đo production 2026-09-22: trợ
+ * lý AI là thứ ĐƯỢC DÙNG NHIỀU NHẤT (150 tin nhắn, hơn cả số lượt ôn từ),
+ * trong khi roleplay mới 5 tin nhắn và minigame 30 ván — nên nối 2 đầu đó
+ * lại là việc đáng làm nhất, không phải thêm trang mới.
+ *
+ * THÊM TRANG MỚI thì nhớ thêm cả ở `PAGE_LABELS_VI` bên dưới. */
 const PAGE_PATHS: Record<string, string> = {
   dashboard: '/dashboard',
   learn: '/learn',
   vocabulary: '/tu-dien',
-  grammar: '/grammar',
+  // `/grammar` đã gộp vào `/ngu-phap` (2026-09-22) và chỉ còn redirect 308 —
+  // trỏ thẳng đường mới, đừng bắt người dùng đi qua một lần chuyển hướng.
+  grammar: '/ngu-phap',
+  roleplay: '/roleplay',
+  minigame: '/minigame',
+  messages: '/messages',
   listening: '/listening',
   pronunciation: '/pronunciation',
   writing: '/writing',
@@ -59,6 +73,9 @@ const PAGE_LABELS_VI: Record<string, string> = {
   learn: 'Lộ trình học',
   vocabulary: 'Từ vựng',
   grammar: 'Ngữ pháp',
+  roleplay: 'Luyện nói với AI',
+  minigame: 'Minigame & Đấu 1v1',
+  messages: 'Tin nhắn',
   listening: 'Luyện nghe',
   pronunciation: 'Luyện phát âm',
   writing: 'Luyện viết Hán tự',
@@ -82,7 +99,7 @@ const TOOLS: Tool[] = [
       {
         name: 'navigate_to_page',
         description:
-          'Lấy đường dẫn tới 1 trang trong app Hanni. GỌI TOOL NÀY (không trả lời bằng text) cho MỌI câu hỏi có dạng "...ở đâu", "...ở chỗ nào", "vào đâu để...", "làm sao/thế nào để...", "sao lâu rồi chưa...", hay bất kỳ câu nào ngụ ý người dùng muốn ĐẾN một trang/tính năng cụ thể — kể cả khi câu hỏi không dùng động từ "mở". Ví dụ: "ôn từ vựng/flashcard ở đâu", "sao lâu rồi chưa ôn bài", "ôn tập kiểu gì vậy" -> page=flashcard; "đổi mật khẩu ở đâu", "sao đổi email/tài khoản", "cập nhật hồ sơ ở chỗ nào" -> page=account; "chỉnh mục tiêu ngày ở đâu" -> page=settings. Các trang khác: lộ trình (learn), từ vựng (vocabulary), ngữ pháp (grammar), luyện nghe (listening), luyện phát âm (pronunciation), luyện viết (writing), kiểm tra HSK (exams), bảng xếp hạng (leaderboard), tiến độ (progress), huy hiệu (achievements). KHÔNG dùng cho video — video dùng open_video. TUYỆT ĐỐI không trả lời kiểu "bạn vào mục X nhé" bằng text suông — phải gọi tool thật để hệ thống hiện nút bấm. `level` là tuỳ chọn, cứ để trống nếu không rõ, ĐỪNG hỏi lại người dùng trước khi gọi tool.',
+          'Lấy đường dẫn tới 1 trang trong app Hanni. GỌI TOOL NÀY (không trả lời bằng text) cho MỌI câu hỏi có dạng "...ở đâu", "...ở chỗ nào", "vào đâu để...", "làm sao/thế nào để...", "sao lâu rồi chưa...", hay bất kỳ câu nào ngụ ý người dùng muốn ĐẾN một trang/tính năng cụ thể — kể cả khi câu hỏi không dùng động từ "mở". Ví dụ: "ôn từ vựng/flashcard ở đâu", "sao lâu rồi chưa ôn bài", "ôn tập kiểu gì vậy" -> page=flashcard; "đổi mật khẩu ở đâu", "sao đổi email/tài khoản", "cập nhật hồ sơ ở chỗ nào" -> page=account; "chỉnh mục tiêu ngày ở đâu" -> page=settings. Các trang khác: lộ trình (learn), từ vựng (vocabulary), ngữ pháp (grammar), luyện nghe (listening), luyện phát âm (pronunciation), luyện viết (writing), luyện NÓI/hội thoại đóng vai với AI (roleplay), trò chơi + đấu 1v1 (minigame), nhắn tin với người học khác (messages), kiểm tra HSK (exams), bảng xếp hạng (leaderboard), tiến độ (progress), huy hiệu (achievements). KHÔNG dùng cho video — video dùng open_video. TUYỆT ĐỐI không trả lời kiểu "bạn vào mục X nhé" bằng text suông — phải gọi tool thật để hệ thống hiện nút bấm. `level` là tuỳ chọn, cứ để trống nếu không rõ, ĐỪNG hỏi lại người dùng trước khi gọi tool.',
         parameters: {
           type: Type.OBJECT,
           properties: {
