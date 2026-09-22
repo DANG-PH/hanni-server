@@ -561,26 +561,12 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   thưởng thói quen cố định, không nên tăng theo hoạt động. Tạo vòng lặp giữ chân có chủ đích: mua
   Premium kiếm xu nhanh hơn → nhiều xu hơn để mua khung/danh hiệu mới → Premium càng đáng giá hơn
   khi có nhiều thứ để mua hơn.
-- **Đấu đôi 2v2 (`src/modules/duel/team-duel.service.ts`, `TeamDuelService`)**: Giai đoạn 4
-  minigame — kiến trúc SONG SONG với `DuelService` (hàng đợi/trạng thái trận RIÊNG, cùng "sống"
-  trong `NotificationsModule` với cùng lý do `forwardRef()` tránh vòng lặp module), nhưng dùng
-  CHUNG `UserRating`/rank tier/mùa giải với đấu 1v1 — KHÔNG dựng bảng xếp hạng/ELO riêng cho 2v2
-  vì cùng đo 1 kỹ năng (phản xạ dịch từ vựng), đơn giản hơn nhiều so với 2 hệ song song. KHÔNG
-  lưu lịch sử trận đấu (khác `DuelMatch` của 1v1) — bảng đó chưa từng hiển thị ở UI, thêm 1 bảng
-  y hệt cho 4 người chơi (cần 4 cột khoá ngoại) chỉ tăng phức tạp schema mà chưa ai cần tra lại,
-  bỏ qua tới khi thực sự cần. **Ghép đội**: hàng đợi solo (CHƯA hỗ trợ rủ bạn vào cùng đội trước
-  — để dành bản sau), đủ 4 người thì ghép "rắn" (snake seed) theo ELO giảm dần — hạng 1+4 vào 1
-  đội, hạng 2+3 vào đội kia — cân bằng ELO trung bình 2 đội tốt hơn ghép ngẫu nhiên. **Luật trận**
-  y hệt 1v1 (8 câu, 8s/câu, độ khó theo `wordPoolSkipForElo(avgElo)` — ở đây là ELO trung bình
-  CẢ 4 người) nhưng điểm ĐỘI = tổng điểm 2 thành viên; ELO tính theo ELO TRUNG BÌNH ĐỘI (công
-  thức Elo chuẩn giữa 2 đội) rồi áp CÙNG 1 mức thay đổi cho cả 2 thành viên — không chia theo
-  đóng góp riêng từng người. **Forfeit**: 1 người rớt mạng quá `DISCONNECT_FORFEIT_MS` (15s) mà
-  không quay lại kịp thì XỬ THUA CẢ ĐỘI (không có cơ chế "chơi tiếp 2v1"). Sự kiện WebSocket
-  `teamduel:join-queue`/`teamduel:leave-queue`/`teamduel:answer` (gửi) và
-  `teamduel:matched`/`teamduel:round`/`teamduel:round-result`/`teamduel:finished` (nhận) — cùng
-  namespace `/notifications` với 1v1. `GET /teamduel/queue-size` + `GET /teamduel/active` (tự
-  phục hồi UI khi refresh giữa trận, y hệt `GET /duel/active`) ở `TeamDuelController`; rating/
-  leaderboard/rank-tiers vẫn dùng chung endpoint của `DuelController` vì chung 1 bảng dữ liệu.
+- **Đấu đôi 2v2 — ĐÃ XOÁ (2026-09-22)**: từng có `TeamDuelService`/`TeamDuelController` +
+  3 sự kiện WebSocket `teamduel:*`. Gỡ vì 0 người từng chơi, và quan trọng hơn: nó TÁCH HÀNG
+  CHỜ GHÉP TRẬN LÀM ĐÔI — với lượng người chơi hiện tại thì cả 1v1 lẫn 2v2 đều khó ghép, gộp
+  về một hàng chờ duy nhất có lợi thật chứ không chỉ gọn code. Không cần migration vì 2v2 vốn
+  dùng chung `UserRating` và không lưu lịch sử trận riêng. Đấu 1v1, rank tier, mùa giải giữ
+  nguyên. Nếu sau này muốn làm lại, xem lịch sử git trước commit "refactor(duel): xoá hẳn".
 - **Hồ sơ công khai (`GET /users/:id/profile`, `UsersService.getPublicProfile()`)**: field an
   toàn để lộ công khai (KHÔNG email/settings/oauth như `getProfile()` của chính mình) — tên,
   avatar, ngày tham gia, streak, số từ đã thuộc (dùng lại luật LEARNED_WHERE giống
