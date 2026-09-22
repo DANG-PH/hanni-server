@@ -108,6 +108,21 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `simplified` vì URL là 1 Hán tự → 1 trang. Client: `/tu-dien/[slug]` + `/tu-dien` là **Server
   Component** (bắt buộc — nội dung phải nằm sẵn trong HTML thì Google mới đọc được), xem
   `hanni-client/CLAUDE.md`.
+  **Phân tích từng chữ + từ cùng chữ (từ 2026-09-22)**: `lookup()` trả thêm `characters[]`
+  (tách từ ghép thành từng chữ kèm âm Hán Việt riêng + nghĩa của chữ đó nếu nó tồn tại như mục
+  từ đơn) và `compounds[]` (từ ghép khác chứa cùng chữ). Đây là chỗ khai thác SÂU nhất lợi thế
+  Hán Việt — 电脑 = 电 (điện) + 脑 (não) thì người Việt đoán ra máy tính ngay. Research sư phạm
+  (Hacking Chinese, YoyoChinese) xác nhận học theo thành phần hiệu quả hơn học từng từ rời rạc;
+  với người Việt mỗi thành phần lại có sẵn một âm quen thuộc. Cũng làm trang DÀY hơn hẳn cho SEO
+  và tạo liên kết nội bộ giúp bot bò sâu. `hanViet` lưu dạng "điện não" (âm cách nhau bởi khoảng
+  trắng, theo THỨ TỰ ký tự) nên tách theo khoảng trắng là khớp 1-1 với từng chữ — nhưng CHỈ gán
+  khi số âm KHỚP số chữ, lệch thì để `null` (thà thiếu còn hơn gán sai âm cho nhầm chữ).
+- **Ngữ pháp CÔNG KHAI (`GET /grammar*` đều `@Public()`, từ 2026-09-22)**: 235 điểm có giải
+  thích soạn tay là tài sản hiếm NHẤT của Hanni (không phải dữ liệu mở cào về như từ vựng), lại
+  cạnh tranh SEO thấp hơn từ vựng nhiều. Client `/ngu-phap` + `/ngu-phap/[slug]`; `/grammar`
+  trong app đã GỘP vào đó (cùng lý do gộp `/vocabulary` vào `/tu-dien`), trang mới còn tốt hơn
+  vì mỗi điểm có URL riêng chia sẻ được thay vì accordion `?open=slug`. Chỉ liệt kê/sitemap mục
+  CÓ giải thích thật — mục đại cương rút gọn (`flat`) mở ra là ngõ cụt.
 - **Từ vựng hôm nay** (`GET /words/of-the-day`, route đăng ký TRƯỚC `words/:id` để tránh
   `ParseUUIDPipe` nuốt mất — xem `vocabulary.controller.ts`): 1 từ CỐ ĐỊNH theo ngày (đổi lúc 0h
   UTC), giống nhau cho mọi user, không lưu DB — xoay vòng theo `frequencyRank` (chỉ từ có nghĩa
