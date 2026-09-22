@@ -230,8 +230,28 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `pinyinNumeric`** vì đó là khoá khớp của `seed-word-examples.ts`. `cleanDef()` trong ETL cũng
   đã lọc chú thích lượng từ `(LT:...)` để bản seed dựng lại sau này sạch sẵn (22 từ, xem
   `scripts/clean-meaning-annotations.ts`).
-  **Chưa làm**: sửa tận gốc phần chọn cách đọc trong ETL — cần chạy lại `data:build-words` với
-  nguồn thô, và còn phải rà xem bao nhiêu từ khác đang dính cùng lỗi.
+  **ĐÃ sửa tận gốc (cùng ngày)** — xem mục "Chọn cách đọc cho chữ đa âm" ngay dưới.
+- **Chọn cách đọc cho chữ ĐA ÂM trong ETL (sửa 2026-09-22)** — `build-words.ts` BỎ DẤU THANH
+  trước khi khớp pinyin đại cương với CC-CEDICT, nên với chữ đa âm mà 2 cách đọc chung phụ âm +
+  vần thì `.find()` lấy đại cái ĐẦU TIÊN trong mảng CEDICT, trong khi đại cương HSK đã ghi sẵn
+  đúng thanh điệu — thông tin đó bị vứt đi. Hậu quả đo được:
+  (1) đọc sai: 个 lấy `ge3` (gě, chỉ dùng trong 自个儿) thay vì `ge4` — LƯỢNG TỪ THÔNG DỤNG NHẤT
+  tiếng Trung; 那 nǎ thay vì nà; 草 cào (biến thể tục) thay vì cǎo; 吗 má thay vì ma.
+  (2) **MẤT TỪ**: 2 mục đại cương khác cách đọc bị trùng khoá `simplified|pinyinNumeric` rồi gộp
+  làm một — 只 có cả zhī (HSK1, lượng từ) lẫn zhǐ (HSK3, "chỉ") nhưng chỉ còn 1; tương tự 好 hào,
+  看 kān, 干 gān, 种 zhòng… Tổng **10.912 → 10.958 từ (+46 cứu lại)**, 105 từ sửa cách đọc.
+  Sửa: khớp GIỮ nguyên dấu thanh trước (`comparablePinyin()` — bỏ khoảng trắng + không phân biệt
+  hoa thường, vì đại cương viết liền "bàba" còn CEDICT tách "bà ba" và viết hoa tên riêng "Na1"),
+  chỉ bỏ thanh khi không còn cách nào.
+  **Ràng buộc kéo theo**: `lesson-themes-hsk*.json` khoá theo `simplified|pinyinNumeric` nên mỗi
+  lần đổi cách chọn pinyin là vỡ hết khoá cũ — đã thêm dự phòng khớp theo CHỮ (trong 1 cấp mỗi
+  chữ chỉ thuộc 1 chủ đề), và 29 cách đọc vừa cứu lại đã gán chủ đề tay. Build vẫn **BÁO LỖI**
+  khi thiếu chủ đề chứ không âm thầm bỏ từ.
+  **Đưa vào DB đang chạy**: `npx tsx scripts/sync-word-readings.ts [--apply]` (mặc định chạy
+  thử). KHÔNG dùng `db:seed` vì `UserWordProgress` trỏ vào `Word.id` — xoá/tạo lại là mất sạch
+  tiến độ. Script sửa TẠI CHỖ cách đọc + nghĩa của từ đã có, thêm cách đọc thứ hai còn thiếu với
+  `lessonId = null` (không nhét từ mới vào giữa lộ trình của người đang học), KHÔNG xoá gì. Chạy
+  `apply-meaning-fixes.ts` SAU nó để khẳng định lại phần nghĩa soạn tay.
 - **SRS**: `SchedulerRegistry.get(name)` chọn `Sm2Scheduler` | `FsrsScheduler` theo
   `UserSettings.srsScheduler`. `UserWordProgress` có cả trường SM-2 (easeFactor/intervalDays)
   lẫn FSRS (stability/difficulty) → đổi thuật toán không cần migration.
