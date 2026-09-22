@@ -37,14 +37,22 @@ interface CommonsSearchResult {
   };
 }
 
-/** Trả về URL ảnh thu nhỏ (400px) hoặc null nếu không tìm được/lỗi. */
+/** Trả về URL ảnh thu nhỏ (400px) hoặc null nếu không tìm được/lỗi.
+ *
+ * `gsrnamespace=6` là namespace File của Commons — gồm CẢ audio/video/PDF chứ
+ * không riêng ảnh. Không lọc thì gặp thật: query "sound" trả về
+ * `File:Sound of light rainfall.ogg` và `thumburl` của nó là ICON LOẠI FILE
+ * (`fileicon-ogg.png`), tức là từ vựng sẽ hiện icon file thay vì ảnh minh
+ * hoạ. Vì vậy thêm `filetype:bitmap` vào truy vấn, và chặn thêm 1 lớp nữa
+ * theo đường dẫn `file-type-icons` phòng khi Commons đổi cách trả về. */
 export async function searchCommonsImage(
   query: string,
 ): Promise<string | null> {
   try {
+    const search = `${query} filetype:bitmap`;
     const url =
       'https://commons.wikimedia.org/w/api.php?action=query&generator=search' +
-      `&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=6&gsrlimit=1` +
+      `&gsrsearch=${encodeURIComponent(search)}&gsrnamespace=6&gsrlimit=1` +
       '&prop=imageinfo&iiprop=url&iiurlwidth=400&format=json';
     const res = await fetch(url, {
       headers: { 'User-Agent': USER_AGENT },
@@ -54,7 +62,9 @@ export async function searchCommonsImage(
     const data = (await res.json()) as CommonsSearchResult;
     const pages = data.query?.pages ?? {};
     const first = Object.values(pages)[0];
-    return first?.imageinfo?.[0]?.thumburl ?? null;
+    const thumb = first?.imageinfo?.[0]?.thumburl;
+    if (!thumb || thumb.includes('file-type-icons')) return null;
+    return thumb;
   } catch {
     return null;
   }

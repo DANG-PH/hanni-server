@@ -21,16 +21,25 @@ export class VocabularyController {
     private readonly levels: HskLevelsService,
   ) {}
 
+  /** Công khai: dữ liệu từ vựng/cấp HSK vốn là dữ liệu mở (CC BY-SA, xem
+   * data/NOTICES.md), không có gì nhạy cảm để giấu sau đăng nhập. Mở ra để
+   * trang `/tu-dien` (Server Component, index được bởi Google) dùng CHUNG
+   * đúng 1 nguồn với trang duyệt trong app — trước đây `/vocabulary` cần
+   * đăng nhập nên phải dựng endpoint riêng cho bản công khai, thành 2 hệ
+   * thống rời rạc hiển thị cùng một thứ. */
+  @Public()
   @Get('levels')
   listLevels() {
     return this.levels.list();
   }
 
+  @Public()
   @Get('levels/:level')
   getLevel(@Param('level', ParseIntPipe) level: number) {
     return this.levels.get(level);
   }
 
+  @Public()
   @Get('words')
   listWords(@Query() query: WordQueryDto) {
     return this.words.list(query);
