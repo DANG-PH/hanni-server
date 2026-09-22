@@ -99,17 +99,27 @@ async function main() {
     return;
   }
 
+  let fixed = 0;
   for (const f of fixes) {
-    await prisma.word.update({
-      where: { id: f.id },
-      data: {
-        pinyin: f.s.pinyin,
-        pinyinNumeric: f.s.pinyinNumeric,
-        meaningVi: f.s.meaningVi ?? null,
-        meaningEn: f.s.meaningEn ?? null,
-        hanViet: f.s.hanViet ?? null,
-      },
-    });
+    // Bắt lỗi TỪNG DÒNG: `@@unique([simplified, pinyinNumeric])` có thể đụng
+    // nếu ghép nhầm cặp; hỏng 1 từ không được làm hỏng cả lượt chạy.
+    try {
+      await prisma.word.update({
+        where: { id: f.id },
+        data: {
+          pinyin: f.s.pinyin,
+          pinyinNumeric: f.s.pinyinNumeric,
+          meaningVi: f.s.meaningVi ?? null,
+          meaningEn: f.s.meaningEn ?? null,
+          hanViet: f.s.hanViet ?? null,
+        },
+      });
+      fixed += 1;
+    } catch (e) {
+      console.log(
+        `  ! không sửa được ${f.s.simplified} ${f.old} -> ${f.s.pinyin}: ${(e as Error).message.split('\n')[0]}`,
+      );
+    }
   }
   let added = 0;
   for (const w of inserts) {
@@ -131,7 +141,7 @@ async function main() {
       console.log(`  ! không thêm được ${w.simplified} ${w.pinyin}: ${e.message.split('\n')[0]}`);
     });
   }
-  console.log(`\nĐã ghi: ${fixes.length} sửa, ${added} thêm mới`);
+  console.log(`\nĐã ghi: ${fixed}/${fixes.length} sửa, ${added}/${inserts.length} thêm mới`);
   await prisma.$disconnect();
 }
 
