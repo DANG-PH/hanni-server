@@ -856,8 +856,19 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   đếm riêng — chấp nhận đánh đổi là spam gợi ý không tự làm hết hạn mức nhanh hơn (quy mô nhỏ,
   chưa đáng lo). Client: bấm "Dùng câu này" điền thẳng gợi ý vào ô nhập để người học TỰ xem/sửa
   trước khi gửi (không tự động gửi luôn), giống đúng tinh thần nút "Dịch" ở `/messages`.
-  **Vẫn chưa làm**: chấm điểm/phản hồi lỗi ngữ pháp sau khi kết thúc hội thoại (hiện chỉ luyện
-  phản xạ thuần, không có "kết quả buổi luyện" như `/listening`/`/pronunciation`).
+  **Nhận xét cuối buổi** (`POST /roleplay/sessions/:id/feedback`, `RoleplayService.feedback()`,
+  từ 2026-09-22) — đúng mục "chưa làm" ghi ngay lúc xong tính năng: trước đó bấm "Kết thúc" là
+  hội thoại bị xoá ngay, luyện xong không biết mình sai chỗ nào, trong khi `/listening` và
+  `/pronunciation` đều đã có phần "kết quả buổi luyện". `buildFeedbackPrompt()` cho Gemini đứng
+  NGOÀI vai diễn, nhận xét bằng TIẾNG VIỆT và CHỈ phần người học nói, theo khuôn cố định (**Làm
+  tốt** / **Nên sửa** dạng "câu đã viết → câu nên viết — lý do" / **Lần sau thử** 1 câu) giới hạn
+  ~120 từ — nhận xét chung chung kiểu "cần cố gắng hơn" thì vô dụng, mà giảng ngữ pháp dài thì
+  hỏng mục đích luyện phản xạ. **Chưa nói câu nào thì trả lời thẳng, KHÔNG gọi Gemini** (không
+  đốt quota để model tự bịa nhận xét). **KHÔNG lưu DB**: hội thoại đóng vai vốn bị xoá khi kết
+  thúc nên lưu riêng nhận xét sẽ thành dữ liệu mồ côi. Đọc tối đa `FEEDBACK_HISTORY_LIMIT` (40)
+  lượt — nhiều hơn `HISTORY_LIMIT` (20) của `reply()` vì cần nhìn cả buổi, nhưng vẫn có trần.
+  Dùng chung hạn mức/ngày với `reply()`/`hint()`. Client: bấm "Kết thúc" hiện màn kết quả rồi
+  mới chọn "Đóng buổi luyện" (xoá) hay "Nói tiếp"; AI lỗi thì KHÔNG chặn đường thoát.
   **Rủi ro nhỏ đã biết, CHẤP NHẬN không sửa**: `checkDailyQuota()` đếm `RoleplayMessage` hiện
   có rồi so với `FREE_ROLEPLAY_DAILY_LIMIT` TRƯỚC khi lưu lượt hiện tại — nhiều request gửi dồn
   dập/đồng thời gần chạm hạn mức đều đọc cùng số đếm cũ, có thể vượt hạn mức vài lượt gọi
