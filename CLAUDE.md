@@ -148,6 +148,15 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   audio/video/PDF. Query "sound" trả về `File:...ogg` mà `thumburl` là **ICON LOẠI FILE**
   (`fileicon-ogg.png`), tức từ vựng hiện icon file thay vì ảnh minh hoạ. Đã thêm
   `filetype:bitmap` vào truy vấn + chặn thêm lớp theo đường dẫn `file-type-icons`.
+  **ĐỔI NGUỒN CHÍNH sang Wikipedia tiếng Trung (`searchWikipediaImage()`)**: cào hàng loạt làm
+  lộ rõ lỗi word-sense nói ở trên không còn là chuyện lẻ tẻ nữa — 苹果 (`meaningEn` = "mincemeat,
+  pome, apple, Empire") cho ra ảnh BÁNH NHÂN THỊT, và cào hàng loạt thì nhân rộng lỗi đó. Tra
+  thẳng **Hán tự** trên `zh.wikipedia.org` (`prop=pageimages`) né hẳn bài toán chọn đúng nghĩa
+  vì không phải dịch sang tiếng Anh nữa. Kiểm chứng thật: 苹果 → rổ táo, 医生 → tranh bác sĩ,
+  书 → sách mở, 狗 → các giống chó. Commons giữ làm **dự phòng** khi Wikipedia không có bài.
+  **Bản quyền**: CHỈ nhận ảnh có đường dẫn `/wikipedia/commons/` — ảnh upload riêng vào một wiki
+  (`/wikipedia/zh/`) có thể là fair-use, KHÔNG được phép dùng lại. Script có cờ `--refresh` để
+  lấy lại cả từ ĐÃ có ảnh (dùng khi đổi nguồn như lần này).
 - **SRS**: `SchedulerRegistry.get(name)` chọn `Sm2Scheduler` | `FsrsScheduler` theo
   `UserSettings.srsScheduler`. `UserWordProgress` có cả trường SM-2 (easeFactor/intervalDays)
   lẫn FSRS (stability/difficulty) → đổi thuật toán không cần migration.
