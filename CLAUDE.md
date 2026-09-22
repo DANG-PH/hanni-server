@@ -287,6 +287,19 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   family (trình duyệt chỉ giữ cookie cuối, số còn lại thành token thừa còn hiệu lực tới khi hết
   hạn). Không phải lỗ hổng (cùng family, cùng user, quyền y hệt nhau) và sau bản sửa phía client
   thì đường này hiếm khi chạy — chỉ còn khi mở nhiều tab/thiết bị cùng lúc.
+- **Giờ nhắc học mặc định khi bật thông báo (sửa 2026-09-22)** — đo production: `reminderHour`
+  NULL ở **102/102** tài khoản, nghĩa là `ReminderService` (nhắc học mỗi ngày) chưa từng gửi
+  được cho ai. Lý do: giờ nhắc chỉ đặt được bằng 1 ô chọn nằm sâu trong `/settings`, sau khi đã
+  bật thông báo — gần như không ai đi hết quãng đó. `PushService.subscribe()` giờ đặt
+  `DEFAULT_REMINDER_HOUR` (20h) khi `reminderHour` đang NULL: người vừa chủ động cấp quyền thông
+  báo thì "nhắc học mỗi ngày" chính là thứ họ vừa đồng ý, và job vốn đã bỏ qua ai đạt mục tiêu
+  ngày hôm đó. **Chỉ đặt khi đang NULL** — không ghi đè lựa chọn của người đã tự chỉnh.
+- **`MAIL_HOST` trống trên production (phát hiện 2026-09-22, CẦN BẠN CẤU HÌNH)** — email xác
+  minh, đặt lại mật khẩu quên và bản tin tuần chỉ được log ra console, không bao giờ tới nơi,
+  trong khi 101/102 tài khoản đang bật "Email tổng kết tuần". Đăng nhập KHÔNG chặn người chưa
+  xác minh nên không ai bị kẹt, nhưng **quên mật khẩu là mất tài khoản**. Code đã đúng từ lâu,
+  chỉ thiếu biến môi trường. `GET /mail/configured` (mới) để client báo thật thay vì bày ra giao
+  diện như đang chạy — cùng cách `/payments/configured` ẩn phần nạp xu khi chưa có payOS.
 - **Index quan trọng cho queue SRS**: `UserWordProgress (userId, dueAt)` và `(userId, hskLevel, dueAt)`.
 - **"Từ khó nhớ" (leech, thuật ngữ Anki) — `GET /study/leeches` (từ 2026-09-19)**: phát hiện qua
   research chủ động (rà lại code, không phải yêu cầu cụ thể của user) — field `UserWordProgress.
