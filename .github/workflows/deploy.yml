@@ -78,17 +78,37 @@ jobs:
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             cd "${{ secrets.VPS_APP_PATH }}"
+            LOCK_BEFORE=$(md5sum package-lock.json | cut -d' ' -f1)
             git fetch origin main
             git reset --hard origin/main
-            npm ci
-            npx prisma generate
-            npx prisma migrate deploy
-            # Chỉ thay dist SAU KHI mọi bước trên đã xong (set -e): nếu có
-            # bước nào hỏng thì dist cũ vẫn nguyên, app vẫn chạy được.
+            LOCK_AFTER=$(md5sum package-lock.json | cut -d' ' -f1)
+
+            # Thay dist NGAY, TRƯỚC các bước nặng. Đặt sau `npm ci` như trước
+            # thì khi `npm ci` chết vì hết RAM, `set -e` dừng script và dist
+            # mới không bao giờ được áp — đã gặp thật: route mới trả 401/404
+            # sai trong khi code đã đúng commit và .deploy-tmp nằm lại đó.
             test -d .deploy-tmp/dist
             rm -rf dist
             mv .deploy-tmp/dist dist
             rm -rf .deploy-tmp
+
+            # CHỈ cài lại khi package-lock ĐỔI. VPS 3.9GB dùng chung nhiều
+            # dịch vụ; chạy `npm ci` mỗi lần deploy đã có lần chết giữa chừng
+            # và để lại node_modules HỎNG (mất cả @nestjs/common -> app không
+            # khởi động nổi). Dùng `npm install` chứ không `npm ci`: npm ci
+            # XOÁ SẠCH node_modules trước khi cài, nên fail giữa chừng là mất
+            # trắng; npm install cập nhật tại chỗ, hỏng cũng còn dùng được.
+            if [ "$LOCK_BEFORE" != "$LOCK_AFTER" ]; then
+              echo "package-lock đổi — cài lại dependencies"
+              npm install --no-audit --no-fund
+            else
+              echo "package-lock không đổi — bỏ qua cài đặt"
+            fi
+
+            npx prisma generate
+            npx prisma migrate deploy
             # `pm2 restart all` sẽ restart cả app của dịch vụ KHÁC trên cùng
             # VPS — chỉ restart đúng app của mình.
             pm2 restart hanni-server --update-env
+            sleep 5
+            curl -fsS http://localhost:8000/api/health
