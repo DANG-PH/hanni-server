@@ -72,17 +72,44 @@ export class MinigameService {
     private readonly wallet: WalletService,
   ) {}
 
+  /** Kho từ cho 1 ván — ƯU TIÊN từ chính người chơi ĐANG HỌC, thiếu thì bù
+   * bằng từ phổ biến.
+   *
+   * Trước đây luôn lấy `POOL_SIZE` từ phổ biến nhất TOÀN BỘ kho, bất kể
+   * người chơi đang ở đâu — nên người học HSK5 vẫn chơi với từ HSK1 và
+   * minigame chẳng liên quan gì tới việc học của họ. Cố tình KHÔNG bó vào
+   * đúng 1 bài học như `/listening`/`/writing`: minigame là luyện PHẢN XẠ
+   * trên vốn từ rộng, bó vào 10-15 từ một bài thì lặp lại rất nhanh và chán.
+   * Cùng cách `QuizService` đã làm. */
+  private async buildPool(userId: string, mode: GameMode) {
+    const needsAudio = mode === GameMode.LISTENING;
+    const wordWhere = {
+      meaningVi: { not: null },
+      ...(needsAudio ? { audioUrl: { not: null } } : {}),
+    };
+
+    const learning = await this.prisma.userWordProgress.findMany({
+      where: { userId, word: wordWhere },
+      include: { word: true },
+      orderBy: { updatedAt: 'desc' },
+      take: POOL_SIZE,
+    });
+    const pool = learning.map((p) => p.word);
+    if (pool.length >= POOL_SIZE) return pool;
+
+    // Bù từ phổ biến (bỏ những từ đã có để không trùng đáp án).
+    const extra = await this.prisma.word.findMany({
+      where: { ...wordWhere, id: { notIn: pool.map((w) => w.id) } },
+      orderBy: { frequencyRank: 'asc' },
+      take: POOL_SIZE - pool.length,
+    });
+    return [...pool, ...extra];
+  }
+
   async start(userId: string, mode: GameMode = GameMode.TRANSLATE) {
     if (mode === GameMode.MATCH) return this.startMatchGame(userId);
 
-    const pool = await this.prisma.word.findMany({
-      where: {
-        meaningVi: { not: null },
-        ...(mode === GameMode.LISTENING ? { audioUrl: { not: null } } : {}),
-      },
-      orderBy: { frequencyRank: 'asc' },
-      take: POOL_SIZE,
-    });
+    const pool = await this.buildPool(userId, mode);
     if (pool.length < 4) {
       throw new BadRequestException('Chưa đủ từ vựng để chơi minigame');
     }
