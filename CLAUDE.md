@@ -188,6 +188,19 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   **Bản quyền**: CHỈ nhận ảnh có đường dẫn `/wikipedia/commons/` — ảnh upload riêng vào một wiki
   (`/wikipedia/zh/`) có thể là fair-use, KHÔNG được phép dùng lại. Script có cờ `--refresh` để
   lấy lại cả từ ĐÃ có ảnh (dùng khi đổi nguồn như lần này).
+  **TRẦN HSK5 (`IMAGE_MAX_HSK_LEVEL`, từ 2026-09-22)** — lấy thử 15 danh từ HSK6 rồi kiểm tra
+  tay: khoảng MỘT NỬA ra ảnh sai hẳn nghĩa (真相 "sự thật" → que diêm, 著作 "viết" → cái đầm phá,
+  线索 "manh mối" → sân điền kinh). Từ càng lên cao càng TRỪU TƯỢNG, mà ảnh lấy từ ảnh đại diện
+  bài Wikipedia của chính Hán tự — với vật thể cụ thể thì đúng (HSK1-5: 1.650/1.662 danh từ, đã
+  kiểm tra tay), với khái niệm trừu tượng thì gần như tuỳ hứng. Gắn ảnh sai vào một từ là DẠY
+  SAI liên tưởng, hại hơn là không có ảnh — cùng nguyên tắc "thà thiếu còn hơn sai" của âm Hán
+  Việt và của việc không trích câu thoại video làm câu ví dụ. Chặn ở CẢ 2 đường: `attachImage()`
+  và script (`--level=6` cũng bị trần chặn, phải `--max-level=` tường minh mới lách được). 16
+  ảnh HSK6 lấy thử đã xoá khỏi production. **Hệ quả**: HSK6-9 sẽ không có ảnh cho tới khi có
+  cách chọn ảnh đáng tin cho từ trừu tượng (vd danh sách soạn tay như `hanviet-supplement.json`).
+  **Client hiện ảnh ở đâu**: từ điển công khai, popup bấm từ trong video, thẻ "Từ vựng hôm nay",
+  bộ thẻ học thử, VÀ (từ 2026-09-22) mặt sau flashcard ôn tập + danh sách từ ở `/learn/[lessonId]`
+  — trước đó luồng học chính không render ảnh nên người dùng tưởng chưa cào được ảnh nào.
 - **SRS**: `SchedulerRegistry.get(name)` chọn `Sm2Scheduler` | `FsrsScheduler` theo
   `UserSettings.srsScheduler`. `UserWordProgress` có cả trường SM-2 (easeFactor/intervalDays)
   lẫn FSRS (stability/difficulty) → đổi thuật toán không cần migration.
