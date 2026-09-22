@@ -216,6 +216,18 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   KHÔNG báo lỗi gì. Huy hiệu mới `INSERT` qua **migration** (`20260921120000_add_early_achievements`,
   `ON CONFLICT DO NOTHING`) chứ không chỉ qua seed — vì CI/CD chỉ chạy `prisma migrate deploy`,
   KHÔNG chạy `db:seed`, nên sửa seed thôi sẽ không bao giờ lên tới production.
+- **Bài đang học dở (`GET /learn/current`, `LearnService.currentLesson()`, từ 2026-09-22)** —
+  user phản ánh flashcard và các tính năng khác "không phân theo lộ trình, chưa phân chủ đề,
+  rất khó hiểu và loạn". Kiểm tra thì **dữ liệu đã chia chủ đề rất tốt** (HSK1: "Chào hỏi &
+  giao tiếp xã giao" có 你好/谢谢/再见, "Gia đình & con người", "Đồ ăn & thức uống", "Thời
+  tiết"...) — vấn đề nằm ở chỗ mỗi trang luyện tập TỰ chọn từ theo cấp HSK rồi lấy ngẫu
+  nhiên/theo trang, nên người đang học bài "Gia đình" vào luyện nghe lại gặp toàn từ khác.
+  Endpoint này để mọi trang hỏi CHUNG một chỗ thay vì mỗi nơi tự đoán. `path()` đã tính
+  `currentLessonId` nhưng phải dựng cả lộ trình (mọi bài + tiến độ từng bài) mới ra — quá nặng
+  cho việc chỉ cần 1 dòng. Ưu tiên bài ĐANG DỞ, sau đó tới bài chưa học đầu tiên.
+  Client dùng ở `PracticeLibrary` (luyện nghe/phát âm), `/study` và `/writing` — xem
+  `hanni-client/CLAUDE.md`. Quiz KHÔNG cần: quiz cuối buổi vốn đã truyền `wordIds` các từ vừa
+  ôn, quiz khác ưu tiên từ trong `UserWordProgress` của chính người dùng.
 - **Index quan trọng cho queue SRS**: `UserWordProgress (userId, dueAt)` và `(userId, hskLevel, dueAt)`.
 - **"Từ khó nhớ" (leech, thuật ngữ Anki) — `GET /study/leeches` (từ 2026-09-19)**: phát hiện qua
   research chủ động (rà lại code, không phải yêu cầu cụ thể của user) — field `UserWordProgress.
