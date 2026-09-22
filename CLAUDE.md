@@ -238,6 +238,14 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   Client dùng ở `PracticeLibrary` (luyện nghe/phát âm), `/study` và `/writing` — xem
   `hanni-client/CLAUDE.md`. Quiz KHÔNG cần: quiz cuối buổi vốn đã truyền `wordIds` các từ vừa
   ôn, quiz khác ưu tiên từ trong `UserWordProgress` của chính người dùng.
+- **Bỏ KHOÁ bài học (`LearnService.path()`, 2026-09-22)** — user phản ánh "mấy phần khóa khóa
+  cũng hơi khó hiểu cho user mới". Trước đây bài sau chỉ mở khi bài trước học HẾT mọi từ, nên
+  người mới mở `/learn` ra thấy 1 bài mở + 26 ổ khoá, KHÔNG kèm lời giải thích nào. Quan trọng
+  hơn: các bài chia theo CHỦ ĐỀ (Chào hỏi, Gia đình, Đồ ăn, Thời tiết...) chứ không theo độ khó
+  tăng dần, nên bắt học xong "Số đếm" mới được học "Đồ ăn" là vô lý. `LessonStatus` giờ chỉ còn
+  `COMPLETED | IN_PROGRESS | AVAILABLE` (giá trị `LOCKED` XOÁ khỏi cả type union ở client). Định
+  hướng vẫn giữ nguyên qua `currentLessonId` — gợi ý thay vì cấm; client đổi sang nhãn chữ "Bắt
+  đầu từ đây"/"Học tiếp" trên đúng bài đó (xem `hanni-client/CLAUDE.md`).
 - **Index quan trọng cho queue SRS**: `UserWordProgress (userId, dueAt)` và `(userId, hskLevel, dueAt)`.
 - **"Từ khó nhớ" (leech, thuật ngữ Anki) — `GET /study/leeches` (từ 2026-09-19)**: phát hiện qua
   research chủ động (rà lại code, không phải yêu cầu cụ thể của user) — field `UserWordProgress.
