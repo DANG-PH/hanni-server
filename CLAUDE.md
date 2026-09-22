@@ -755,6 +755,12 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   gộp thành 1 câu văn xuôi — tránh đọc nhầm 2 số HSK khác nhau (vd tự đánh giá HSK5 nhưng đề xuất
   ghi "bắt đầu từ HSK1" từng bị hiểu lầm là lỗi vì không phân biệt được số nào là hiện tại/số nào
   là mục tiêu).
+  **`POST /onboarding/preview` (`@Public()`, từ 2026-09-22)** — tính đúng lộ trình như `submit()`
+  nhưng KHÔNG lưu và KHÔNG cần đăng nhập. Khảo sát vốn thiết kế để làm TRƯỚC khi có tài khoản
+  (kiểu "gradual engagement" của Duolingo), nhưng trước đó trả lời xong 3 câu là bị đẩy thẳng
+  sang `/register` mới được xem kết quả — bỏ công ra mà chưa nhận lại gì, đúng chỗ dễ rời đi
+  nhất trong cả luồng. `buildRecommendation()` vì vậy nhận `userId: string | null`; thiếu
+  `UserSettings` thì rơi về nhịp mặc định 20 từ/ngày.
 - **Trợ lý AI Hanni (`src/modules/assistant`)**: RAG qua Gemini (`@google/genai`), kiến trúc
   tham khảo từ project `tech-books-backend` cá nhân (in-memory vector store, model fallback
   chain `CHAT_MODELS`, cache index xuống `.cache/assistant-index.json` — KHÔNG commit). Có
