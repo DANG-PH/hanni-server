@@ -114,7 +114,74 @@ export class WordsService {
       orderBy: { frequencyRank: 'asc' },
       take: 12,
     });
-    return { words, related };
+
+    const [characters, compounds] = await Promise.all([
+      this.breakDownCharacters(words[0]),
+      this.compoundsContaining(slug),
+    ]);
+    return { words, related, characters, compounds };
+  }
+
+  /** Tách từ ghép thành từng chữ kèm âm Hán Việt + nghĩa của riêng chữ đó.
+   *
+   * Đây là chỗ khai thác SÂU nhất lợi thế Hán Việt: 电脑 = 电 (điện) + 脑
+   * (não) → người Việt đọc "điện não" là đoán ra máy tính ngay, không cần
+   * học thuộc. Research sư phạm tiếng Trung (Hacking Chinese, YoyoChinese)
+   * đều xác nhận học theo thành phần hiệu quả hơn nhiều so với học từng từ
+   * rời rạc — "biết các từ chứa một chữ thì đoán được nghĩa từ mới chứa chữ
+   * đó". Với người Việt, mỗi thành phần lại có sẵn một âm quen thuộc.
+   *
+   * `hanViet` lưu dạng "điện não" (các âm cách nhau bởi khoảng trắng, sinh
+   * theo THỨ TỰ ký tự) nên tách theo khoảng trắng là khớp 1-1 với từng chữ.
+   * Nghĩa riêng của chữ lấy từ chính bảng Word nếu chữ đó tồn tại như một
+   * mục từ đơn (1.519 từ 1 chữ). */
+  private async breakDownCharacters(word: Word) {
+    const chars = Array.from(word.simplified);
+    if (chars.length < 2) return [];
+    const readings = word.hanViet ? word.hanViet.split(/\s+/) : [];
+    // Chỉ dùng khi số âm khớp số chữ — lệch thì thà bỏ còn hơn gán sai âm.
+    const aligned = readings.length === chars.length;
+
+    const singles = await this.prisma.word.findMany({
+      where: { simplified: { in: chars }, meaningVi: { not: null } },
+      select: { simplified: true, pinyin: true, meaningVi: true },
+      orderBy: { frequencyRank: 'asc' },
+    });
+    const byChar = new Map<string, (typeof singles)[number]>();
+    for (const s of singles)
+      if (!byChar.has(s.simplified)) byChar.set(s.simplified, s);
+
+    return chars.map((char, i) => ({
+      char,
+      hanViet: aligned ? readings[i] : null,
+      pinyin: byChar.get(char)?.pinyin ?? null,
+      meaningVi: byChar.get(char)?.meaningVi ?? null,
+    }));
+  }
+
+  /** Từ ghép KHÁC cũng chứa chữ này — vừa là cách học theo cụm (thấy 电 lặp
+   * lại ở 电话/电视 thì nhớ "điện" chắc hơn), vừa tạo liên kết nội bộ dày
+   * giữa các trang từ điển, giúp bot bò sâu vào site. */
+  private async compoundsContaining(slug: string) {
+    const chars = Array.from(slug);
+    // Từ 1 chữ: tìm từ ghép chứa nó. Từ ghép: lấy theo chữ ĐẦU (đại diện đủ
+    // tốt, tránh truy vấn OR dài dòng cho từ 3-4 chữ).
+    const key = chars[0];
+    return this.prisma.word.findMany({
+      where: {
+        simplified: { contains: key, not: slug },
+        meaningVi: { not: null },
+        hanViet: { not: null },
+      },
+      select: {
+        simplified: true,
+        pinyin: true,
+        hanViet: true,
+        meaningVi: true,
+      },
+      orderBy: { frequencyRank: 'asc' },
+      take: 10,
+    });
   }
 
   /** Danh sách Hán tự công khai cho sitemap (chỉ từ CÓ nghĩa tiếng Việt —
