@@ -246,6 +246,22 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `COMPLETED | IN_PROGRESS | AVAILABLE` (giá trị `LOCKED` XOÁ khỏi cả type union ở client). Định
   hướng vẫn giữ nguyên qua `currentLessonId` — gợi ý thay vì cấm; client đổi sang nhãn chữ "Bắt
   đầu từ đây"/"Học tiếp" trên đúng bài đó (xem `hanni-client/CLAUDE.md`).
+- **"Tôi đã biết từ này rồi" — ẩn từ khỏi hàng đợi ôn (`isSuspended`, từ 2026-09-22)**: field
+  `UserWordProgress.isSuspended` được ĐỌC đúng ở khắp nơi từ rất lâu (`getQueue()`,
+  `getStats()`, `progress.service`, `reminder.service` đều lọc `isSuspended: false`) nhưng CHƯA
+  CÓ chỗ nào GHI — field mồ côi y hệt `isLeech` trước đây. Lý do đáng làm: người Việt học tiếng
+  Trung gặp RẤT NHIỀU từ đã biết sẵn qua âm Hán Việt (chính Hanni có trang `/tu-da-biet` liệt kê
+  773 từ như vậy), bắt ôn đi ôn lại những từ đó là lý do bỏ app rất thật.
+  `POST /study/words/:wordId/suspend` (body `{suspended}`) + `GET /study/suspended`.
+  **Từ CHƯA từng học**: `setSuspended()` tạo sẵn 1 dòng `UserWordProgress` đang ẩn — `getQueue()`
+  lấy từ mới bằng `progress: { none: { userId } }` nên chỉ cần TỒN TẠI dòng là từ đó không vào
+  hàng đợi nữa, không phải sửa gì trong `getQueue()`.
+  **CỐ Ý KHÔNG đánh dấu `learnedAt`** dù người dùng nói "đã biết": "từ đã thuộc" là một tiêu chí
+  BẢNG XẾP HẠNG, cho tự khai là mở đường gian lận. Ẩn chỉ có nghĩa "đừng hỏi tôi nữa".
+  `getStats()` thêm `suspendedCount`, và `inProgress` giờ lọc `isSuspended: false` — nếu không
+  thì ẩn 20 từ là "vốn từ" ở dashboard tăng 20 mà người dùng chẳng học thêm gì.
+  Client: nút ở mặt SAU flashcard (chỉ sau khi lật) + mục "Từ đã ẩn" có nút "Học lại" ở
+  `/progress` — bỏ ẩn được thì người dùng mới dám ẩn.
 - **Index quan trọng cho queue SRS**: `UserWordProgress (userId, dueAt)` và `(userId, hskLevel, dueAt)`.
 - **"Từ khó nhớ" (leech, thuật ngữ Anki) — `GET /study/leeches` (từ 2026-09-19)**: phát hiện qua
   research chủ động (rà lại code, không phải yêu cầu cụ thể của user) — field `UserWordProgress.
