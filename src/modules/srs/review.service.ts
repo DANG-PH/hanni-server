@@ -481,22 +481,13 @@ export class ReviewService {
   }
 
   async getLeeches(userId: string) {
+    // Trả NGUYÊN `word` (không `select` bớt như trước): danh sách này giờ
+    // còn dùng để mở thẳng một buổi ôn riêng từ khó ở `/study?leeches=1`,
+    // mà thẻ flashcard cần đủ field (`pos`, ví dụ...) giống hàng đợi thường.
     const rows = await this.prisma.userWordProgress.findMany({
       where: { userId, isLeech: true },
       orderBy: { lapses: 'desc' },
-      include: {
-        word: {
-          select: {
-            id: true,
-            simplified: true,
-            pinyin: true,
-            meaningVi: true,
-            hanViet: true,
-            hskLevel: true,
-            audioUrl: true,
-          },
-        },
-      },
+      include: { word: { include: { examples: { orderBy: { orderIndex: 'asc' } } } } },
     });
     return rows.map((r) => ({
       word: r.word,
