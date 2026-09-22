@@ -95,6 +95,16 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   trùng chuỗi). **`GET /words/stats`** (`@Public()`, không cần đăng nhập) trả `{total,
   withHanViet}` — dùng cho hook thu hút user ngay ở trang chủ (`hanni-client/CLAUDE.md`),
   trước khi backfill chạy thì `withHanViet = 0` và client tự ẩn số liệu thay vì hiện số sai.
+- **"Từ bạn đã biết sẵn" (`GET /words/familiar`, `@Public()`, từ 2026-09-22)** — hook thu hút
+  nhóm khó tiếp cận nhất: người CHƯA từng học tiếng Trung. 773 từ có âm Hán Việt trùng khớp
+  LUÔN nghĩa tiếng Việt (电话 = "điện thoại", 世界 = "thế giới", 机会 = "cơ hội", 决定 = "quyết
+  định") — toàn từ dùng hàng ngày nên rất thuyết phục. Thông điệp đổi từ "học tiếng Trung đi"
+  thành "bạn đã biết 773 từ rồi, chỉ là chưa nhận ra". **Không từ điển Trung-Việt nào khác dựng
+  được danh sách này**: cần cùng lúc âm Hán Việt từng từ + nghĩa tiếng Việt + phép so khớp giữa
+  hai thứ. So khớp ở tầng service (không SQL) cho dễ chỉnh: chuẩn hoá `meaningVi` (bỏ phần trong
+  ngoặc kiểu "(khái niệm)", "(LT:個|个[ge4])", tách nghĩa theo `;` và `,`) rồi so CHÍNH XÁC với
+  `hanViet` — nhận cả "chứa" thì lọt nhiều từ người đọc không thấy giống, mất tính thuyết phục
+  của cả danh sách. Client: `/tu-da-biet`.
 - **Từ điển CÔNG KHAI cho SEO (`GET /dictionary/:slug`, `/dictionary/slugs`, cả 2 `@Public()`,
   từ 2026-09-21)** — lý do làm: ĐO thật trên production thấy `sitemap.xml` chỉ có **6 URL** toàn
   trang chức năng (login/register/install), trong khi 10.912 từ + 235 điểm ngữ pháp đều nằm sau
