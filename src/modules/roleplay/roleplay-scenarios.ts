@@ -97,3 +97,21 @@ export function buildHintPrompt(scenario: RoleplayScenario): string {
     'Nghĩa：<nghĩa tiếng Việt của câu đó>'
   );
 }
+
+/** Nhận xét NGẮN sau khi kết thúc buổi luyện — khác hẳn 2 prompt trên: ở đây
+ * Gemini đứng ngoài vai diễn và nói TIẾNG VIỆT, chỉ nhận xét phần NGƯỜI HỌC
+ * nói. Trước đó bấm "Kết thúc" là hội thoại biến mất, người học không nhận
+ * lại gì — luyện xong không biết mình sai ở đâu thì khó tiến bộ.
+ *
+ * Yêu cầu ngắn và CỤ THỂ: nhận xét chung chung ("cần cố gắng hơn") vô dụng.
+ * Giới hạn độ dài để không biến bài luyện phản xạ thành bài giảng ngữ pháp. */
+export function buildFeedbackPrompt(scenario: RoleplayScenario): string {
+  return (
+    `Người học vừa hoàn thành một bài tập đóng vai tiếng Trung. Tình huống: "${scenario.titleVi}", trình độ khoảng HSK${scenario.hskLevel}. ` +
+    'Hãy nhận xét NGẮN GỌN bằng TIẾNG VIỆT về phần NGƯỜI HỌC nói (vai "user"), bỏ qua phần của đối phương. Viết đúng cấu trúc sau, không thêm gì khác:\n' +
+    '**Làm tốt:** 1-2 gạch đầu dòng, mỗi dòng nêu 1 điều cụ thể (trích đúng câu tiếng Trung người học đã dùng).\n' +
+    '**Nên sửa:** tối đa 2 gạch đầu dòng, mỗi dòng theo mẫu "câu đã viết → câu nên viết — lý do ngắn". Nếu không có lỗi đáng kể thì ghi "Không có lỗi đáng kể."\n' +
+    '**Lần sau thử:** đúng 1 câu tiếng Trung ngắn người học có thể dùng ở tình huống này, kèm nghĩa tiếng Việt trong ngoặc.\n' +
+    'Tổng cộng không quá 120 từ. Không khen sáo rỗng, không giảng lý thuyết ngữ pháp dài.'
+  );
+}

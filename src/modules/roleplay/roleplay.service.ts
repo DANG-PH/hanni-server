@@ -16,6 +16,7 @@ import { PrismaService } from '../../infra/prisma/prisma.service';
 import { CHAT_MODELS } from '../assistant/gemini-models';
 import { isPremiumActive } from '../premium/premium-plans';
 import {
+  buildFeedbackPrompt,
   buildHintPrompt,
   buildSystemPrompt,
   ROLEPLAY_SCENARIOS,
@@ -28,6 +29,9 @@ import {
  * quyết định "Premium chỉ mở tiện ích AI" đã áp dụng cho trợ lý hỏi-đáp. */
 export const FREE_ROLEPLAY_DAILY_LIMIT = 15;
 const HISTORY_LIMIT = 20;
+/** Nhận xét cuối buổi đọc NHIỀU lượt hơn lúc trả lời (cần nhìn cả buổi mới
+ * nhận xét được), nhưng vẫn chặn trần để prompt không phình vô hạn. */
+const FEEDBACK_HISTORY_LIMIT = 40;
 
 @Injectable()
 export class RoleplayService {
@@ -200,6 +204,67 @@ export class RoleplayService {
       }
     }
     throw new BadRequestException('Chưa tạo được gợi ý, thử lại nhé.');
+  }
+
+  /**
+   * Nhận xét ngắn sau khi kết thúc buổi luyện.
+   *
+   * Lý do có: trước đó bấm "Kết thúc" là xoá luôn hội thoại, người học không
+   * nhận lại gì — luyện xong không biết mình sai chỗ nào thì khó tiến bộ, mà
+   * `/listening` và `/pronunciation` đều đã có phần "kết quả buổi luyện".
+   *
+   * KHÔNG lưu nhận xét vào DB: hội thoại đóng vai vốn bị xoá khi kết thúc
+   * (nó là bài tập, không phải kiến thức cần tra lại), lưu riêng nhận xét sẽ
+   * thành dữ liệu mồ côi. Dùng CHUNG hạn mức/ngày như `reply()`/`hint()`.
+   */
+  async feedback(userId: string, sessionId: string) {
+    const session = await this.requireOwnSession(userId, sessionId);
+    const scenario = this.scenarioOf(session.scenarioKey);
+
+    const history = await this.prisma.roleplayMessage.findMany({
+      where: { sessionId },
+      orderBy: { createdAt: 'asc' },
+      take: FEEDBACK_HISTORY_LIMIT,
+    });
+    const userTurns = history.filter((h) => h.role === ChatRole.USER).length;
+    // Chưa nói câu nào thì không có gì để nhận xét — trả lời thẳng thay vì
+    // đốt 1 lượt quota Gemini để model tự bịa ra nhận xét.
+    if (userTurns === 0) {
+      return {
+        userTurns: 0,
+        feedbackVi:
+          'Bạn chưa nói câu nào trong buổi này nên chưa có gì để nhận xét. Thử lại và nói vài câu nhé!',
+      };
+    }
+
+    await this.checkDailyQuota(userId);
+    if (!this.genAI) {
+      throw new BadRequestException(
+        'Luyện nói với AI chưa được bật — cần cấu hình GEMINI_API_KEY trước đã.',
+      );
+    }
+
+    const contents: Content[] = history.map((h) => ({
+      role: h.role === ChatRole.USER ? ('user' as const) : ('model' as const),
+      parts: [{ text: h.text }],
+    }));
+    const systemInstruction = buildFeedbackPrompt(scenario);
+    for (const model of CHAT_MODELS) {
+      try {
+        const response = await this.genAI.models.generateContent({
+          model,
+          contents,
+          config: { systemInstruction },
+        });
+        const text = response.text?.trim();
+        if (text) return { userTurns, feedbackVi: text };
+      } catch (err) {
+        this.logger.warn(
+          `[Roleplay] feedback model ${model} lỗi: ${(err as Error).message}`,
+        );
+      }
+    }
+    throw new BadRequestException('Chưa tạo được nhận xét, thử lại nhé.');
   }
 
   /** Format mong đợi 2 dòng "中文：..." / "Nghĩa：..." — nếu Gemini trả sai

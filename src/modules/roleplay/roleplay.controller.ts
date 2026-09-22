@@ -59,6 +59,15 @@ export class RoleplayController {
     return this.roleplay.hint(user.id, sessionId);
   }
 
+  /** Nhận xét ngắn sau buổi luyện — xem RoleplayService.feedback. */
+  @Post('sessions/:sessionId/feedback')
+  feedback(
+    @CurrentUser() user: AuthUser,
+    @Param('sessionId', ParseUUIDPipe) sessionId: string,
+  ) {
+    return this.roleplay.feedback(user.id, sessionId);
+  }
+
   @Delete('sessions/:sessionId')
   async remove(
     @CurrentUser() user: AuthUser,
