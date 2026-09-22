@@ -188,4 +188,68 @@ export class ProgressService {
 
     return { justCompleted: isComplete && !prev?.completedAt };
   }
+
+  /**
+   * Cập nhật `UserLessonProgress` cho BÀI chứa từ vừa ôn.
+   *
+   * Bảng này trước đây CHỈ ĐƯỢC ĐỌC, KHÔNG CHỖ NÀO GHI — đo production
+   * 2026-09-22: 0 dòng trong khi đã có 127 lượt ôn. Hậu quả im lặng:
+   * - `LearnService.currentLesson()` chọn bài đang học dựa vào bảng này, không
+   *   có dòng nào nghĩa là LUÔN trả về bài ĐẦU TIÊN — nên mọi chỗ "bám bài
+   *   đang học" (`/study`, `/writing`, `/listening`, `/pronunciation`) vĩnh
+   *   viễn đứng ở bài 1 dù người học đã đi xa tới đâu.
+   * - Tiêu chí "bài đã xong" ở bảng xếp hạng và hồ sơ công khai luôn = 0 cho
+   *   tất cả mọi người.
+   * - Trợ lý AI được dạy phải nhắc tên bài đang học dở nhưng không bao giờ
+   *   có dữ liệu để nhắc.
+   *
+   * Định nghĩa "xong bài" lấy ĐÚNG như `LearnService.path()` (đã học qua mọi
+   * từ trong bài ít nhất 1 lần) để 2 nơi không nói 2 kiểu.
+   */
+  async recomputeLessonCache(userId: string, wordId: string): Promise<void> {
+    const word = await this.prisma.word.findUnique({
+      where: { id: wordId },
+      select: { lessonId: true },
+    });
+    if (!word?.lessonId) return;
+
+    const lesson = await this.prisma.lesson.findUnique({
+      where: { id: word.lessonId },
+      select: { id: true, wordCount: true },
+    });
+    if (!lesson) return;
+
+    const [startedWords, learnedWords, prev] = await Promise.all([
+      this.prisma.userWordProgress.count({
+        where: { userId, word: { lessonId: lesson.id } },
+      }),
+      this.prisma.userWordProgress.count({
+        where: { userId, word: { lessonId: lesson.id }, learnedAt: { not: null } },
+      }),
+      this.prisma.userLessonProgress.findUnique({
+        where: { userId_lessonId: { userId, lessonId: lesson.id } },
+      }),
+    ]);
+
+    const now = new Date();
+    const isComplete = lesson.wordCount > 0 && startedWords >= lesson.wordCount;
+    await this.prisma.userLessonProgress.upsert({
+      where: { userId_lessonId: { userId, lessonId: lesson.id } },
+      create: {
+        userId,
+        lessonId: lesson.id,
+        learnedWords,
+        totalWords: lesson.wordCount,
+        startedAt: now,
+        completedAt: isComplete ? now : null,
+      },
+      update: {
+        learnedWords,
+        totalWords: lesson.wordCount,
+        startedAt: prev?.startedAt ?? now,
+        // Giữ nguyên mốc hoàn thành CŨ, không ghi đè mỗi lần ôn lại.
+        completedAt: isComplete ? (prev?.completedAt ?? now) : null,
+      },
+    });
+  }
 }

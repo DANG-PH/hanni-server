@@ -20,6 +20,9 @@ export class ProgressListener {
   @OnEvent(AppEvent.WordReviewed, { async: true })
   async onWordReviewed(payload: WordReviewedPayload): Promise<void> {
     try {
+      // Cập nhật CẢ tiến độ bài học — xem ProgressService.recomputeLessonCache
+      // cho lý do (bảng đó trước đây chỉ được đọc, không ai ghi).
+      await this.progress.recomputeLessonCache(payload.userId, payload.wordId);
       const { justCompleted } = await this.progress.recomputeLevelCache(
         payload.userId,
         payload.hskLevel,
