@@ -244,10 +244,27 @@ export class RoleplayService {
       );
     }
 
-    const contents: Content[] = history.map((h) => ({
-      role: h.role === ChatRole.USER ? ('user' as const) : ('model' as const),
-      parts: [{ text: h.text }],
-    }));
+    // KHÔNG đưa hội thoại vào dạng nhiều lượt user/model như `reply()`:
+    // verify thật trên production cho thấy Gemini đọc đúng khuôn "đang chat"
+    // rồi NÓI TIẾP bằng tiếng Trung trong vai nhân viên, bỏ qua hẳn yêu cầu
+    // nhận xét ở systemInstruction. Gộp cả buổi thành MỘT lượt `user` dạng
+    // bản ghi có nhãn thì nhiệm vụ rõ ràng, không còn chỗ hiểu nhầm.
+    const transcript = history
+      .map(
+        (h) =>
+          `${h.role === ChatRole.USER ? 'Người học' : 'Đối phương'}: ${h.text}`,
+      )
+      .join('\n');
+    const contents: Content[] = [
+      {
+        role: 'user' as const,
+        parts: [
+          {
+            text: `Đây là bản ghi buổi luyện đóng vai vừa xong:\n\n${transcript}\n\nHãy nhận xét theo đúng yêu cầu.`,
+          },
+        ],
+      },
+    ];
     const systemInstruction = buildFeedbackPrompt(scenario);
     for (const model of CHAT_MODELS) {
       try {
