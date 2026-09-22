@@ -274,7 +274,13 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   danh sách từ `isLeech: true` kèm thông tin từ, sắp theo `lapses` giảm dần — KHÔNG lọc theo
   `dueAt` (khác `getQueue()`) vì đây là màn "xem toàn bộ từ khó" để người học biết, không phải
   hàng đợi ôn hôm nay. `getStats()` cũng trả thêm `leechCount` cho tiện hiện số lượng nhanh.
-  Client: section "Từ khó nhớ" ở `/progress` (chỉ hiện khi có ít nhất 1 từ, không ép hiện rỗng).
+  Client: section "Từ khó nhớ" ở `/progress` (chỉ hiện khi có ít nhất 1 từ, không ép hiện rỗng),
+  kèm nút "Ôn riêng N từ này" mở `/study?leeches=1` (từ 2026-09-22) — trước đó mục này chỉ LIỆT
+  KÊ, xem xong không làm gì được. `getLeeches()` vì vậy trả NGUYÊN `word` (kèm `examples`) thay
+  vì bản `select` rút gọn: thẻ flashcard cần đủ field giống hàng đợi thường. Buổi ôn đó vẫn ghi
+  nhận lượt ôn qua `review()` bình thường — ôn sớm một từ hay quên chính là việc cần làm, SM-2 tự
+  tính lại chu kỳ theo số ngày đã trôi qua nên không phá lịch (KHÔNG cần tới `ReviewType.CRAM`,
+  enum đó vẫn mồ côi).
   **Gỡ leech (làm 2026-09-22)**: `isLeech = out.lapses >= LEECH_LAPSES && !nowLearned` — sai
   nhiều lần nhưng nay đã đạt chu kỳ ôn của từ "đã thuộc" thì bỏ đánh dấu. Trước đó `isLeech`
   một khi bật là bật MÃI, nên từ đã nhớ được vẫn nằm trong "Từ khó nhớ" ở `/progress`: vừa sai
