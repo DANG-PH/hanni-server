@@ -39,7 +39,7 @@ export interface AssistantAction {
 const PAGE_PATHS: Record<string, string> = {
   dashboard: '/dashboard',
   learn: '/learn',
-  vocabulary: '/vocabulary',
+  vocabulary: '/tu-dien',
   grammar: '/grammar',
   listening: '/listening',
   pronunciation: '/pronunciation',
