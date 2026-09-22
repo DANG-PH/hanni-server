@@ -115,11 +115,42 @@ export class WordsService {
       take: 12,
     });
 
-    const [characters, compounds] = await Promise.all([
+    const [characters, compounds, videos] = await Promise.all([
       this.breakDownCharacters(words[0]),
       this.compoundsContaining(slug),
+      this.videosUsingWord(slug),
     ]);
-    return { words, related, characters, compounds };
+    return { words, related, characters, compounds, videos };
+  }
+
+  /** Video có lời thoại chứa từ này — để người học nghe nó trong ngữ cảnh
+   * thật thay vì chỉ đọc nghĩa.
+   *
+   * CỐ TÌNH chỉ trả tên video + số lần xuất hiện, KHÔNG trích câu thoại ra
+   * làm "câu ví dụ". Đã thử hướng đó và bỏ: video Hanni chủ yếu là phim tu
+   * tiên/ngôn tình, phụ đề dịch bằng MÁY, nên trích ra được những câu kiểu
+   * 等我用剑一草突破回去就是你的死期 → "Khi tôi sử dụng kiếm và cỏ đột phá,
+   * bạn sẽ ch…" (sai + cụt) hoặc từ vựng tu tiên vô dụng với người học HSK.
+   * Dạy sai còn hại hơn thiếu, và Google cũng đánh giá thấp nội dung kiểu đó.
+   * Đưa người học sang xem cả đoạn video thì ngữ cảnh đầy đủ và có giọng
+   * thật — an toàn hơn hẳn mà vẫn nối được từ vựng với video. */
+  private async videosUsingWord(slug: string) {
+    const rows = await this.prisma.videoLine.groupBy({
+      by: ['videoId'],
+      where: { zh: { contains: slug } },
+      _count: { _all: true },
+      orderBy: { _count: { videoId: 'desc' } },
+      take: 3,
+    });
+    if (rows.length === 0) return [];
+    const videos = await this.prisma.video.findMany({
+      where: { id: { in: rows.map((r) => r.videoId) } },
+      select: { id: true, title: true, thumbnailUrl: true, hskLevel: true },
+    });
+    const countById = new Map(rows.map((r) => [r.videoId, r._count._all]));
+    return videos
+      .map((v) => ({ ...v, lineCount: countById.get(v.id) ?? 0 }))
+      .sort((a, b) => b.lineCount - a.lineCount);
   }
 
   /** Tách từ ghép thành từng chữ kèm âm Hán Việt + nghĩa của riêng chữ đó.
