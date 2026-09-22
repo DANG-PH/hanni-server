@@ -105,6 +105,16 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   ngoặc kiểu "(khái niệm)", "(LT:個|个[ge4])", tách nghĩa theo `;` và `,`) rồi so CHÍNH XÁC với
   `hanViet` — nhận cả "chứa" thì lọt nhiều từ người đọc không thấy giống, mất tính thuyết phục
   của cả danh sách. Client: `/tu-da-biet`.
+  **`GET /words/trial` (`@Public()`, từ 2026-09-22)** — 8 từ cho bộ thẻ học thử ở `/hoc-thu`,
+  trang ĐÍCH của phễu SEO. Trước đó trang đó lấy thẳng `/words?level=1&pageSize=8`, tức 8 từ
+  HSK1 thông dụng nhất: 的, 我, 你, 是, 了, 不, 在, 他 — toàn hư từ, không ảnh, âm Hán Việt chẳng
+  gợi được gì ("đích", "liễu"), trong khi chính trang đó hứa "âm Hán Việt — cách người Việt nhớ
+  chữ Hán nhanh nhất". Thẻ ĐẦU TIÊN người lạ nhìn thấy lại là thứ phản chứng cho lời hứa. Giờ
+  lấy từ nhóm "đã biết sẵn" ở HSK1-3 (时间 = thời gian, 电话 = điện thoại, 机会 = cơ hội). Luật
+  so khớp tách thành `hanVietMatchesMeaning()` dùng CHUNG với `familiarWords()` để 2 nơi không
+  lệch nhau theo thời gian. Client có dự phòng rơi về truy vấn cũ nếu endpoint chưa sẵn sàng —
+  trang prerender + cache 24h nên build trúng lúc endpoint chưa tồn tại là đóng băng trang trống
+  cả ngày.
 - **Từ điển CÔNG KHAI cho SEO (`GET /dictionary/:slug`, `/dictionary/slugs`, cả 2 `@Public()`,
   từ 2026-09-21)** — lý do làm: ĐO thật trên production thấy `sitemap.xml` chỉ có **6 URL** toàn
   trang chức năng (login/register/install), trong khi 10.912 từ + 235 điểm ngữ pháp đều nằm sau
