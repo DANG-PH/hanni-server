@@ -283,6 +283,10 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   (30s — Auth0/Okta gọi là "reuse interval"), trong cửa sổ đó thì cấp cặp mới trong CÙNG family
   thay vì huỷ tất cả; client gộp chung 1 lượt refresh cho mọi request đang chờ (xem
   `hanni-client/CLAUDE.md`). Token bị đánh cắp dùng lại SAU cửa sổ vẫn bị phát hiện như cũ.
+  **Đánh đổi đã biết**: mỗi lượt refresh trùng trong cửa sổ ân hạn tạo THÊM 1 token trong cùng
+  family (trình duyệt chỉ giữ cookie cuối, số còn lại thành token thừa còn hiệu lực tới khi hết
+  hạn). Không phải lỗ hổng (cùng family, cùng user, quyền y hệt nhau) và sau bản sửa phía client
+  thì đường này hiếm khi chạy — chỉ còn khi mở nhiều tab/thiết bị cùng lúc.
 - **Index quan trọng cho queue SRS**: `UserWordProgress (userId, dueAt)` và `(userId, hskLevel, dueAt)`.
 - **"Từ khó nhớ" (leech, thuật ngữ Anki) — `GET /study/leeches` (từ 2026-09-19)**: phát hiện qua
   research chủ động (rà lại code, không phải yêu cầu cụ thể của user) — field `UserWordProgress.
