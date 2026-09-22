@@ -96,10 +96,10 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   withHanViet}` — dùng cho hook thu hút user ngay ở trang chủ (`hanni-client/CLAUDE.md`),
   trước khi backfill chạy thì `withHanViet = 0` và client tự ẩn số liệu thay vì hiện số sai.
 - **"Từ bạn đã biết sẵn" (`GET /words/familiar`, `@Public()`, từ 2026-09-22)** — hook thu hút
-  nhóm khó tiếp cận nhất: người CHƯA từng học tiếng Trung. 773 từ có âm Hán Việt trùng khớp
+  nhóm khó tiếp cận nhất: người CHƯA từng học tiếng Trung. 739 từ (số ĐO LẠI 2026-09-22, tính live nên đổi theo dữ liệu) có âm Hán Việt trùng khớp
   LUÔN nghĩa tiếng Việt (电话 = "điện thoại", 世界 = "thế giới", 机会 = "cơ hội", 决定 = "quyết
   định") — toàn từ dùng hàng ngày nên rất thuyết phục. Thông điệp đổi từ "học tiếng Trung đi"
-  thành "bạn đã biết 773 từ rồi, chỉ là chưa nhận ra". **Không từ điển Trung-Việt nào khác dựng
+  thành "bạn đã biết hàng trăm từ rồi, chỉ là chưa nhận ra" (client đọc số LIVE từ API, không chép tay). **Không từ điển Trung-Việt nào khác dựng
   được danh sách này**: cần cùng lúc âm Hán Việt từng từ + nghĩa tiếng Việt + phép so khớp giữa
   hai thứ. So khớp ở tầng service (không SQL) cho dễ chỉnh: chuẩn hoá `meaningVi` (bỏ phần trong
   ngoặc kiểu "(khái niệm)", "(LT:個|个[ge4])", tách nghĩa theo `;` và `,`) rồi so CHÍNH XÁC với
@@ -274,7 +274,7 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `getStats()`, `progress.service`, `reminder.service` đều lọc `isSuspended: false`) nhưng CHƯA
   CÓ chỗ nào GHI — field mồ côi y hệt `isLeech` trước đây. Lý do đáng làm: người Việt học tiếng
   Trung gặp RẤT NHIỀU từ đã biết sẵn qua âm Hán Việt (chính Hanni có trang `/tu-da-biet` liệt kê
-  773 từ như vậy), bắt ôn đi ôn lại những từ đó là lý do bỏ app rất thật.
+  ~739 từ như vậy), bắt ôn đi ôn lại những từ đó là lý do bỏ app rất thật.
   `POST /study/words/:wordId/suspend` (body `{suspended}`) + `GET /study/suspended`.
   **Từ CHƯA từng học**: `setSuspended()` tạo sẵn 1 dòng `UserWordProgress` đang ẩn — `getQueue()`
   lấy từ mới bằng `progress: { none: { userId } }` nên chỉ cần TỒN TẠI dòng là từ đó không vào
