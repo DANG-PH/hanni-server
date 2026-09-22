@@ -65,6 +65,13 @@ export class VocabularyController {
     return this.words.familiarWords(lv >= 1 && lv <= 9 ? lv : undefined);
   }
 
+  /** 8 từ cho bộ thẻ học thử ở `/hoc-thu` — xem WordsService.trialWords(). */
+  @Public()
+  @Get('words/trial')
+  getTrialWords() {
+    return this.words.trialWords();
+  }
+
   /** Từ điển công khai (SEO) — xem WordsService.lookup(). Đặt dưới
    * `dictionary/` thay vì `words/` để không đụng `words/:id` (ParseUUIDPipe). */
   @Public()
