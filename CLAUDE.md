@@ -137,6 +137,17 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   đánh đổi của 1 tính năng tự động miễn phí, đa số từ đơn nghĩa vẫn ra ảnh đúng (đã test 苹果,
   书, 八 đều đúng khi query rõ ràng). Nếu thấy ảnh sai ở từ nào, xoá tay `Word.imageUrl` của
   từ đó (set về `null`) để lần xem sau tự lấy lại — KHÔNG tự retry logic phức tạp hơn.
+  **Lấy SẴN hàng loạt (`scripts/fetch-word-images.ts`, từ 2026-09-22)**: cơ chế "lấy khi có
+  người xem" ở trên gần như không chạy khi lượng người dùng còn nhỏ — đo thật chỉ **51/10.912
+  từ** có ảnh sau nhiều tháng. Script lấp sẵn để người học đầu tiên đã thấy ảnh, không phải là
+  người "khai hoang" cho người sau. VẪN tôn trọng hạ tầng Wikimedia (lý do trước đó cố tình
+  không cào): chạy TUẦN TỰ, `DELAY_MS` 400ms/request, không song song, User-Agent mô tả rõ ứng
+  dụng. `--level=1,2,3` để ưu tiên cấp thấp (nơi người mới học), `--limit=N` để cắt ngắn; sắp
+  theo `hskLevel` rồi `frequencyRank` nên dừng giữa chừng vẫn được phần thông dụng nhất.
+  **Lỗi thật đã sửa cùng đợt**: `gsrnamespace=6` là namespace File của Commons — gồm CẢ
+  audio/video/PDF. Query "sound" trả về `File:...ogg` mà `thumburl` là **ICON LOẠI FILE**
+  (`fileicon-ogg.png`), tức từ vựng hiện icon file thay vì ảnh minh hoạ. Đã thêm
+  `filetype:bitmap` vào truy vấn + chặn thêm lớp theo đường dẫn `file-type-icons`.
 - **SRS**: `SchedulerRegistry.get(name)` chọn `Sm2Scheduler` | `FsrsScheduler` theo
   `UserSettings.srsScheduler`. `UserWordProgress` có cả trường SM-2 (easeFactor/intervalDays)
   lẫn FSRS (stability/difficulty) → đổi thuật toán không cần migration.

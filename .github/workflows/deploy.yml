@@ -25,13 +25,46 @@ jobs:
       - run: npm run lint
       - run: npm run build
 
+      # Giữ lại kết quả build để job deploy dùng luôn, KHÔNG build lại trên VPS.
+      - name: Lưu dist làm artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
   deploy:
     name: Deploy lên VPS
     needs: ci
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - name: SSH vào VPS và deploy
+      # VPS chỉ có 3.9GB RAM và dùng CHUNG với nhiều dịch vụ khác
+      # (profile-backend, bookshelf, grafana, prometheus, rabbitmq...). Chạy
+      # `npm run build` ở đó đã 2 lần làm build chết giữa chừng và XOÁ MẤT
+      # `dist/`, trong khi pm2 vẫn báo "online" và /health vẫn 200 vì tiến
+      # trình cũ còn sống trong RAM — triệu chứng là route mới trả 404 dù
+      # code đã ở đúng commit. Vì vậy build trên runner (7GB, miễn phí) rồi
+      # chỉ chép kết quả sang.
+      - name: Tải dist đã build ở job ci
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Chép dist sang VPS (thư mục tạm)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "dist/**"
+          target: "${{ secrets.VPS_APP_PATH }}/.deploy-tmp"
+          rm: true
+
+      - name: Cập nhật mã nguồn, migrate và restart
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -50,5 +83,12 @@ jobs:
             npm ci
             npx prisma generate
             npx prisma migrate deploy
-            npm run build
-            pm2 restart all --update-env
+            # Chỉ thay dist SAU KHI mọi bước trên đã xong (set -e): nếu có
+            # bước nào hỏng thì dist cũ vẫn nguyên, app vẫn chạy được.
+            test -d .deploy-tmp/dist
+            rm -rf dist
+            mv .deploy-tmp/dist dist
+            rm -rf .deploy-tmp
+            # `pm2 restart all` sẽ restart cả app của dịch vụ KHÁC trên cùng
+            # VPS — chỉ restart đúng app của mình.
+            pm2 restart hanni-server --update-env
