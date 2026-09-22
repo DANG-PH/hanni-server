@@ -936,7 +936,9 @@ tự đổi `orderBy` sang `lessonOrder` thay vì `frequencyRank` khi có `lesso
 dùng chung `PracticeLibrary` nhận prop `lessonId`, tự ẩn phần chọn cấp độ và tự fetch tên bài
 qua `useLesson()` khi có `lessonId`, có link "luyện tự do theo cấp độ" để thoát ra). `/writing`
 KHÔNG dùng chung cơ chế này (đọc file tĩnh `hanzi-strokes/index.json` theo ký tự, không có khái
-niệm lessonId) — gắn bài học cho `/writing` là việc riêng, chưa làm.
+niệm lessonId). **Đã làm 2026-09-22**: `/writing` mặc định lọc theo các chữ có trong từ vựng
+của bài đang học (`GET /learn/current` + `/learn/lessons/:id`), đổi sang toàn bộ cấp được bằng
+1 nút — xem `hanni-client/CLAUDE.md`.
 
 **Quiz** (`src/modules/gamification/quiz/quiz.service.ts`): `generate()` trộn 2 dạng câu —
 `listening` (~`LISTENING_RATIO` 40% số câu, chỉ lấy từ có `audioUrl`, xếp trước) và `reading`
