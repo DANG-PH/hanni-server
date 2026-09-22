@@ -27884,6 +27884,36 @@
       "simplified": "做主",
       "pinyinNumeric": "zuo4 zhu3",
       "theme": "tinh_cach_cam_xuc"
+    },
+    {
+      "simplified": "精神",
+      "pinyinNumeric": "jing1 shen2",
+      "theme": "tinh_cach_cam_xuc"
+    },
+    {
+      "simplified": "尽",
+      "pinyinNumeric": "jin3",
+      "theme": "ngu_phap_lien_ket"
+    },
+    {
+      "simplified": "挑",
+      "pinyinNumeric": "tiao3",
+      "theme": "dong_tu_hanh_dong"
+    },
+    {
+      "simplified": "撒",
+      "pinyinNumeric": "sa1",
+      "theme": "dong_tu_hanh_dong"
+    },
+    {
+      "simplified": "涨",
+      "pinyinNumeric": "zhang4",
+      "theme": "dong_tu_hanh_dong"
+    },
+    {
+      "simplified": "地道",
+      "pinyinNumeric": "di4 dao4",
+      "theme": "tinh_tu_mo_ta"
     }
   ]
 }

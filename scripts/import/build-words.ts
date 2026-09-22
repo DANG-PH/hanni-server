@@ -57,6 +57,12 @@ function need(path: string, hint: string): void {
   }
 }
 
+/** Chuẩn hoá pinyin để so khớp: bỏ khoảng trắng, về chữ thường. Giữ NGUYÊN
+ * dấu thanh — đó chính là thứ phân biệt gè với gě. */
+function comparablePinyin(p: string): string {
+  return (p || '').replace(/\s+/g, '').trim().toLowerCase();
+}
+
 function cleanDef(def: string): string {
   return (
     def
@@ -157,7 +163,25 @@ function main(): void {
     let traditional: string | null = null;
     if (ced) {
       traditional = ced.traditional || null;
+      // Khớp GIỮ NGUYÊN dấu thanh trước, chỉ bỏ thanh khi không còn cách nào.
+      //
+      // Trước 2026-09-22 chỉ có nhánh bỏ-thanh, nên với chữ ĐA ÂM mà 2 cách
+      // đọc chung phụ âm+vần thì `.find()` lấy đại cái ĐẦU TIÊN trong mảng
+      // CC-CEDICT — trong khi đại cương HSK đã ghi sẵn đúng thanh điệu.
+      // Hậu quả thật: 个 lấy "ge3" (gě, chỉ dùng trong 自个儿) thay vì "ge4"
+      // (gè — lượng từ thông dụng nhất tiếng Trung); 那 lấy nǎ thay vì nà;
+      // 草 lấy cào (biến thể tục) thay vì cǎo. Nghĩa tiếng Việt tra theo
+      // `simplified|pinyinNumeric` nên cũng sai theo.
+      //
+      // So sánh bỏ khoảng trắng + không phân biệt hoa thường: đại cương viết
+      // liền ("bàba"), CC-CEDICT tách âm tiết ("bà ba") và viết hoa tên riêng
+      // ("Na1").
+      const wanted = comparablePinyin(row.pinyinDiacritic);
       const match =
+        (wanted &&
+          ced.pinyin.find(
+            (p) => comparablePinyin(numericToDiacritic(p)) === wanted,
+          )) ||
         (toneless &&
           ced.pinyin.find(
             (p) => stripTones(numericToDiacritic(p)) === toneless,
@@ -272,11 +296,25 @@ function main(): void {
     const themeOf = new Map(
       themeFile.wordThemes.map((w) => [`${w.simplified}|${w.pinyinNumeric}`, w.theme]),
     );
+    // Dự phòng khớp theo MỖI CHỮ: file chủ đề soạn tay khoá theo
+    // `simplified|pinyinNumeric`, nên mỗi lần sửa cách chọn pinyin (vd bản
+    // sửa 2026-09-22 đưa 吗 từ "ma2" về đúng "ma5") là toàn bộ khoá cũ lệch
+    // và build gãy. Trong 1 cấp mỗi chữ chỉ thuộc đúng 1 chủ đề nên khớp
+    // theo chữ là đủ an toàn, và chủ đề không phụ thuộc cách đọc.
+    const themeBySimplified = new Map<string, string>();
+    for (const w of themeFile.wordThemes) {
+      if (!themeBySimplified.has(w.simplified))
+        themeBySimplified.set(w.simplified, w.theme);
+    }
     const byTheme = new Map<string, Record<string, unknown>[]>();
     for (const r of list) {
       const key = `${r.simplified as string}|${r.pinyinNumeric as string}`;
-      const theme = themeOf.get(key);
+      const theme =
+        themeOf.get(key) ?? themeBySimplified.get(r.simplified as string);
       if (!theme) {
+        // Báo lỗi chứ KHÔNG âm thầm bỏ từ: mỗi lần sửa cách chọn pinyin có
+        // thể làm lộ ra cách đọc thứ hai vốn bị gộp mất (vd 只 zhǐ ở HSK3),
+        // và những từ đó phải được gán chủ đề tay chứ không nên biến mất.
         throw new Error(
           `Từ "${r.simplified as string}" (${key}) chưa có trong lesson-themes-hsk${lv}.json`,
         );
