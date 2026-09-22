@@ -262,6 +262,27 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   thì ẩn 20 từ là "vốn từ" ở dashboard tăng 20 mà người dùng chẳng học thêm gì.
   Client: nút ở mặt SAU flashcard (chỉ sau khi lật) + mục "Từ đã ẩn" có nút "Học lại" ở
   `/progress` — bỏ ẩn được thì người dùng mới dám ẩn.
+- **`UserLessonProgress` chưa từng được GHI (sửa 2026-09-22)** — đo production: bảng 0 dòng
+  trong khi đã có 127 lượt ôn; 4 chỗ ĐỌC nó, 0 chỗ GHI. Hậu quả im lặng, không lỗi gì:
+  (1) `LearnService.currentLesson()` chọn bài đang học từ bảng này nên LUÔN trả bài ĐẦU TIÊN —
+  mọi chỗ "bám bài đang học" (`/study`, `/writing`, `/listening`, `/pronunciation`) vĩnh viễn
+  đứng ở bài 1 (đúng triệu chứng user từng phản ánh: "tự nhiên nhảy vào luôn đại từ nhân xưng ở
+  flashcard à?"); (2) tiêu chí "bài đã xong" ở bảng xếp hạng + hồ sơ công khai luôn = 0 cho tất
+  cả mọi người; (3) trợ lý AI được dạy phải nhắc tên bài đang học dở nhưng không bao giờ có dữ
+  liệu. `ProgressService.recomputeLessonCache()` chạy trong listener `WordReviewed` (nền, không
+  làm chậm lượt ôn), định nghĩa "xong bài" lấy ĐÚNG như `LearnService.path()` để 2 nơi không nói
+  2 kiểu. Phần quá khứ dựng lại bằng `npx tsx scripts/backfill-lesson-progress.ts` (đã chạy trên
+  production: 46 dòng / 6 người dùng).
+- **Refresh token trùng nhau làm ĐĂNG XUẤT OAN (sửa 2026-09-22)** — đo log production: **661
+  lần** `Phát hiện dùng lại refresh token` với chỉ 6 người dùng thật, có lúc 3 lần trong CÙNG 1
+  giây cùng 1 family. Không phải bị tấn công: một trang như dashboard bắn cả chục request song
+  song, access token hết hạn thì tất cả cùng 401 rồi cùng gọi `/auth/refresh` với CÙNG một
+  cookie; request đầu xoay token xong, các request sau mang token vừa revoke tới nên bị coi là
+  trộm → `revokeFamily()` huỷ luôn cả token MỚI → user văng ra màn đăng nhập. Đây là lỗi kinh
+  điển của refresh token rotation. Sửa 2 đầu: `TokenService.rotate()` thêm `REUSE_GRACE_MS`
+  (30s — Auth0/Okta gọi là "reuse interval"), trong cửa sổ đó thì cấp cặp mới trong CÙNG family
+  thay vì huỷ tất cả; client gộp chung 1 lượt refresh cho mọi request đang chờ (xem
+  `hanni-client/CLAUDE.md`). Token bị đánh cắp dùng lại SAU cửa sổ vẫn bị phát hiện như cũ.
 - **Index quan trọng cho queue SRS**: `UserWordProgress (userId, dueAt)` và `(userId, hskLevel, dueAt)`.
 - **"Từ khó nhớ" (leech, thuật ngữ Anki) — `GET /study/leeches` (từ 2026-09-19)**: phát hiện qua
   research chủ động (rà lại code, không phải yêu cầu cụ thể của user) — field `UserWordProgress.
