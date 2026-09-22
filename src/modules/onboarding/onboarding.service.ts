@@ -20,6 +20,28 @@ export class OnboardingService {
     return this.prisma.onboardingProfile.findUnique({ where: { userId } });
   }
 
+  /**
+   * Tính lộ trình đề xuất mà KHÔNG lưu và KHÔNG cần đăng nhập.
+   *
+   * Lý do: khảo sát vốn được thiết kế để làm TRƯỚC khi có tài khoản (kiểu
+   * "gradual engagement" của Duolingo), nhưng trước đây trả lời xong 3 câu
+   * thì người dùng phải đăng ký mới được xem kết quả — bỏ công ra mà chưa
+   * nhận lại gì, đúng chỗ dễ rời đi nhất. Giờ xem kết quả ngay, rồi mới mời
+   * tạo tài khoản để LƯU lộ trình đó.
+   *
+   * Dùng chung `buildRecommendation()` với `submit()`, chỉ khác là không có
+   * `UserSettings` nên rơi về nhịp mặc định 20 từ/ngày.
+   */
+  async preview(dto: SubmitOnboardingDto) {
+    const recommendedLevel = dto.hasStudiedBefore ? dto.selfAssessedLevel! : 1;
+    const recommendationVi = await this.buildRecommendation(
+      null,
+      dto,
+      recommendedLevel,
+    );
+    return { recommendedLevel, recommendationVi };
+  }
+
   async submit(userId: string, dto: SubmitOnboardingDto) {
     const recommendedLevel = dto.hasStudiedBefore ? dto.selfAssessedLevel! : 1;
     const recommendationVi = await this.buildRecommendation(
@@ -69,7 +91,7 @@ export class OnboardingService {
    * không rõ số nào là hiện tại/số nào là mục tiêu.
    */
   private async buildRecommendation(
-    userId: string,
+    userId: string | null,
     dto: SubmitOnboardingDto,
     recommendedLevel: number,
   ): Promise<string> {
@@ -111,10 +133,12 @@ export class OnboardingService {
             select: { cumulative2025: true },
           })
         : null,
-      this.prisma.userSettings.findUnique({
-        where: { userId },
-        select: { dailyGoalValue: true },
-      }),
+      userId
+        ? this.prisma.userSettings.findUnique({
+            where: { userId },
+            select: { dailyGoalValue: true },
+          })
+        : null,
     ]);
     if (!targetInfo) return lines.join('\n');
 
