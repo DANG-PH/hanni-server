@@ -39,6 +39,14 @@ export class MailService implements OnModuleInit {
     });
   }
 
+  /** Đã cấu hình SMTP thật chưa. Đo production 2026-09-22: `MAIL_HOST` trống
+   * nên email xác minh / đặt lại mật khẩu / bản tin tuần chỉ được log ra
+   * console — client cần biết để không hứa suông với người dùng (cùng cách
+   * `/payments/configured` đang ẩn phần nạp xu khi chưa có payOS). */
+  get configured(): boolean {
+    return this.transporter != null;
+  }
+
   private get frontendUrl(): string {
     return this.config.get('FRONTEND_URL', { infer: true });
   }
