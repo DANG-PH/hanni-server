@@ -853,10 +853,16 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   báo "chưa bật", không chặn app khởi động** — cần thêm `GEMINI_API_KEY` (+ `AI_SYSTEM_PROMPT`
   tuỳ chọn) vào `.env`/`.env.production.local` (đã có sẵn ở máy dev, cần copy tay lên VPS).
   **"AI Agent" — tool-calling (`TOOLS`, `executeTool()`)**: trợ lý gọi được 2 tool Gemini
-  function-calling — `navigate_to_page` (16 trang tĩnh, `PAGE_PATHS`/`PAGE_LABELS_VI` — gồm cả
+  function-calling — `navigate_to_page` (19 trang tĩnh, `PAGE_PATHS`/`PAGE_LABELS_VI` — gồm cả
   `flashcard` "ôn flashcard" và `account` "đổi mật khẩu", tuỳ chọn
   `level` cho `learn`/`vocabulary`) và `open_video` (tìm `Video` theo `title`/`titleZh` chứa từ
   khoá). Cả 2 tool đều CHỈ ĐỌC dữ liệu và trả về 1 đường dẫn — không có tool nào tự đổi dữ liệu
+  **Bỏ sót trang trong `PAGE_PATHS` = tính năng đó tàng hình với trợ lý** — 2026-09-22 phát hiện
+  thiếu hẳn `roleplay`, `minigame`, `messages`, nên hỏi "luyện nói ở đâu" là model không có
+  đường nào để trỏ; đúng lúc đo thấy trợ lý AI là thứ ĐƯỢC DÙNG NHIỀU NHẤT (150 tin nhắn, hơn
+  cả số lượt ôn từ) còn roleplay mới 5 tin nhắn, minigame 30 ván. `grammar` cũng còn trỏ
+  `/grammar` (đã gộp vào `/ngu-phap`, chỉ còn redirect 308). Thêm trang mới vào app thì nhớ khai
+  ở CẢ `PAGE_PATHS` lẫn `PAGE_LABELS_VI` và nhắc tên trong description của tool.
   hay tự điều hướng thay người dùng (`resultForModel` luôn nhắc model mời người dùng tự bấm nút,
   KHÔNG được nói là đã tự mở/chuyển trang giúp — sửa đúng lỗi trợ lý hay bịa "đã mở video cho bạn
   rồi" mà thực ra không mở được gì). Description của tool + hướng dẫn hệ thống dạy model nhận ra
