@@ -339,8 +339,13 @@ export class ReviewService {
     );
     const newPerDay = user.settings?.newCardsPerDay ?? 10;
 
+    // "Sắp quên" = đến hạn trong 24h tới. Động lực quay lại mạnh hơn hẳn
+    // "đến hạn ôn": người ta ngại MẤT cái đã có hơn là ngại bỏ lỡ việc mới.
+    const soon = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
     const [
       dueNow,
+      atRisk,
       learnedTotal,
       inProgress,
       reviewsDoneToday,
@@ -353,6 +358,14 @@ export class ReviewService {
           isSuspended: false,
           state: { in: ACTIVE_STATES },
           dueAt: { lte: now },
+        },
+      }),
+      this.prisma.userWordProgress.count({
+        where: {
+          userId,
+          isSuspended: false,
+          state: { in: ACTIVE_STATES },
+          dueAt: { gt: now, lte: soon },
         },
       }),
       this.prisma.userWordProgress.count({
@@ -372,6 +385,7 @@ export class ReviewService {
 
     return {
       dueNow,
+      atRisk,
       learnedTotal,
       inProgress,
       reviewsDoneToday,
