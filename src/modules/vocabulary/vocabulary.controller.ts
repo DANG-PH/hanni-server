@@ -56,6 +56,15 @@ export class VocabularyController {
     return this.words.stats();
   }
 
+  /** "Từ bạn đã biết sẵn" — hook thu hút người Việt chưa học tiếng Trung,
+   * xem WordsService.familiarWords(). */
+  @Public()
+  @Get('words/familiar')
+  getFamiliarWords(@Query('level') level?: string) {
+    const lv = Number(level);
+    return this.words.familiarWords(lv >= 1 && lv <= 9 ? lv : undefined);
+  }
+
   /** Từ điển công khai (SEO) — xem WordsService.lookup(). Đặt dưới
    * `dictionary/` thay vì `words/` để không đụng `words/:id` (ParseUUIDPipe). */
   @Public()

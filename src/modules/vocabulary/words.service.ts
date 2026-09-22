@@ -215,6 +215,60 @@ export class WordsService {
     });
   }
 
+  /** Những từ mà âm Hán Việt TRÙNG KHỚP luôn với nghĩa tiếng Việt — tức là
+   * người Việt đã biết sẵn mà không hay biết (电话 = "điện thoại", 世界 =
+   * "thế giới", 机会 = "cơ hội"...).
+   *
+   * Đây là tài sản nội dung ĐỘC NHẤT của Hanni: cần cùng lúc có âm Hán Việt,
+   * nghĩa tiếng Việt và phép so khớp giữa hai thứ đó — không từ điển
+   * Trung-Việt nào khác dựng được danh sách này. Dùng làm hook thu hút người
+   * chưa biết gì về tiếng Trung: "bạn đã biết sẵn N từ rồi".
+   *
+   * So khớp ở tầng service chứ không SQL để dễ đọc và chỉnh: chuẩn hoá
+   * `meaningVi` (bỏ phần trong ngoặc như "(khái niệm)", "(LT:個|个[ge4])",
+   * tách các nghĩa theo `;`) rồi xem có nghĩa nào trùng đúng âm Hán Việt
+   * không. CHỈ nhận trùng khớp CHÍNH XÁC — "chứa" thôi thì ra nhiều từ mà
+   * người đọc không thấy giống, làm mất tính thuyết phục của cả danh sách. */
+  async familiarWords(level?: number) {
+    const rows = await this.prisma.word.findMany({
+      where: {
+        hanViet: { not: null },
+        meaningVi: { not: null },
+        frequencyRank: { not: null },
+        ...(level ? { hskLevel: level } : {}),
+      },
+      select: {
+        simplified: true,
+        pinyin: true,
+        hanViet: true,
+        meaningVi: true,
+        hskLevel: true,
+      },
+      orderBy: { frequencyRank: 'asc' },
+    });
+
+    const items = rows.filter((w) => {
+      const hv = w.hanViet!.trim().toLowerCase();
+      return w
+        .meaningVi!.replace(/\([^)]*\)/g, '')
+        .split(/[;,]/)
+        .map((s) => s.trim().toLowerCase())
+        .includes(hv);
+    });
+
+    const byLevel = new Map<number, number>();
+    for (const w of items) {
+      byLevel.set(w.hskLevel, (byLevel.get(w.hskLevel) ?? 0) + 1);
+    }
+    return {
+      total: items.length,
+      byLevel: [...byLevel.entries()]
+        .map(([hskLevel, count]) => ({ hskLevel, count }))
+        .sort((a, b) => a.hskLevel - b.hskLevel),
+      items,
+    };
+  }
+
   /** Danh sách Hán tự công khai cho sitemap (chỉ từ CÓ nghĩa tiếng Việt —
    * từ thiếu nghĩa thì trang sẽ mỏng, không nên mời Google index). */
   async publicSlugs() {
