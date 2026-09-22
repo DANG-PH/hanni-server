@@ -20,6 +20,7 @@ import { PrismaClient, WordPos } from '@prisma/client';
 import {
   imageQueryFrom,
   searchCommonsImage,
+  searchWikipediaImage,
 } from '../src/modules/vocabulary/word-image.util';
 
 const DELAY_MS = 400;
@@ -37,11 +38,13 @@ async function main() {
     .map((n) => Number(n.trim()))
     .filter((n) => n >= 1 && n <= 9);
   const limit = Number(argOf('limit')) || undefined;
+  // --refresh: lấy lại cả từ ĐÃ có ảnh. Dùng khi đổi nguồn ảnh (vd chuyển
+  // sang tra Wikipedia theo Hán tự) và muốn thay ảnh cũ kém chính xác.
+  const refresh = process.argv.includes('--refresh');
 
   const words = await prisma.word.findMany({
     where: {
-      imageUrl: null,
-      meaningEn: { not: null },
+      ...(refresh ? {} : { imageUrl: null }),
       pos: { has: WordPos.NOUN },
       ...(levels?.length ? { hskLevel: { in: levels } } : {}),
     },
@@ -60,12 +63,12 @@ async function main() {
   let found = 0;
   let missed = 0;
   for (const [i, w] of words.entries()) {
+    // Wikipedia tiếng Trung TRƯỚC (tra theo chính Hán tự, chính xác hơn
+    // nhiều), Commons chỉ dự phòng — xem searchWikipediaImage().
     const query = w.meaningEn ? imageQueryFrom(w.meaningEn) : null;
-    if (!query) {
-      missed += 1;
-      continue;
-    }
-    const imageUrl = await searchCommonsImage(query);
+    const imageUrl =
+      (await searchWikipediaImage(w.simplified)) ??
+      (query ? await searchCommonsImage(query) : null);
     if (imageUrl) {
       await prisma.word.update({ where: { id: w.id }, data: { imageUrl } });
       found += 1;

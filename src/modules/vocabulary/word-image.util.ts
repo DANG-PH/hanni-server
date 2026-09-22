@@ -69,3 +69,42 @@ export async function searchCommonsImage(
     return null;
   }
 }
+
+interface WikiPageImageResult {
+  query?: {
+    pages?: Record<string, { thumbnail?: { source?: string } }>;
+  };
+}
+
+/** Tra ảnh đại diện của bài Wikipedia tiếng Trung theo CHÍNH Hán tự.
+ *
+ * Chính xác hơn HẲN cách tìm Commons bằng `meaningEn` ở trên, vì né được
+ * bài toán chọn đúng nghĩa: `meaningEn` của 苹果 là "mincemeat, pome, apple,
+ * Empire" nên lấy nghĩa đầu ra ảnh BÁNH NHÂN THỊT (lỗi thật, đã gặp 2 lần).
+ * Tra thẳng "苹果" trên zh.wikipedia ra ảnh rổ táo. Kiểm chứng thêm: 医生 ->
+ * tranh bác sĩ, 书 -> sách mở, 狗 -> các giống chó.
+ *
+ * CHỈ nhận ảnh nằm trên Commons (`/wikipedia/commons/`): ảnh upload riêng vào
+ * một wiki (`/wikipedia/zh/`) có thể là fair-use, KHÔNG được phép dùng lại.
+ */
+export async function searchWikipediaImage(
+  hanzi: string,
+): Promise<string | null> {
+  try {
+    const url =
+      'https://zh.wikipedia.org/w/api.php?action=query&prop=pageimages' +
+      `&titles=${encodeURIComponent(hanzi)}&pithumbsize=400&redirects=1&format=json`;
+    const res = await fetch(url, {
+      headers: { 'User-Agent': USER_AGENT },
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as WikiPageImageResult;
+    const pages = data.query?.pages ?? {};
+    const src = Object.values(pages)[0]?.thumbnail?.source;
+    if (!src || !src.includes('/wikipedia/commons/')) return null;
+    return src;
+  } catch {
+    return null;
+  }
+}

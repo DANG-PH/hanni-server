@@ -3,7 +3,11 @@ import { Prisma, WordPos, type Word } from '@prisma/client';
 import { paginate, type Paginated } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import type { WordQueryDto } from './dto/word-query.dto';
-import { imageQueryFrom, searchCommonsImage } from './word-image.util';
+import {
+  imageQueryFrom,
+  searchCommonsImage,
+  searchWikipediaImage,
+} from './word-image.util';
 
 @Injectable()
 export class WordsService {
@@ -13,10 +17,13 @@ export class WordsService {
    * Commons, miễn phí, không cần key). Không chặn caller lâu nếu lỗi/chậm. */
   private async attachImage<T extends Word>(word: T): Promise<T> {
     if (word.imageUrl) return word;
-    if (!word.meaningEn || !word.pos.includes(WordPos.NOUN)) return word;
-    const query = imageQueryFrom(word.meaningEn);
-    if (!query) return word;
-    const imageUrl = await searchCommonsImage(query);
+    if (!word.pos.includes(WordPos.NOUN)) return word;
+    // Wikipedia tiếng Trung TRƯỚC (tra theo chính Hán tự nên không phải đoán
+    // nghĩa), Commons chỉ là dự phòng — xem searchWikipediaImage().
+    const query = word.meaningEn ? imageQueryFrom(word.meaningEn) : null;
+    const imageUrl =
+      (await searchWikipediaImage(word.simplified)) ??
+      (query ? await searchCommonsImage(query) : null);
     if (!imageUrl) return word;
     await this.prisma.word
       .update({ where: { id: word.id }, data: { imageUrl } })
