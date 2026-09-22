@@ -11,6 +11,7 @@ import {
 import type { Env } from '../../config/env.validation';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { MailService } from './mail.service';
+import { ReviewType } from '@prisma/client';
 
 const DIGEST_HOUR = 9; // 9h sáng local — giờ mở email hợp lý, không làm phiền
 const DIGEST_WEEKDAY = 1; // luxon: 1 = Thứ Hai
@@ -57,19 +58,31 @@ export class WeeklyDigestService {
         const todayIso = localStudyDate(now, user.timezone, cutoffHour);
         const sinceDate = isoDateToUtcDate(shiftIsoDate(todayIso, -6));
 
-        const [activity, streak] = await Promise.all([
+        // `UserDailyActivity.wordsLearned` chỉ tăng khi từ đạt chu kỳ ôn
+        // >= 21 ngày (`becameLearned`), nên người mới học cả tuần vẫn ra 0 —
+        // email tổng kết mà hiện "Từ mới đã thuộc: 0" thì phản tác dụng.
+        // Đếm số từ MỚI BẮT ĐẦU học trong tuần (ReviewLog LEARN) thay vào:
+        // phản ánh đúng nỗ lực và luôn dương với người có học.
+        const [activity, streak, wordsStarted] = await Promise.all([
           this.prisma.userDailyActivity.findMany({
             where: { userId: user.id, localDate: { gte: sinceDate } },
-            select: { wordsReviewed: true, wordsLearned: true },
+            select: { wordsReviewed: true },
           }),
           this.prisma.userStreak.findUnique({ where: { userId: user.id } }),
+          this.prisma.reviewLog.count({
+            where: {
+              userId: user.id,
+              reviewType: ReviewType.LEARN,
+              reviewedAt: { gte: sinceDate },
+            },
+          }),
         ]);
 
         await this.mail.sendWeeklyDigest(user.email, {
           displayName: user.displayName,
           daysStudied: activity.length,
           wordsReviewed: activity.reduce((s, a) => s + a.wordsReviewed, 0),
-          wordsLearned: activity.reduce((s, a) => s + a.wordsLearned, 0),
+          wordsLearned: wordsStarted,
           currentStreak: streak?.currentStreak ?? 0,
         });
         sentCount += 1;

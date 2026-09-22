@@ -106,9 +106,13 @@ export class ReminderService {
             dueAt: { lte: now },
           },
         });
+        // Diễn đạt theo hướng MẤT MÁT thay vì nhiệm vụ: "N từ sắp quên" thúc
+        // đẩy mạnh hơn "N từ cần ôn" (loss aversion — người ta ngại mất cái
+        // đã có hơn ngại bỏ lỡ việc mới). Cùng hướng với thẻ thống kê ở
+        // dashboard.
         const body =
           dueCount > 0
-            ? `Bạn có ${dueCount} từ cần ôn hôm nay — chỉ mất vài phút thôi!`
+            ? `${dueCount} từ bạn đã học đang sắp quên — ôn vài phút để giữ lại nhé!`
             : 'Học thêm vài từ mới hôm nay để mở rộng vốn từ nhé.';
 
         const sent = await this.push.sendToUser(

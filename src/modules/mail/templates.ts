@@ -100,7 +100,7 @@ export function weeklyDigestHtml(opts: {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;">
         ${statRow('📅 Số ngày đã học', `${opts.daysStudied}/7 ngày`)}
         ${statRow('📖 Từ đã ôn', String(opts.wordsReviewed))}
-        ${statRow('✨ Từ mới đã thuộc', String(opts.wordsLearned))}
+        ${statRow('✨ Từ mới bắt đầu học', String(opts.wordsLearned))}
         ${statRow('🔥 Chuỗi ngày hiện tại', `${opts.currentStreak} ngày`, true)}
       </table>
       Tiếp tục giữ nhịp học này nhé!`
