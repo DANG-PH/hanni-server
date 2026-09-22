@@ -26,6 +26,13 @@ export class LearnController {
     return this.learn.path(user.id, q.level);
   }
 
+  /** Bài đang học dở — để các trang luyện tập mặc định luyện đúng chủ đề
+   * người dùng đang theo, thay vì mỗi trang tự lấy ngẫu nhiên theo cấp. */
+  @Get('current')
+  current(@CurrentUser() user: AuthUser) {
+    return this.learn.currentLesson(user.id);
+  }
+
   @Get('lessons/:id')
   lesson(
     @CurrentUser() user: AuthUser,

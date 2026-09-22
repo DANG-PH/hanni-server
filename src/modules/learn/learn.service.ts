@@ -154,6 +154,52 @@ export class LearnService {
     };
   }
 
+  /** Bài học ĐANG HỌC DỞ (hoặc bài tiếp theo nên học) — gọn nhẹ, chỉ trả
+   * đúng thông tin cần để các trang luyện tập biết "người này đang học bài
+   * nào".
+   *
+   * Lý do có hàm này: `/listening`, `/pronunciation`, quiz, minigame trước
+   * đây mỗi trang tự chọn từ theo cấp HSK rồi lấy ngẫu nhiên/theo trang, nên
+   * người đang học bài "Gia đình" vào luyện nghe lại gặp toàn từ khác — các
+   * phần rời rạc, không theo lộ trình lẫn chủ đề. Giờ mọi trang hỏi CHUNG
+   * một chỗ này để mặc định luyện đúng bài đang học.
+   *
+   * `path()` đã tính `currentLessonId` nhưng phải dựng cả lộ trình (mọi bài
+   * + tiến độ từng bài) mới ra — quá nặng cho việc chỉ cần 1 dòng. */
+  async currentLesson(userId: string) {
+    const level = await this.currentLevel(userId);
+    const lessons = await this.prisma.lesson.findMany({
+      where: { hskLevel: level },
+      orderBy: { orderIndex: 'asc' },
+      select: { id: true, title: true, orderIndex: true, hskLevel: true },
+    });
+    if (lessons.length === 0) return null;
+
+    const progress = await this.prisma.userLessonProgress.findMany({
+      where: { userId, lessonId: { in: lessons.map((l) => l.id) } },
+      select: { lessonId: true, completedAt: true },
+    });
+    const doneIds = new Set(
+      progress.filter((p) => p.completedAt).map((p) => p.lessonId),
+    );
+    const startedIds = new Set(
+      progress.filter((p) => !p.completedAt).map((p) => p.lessonId),
+    );
+
+    // Ưu tiên bài đang dở, sau đó tới bài chưa học đầu tiên.
+    const lesson =
+      lessons.find((l) => startedIds.has(l.id)) ??
+      lessons.find((l) => !doneIds.has(l.id)) ??
+      lessons[lessons.length - 1];
+
+    return {
+      ...lesson,
+      inProgress: startedIds.has(lesson.id),
+      totalLessons: lessons.length,
+      completedLessons: doneIds.size,
+    };
+  }
+
   async lesson(userId: string, lessonId: string) {
     const lesson = await this.prisma.lesson.findUnique({
       where: { id: lessonId },
