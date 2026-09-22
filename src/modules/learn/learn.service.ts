@@ -111,17 +111,27 @@ export class LearnService {
       previewBy.set(w.lessonId, arr);
     }
 
-    let prevCompleted = true;
     const nodes: LessonNode[] = lessons.map((l) => {
       const agg = perLesson.get(l.id) ?? { learned: 0, started: 0, due: 0 };
       // "xong bài" = đã học qua tất cả từ trong bài ít nhất 1 lần (SRS lo phần ôn lại).
       const completed = l.wordCount > 0 && agg.started >= l.wordCount;
-      let status: LessonStatus;
-      if (completed) status = 'COMPLETED';
-      else if (agg.started > 0) status = 'IN_PROGRESS';
-      else if (prevCompleted) status = 'AVAILABLE';
-      else status = 'LOCKED';
-      prevCompleted = completed;
+      // KHÔNG khoá bài nào nữa (bỏ 2026-09-22). Trước đây bài sau chỉ mở khi
+      // bài trước học HẾT mọi từ, nên người mới mở lộ trình ra thấy 1 bài mở
+      // và 26 ổ khoá, không kèm lời giải thích nào — vừa nản vừa khó hiểu.
+      //
+      // Quan trọng hơn: các bài ở đây chia theo CHỦ ĐỀ (Chào hỏi, Gia đình,
+      // Đồ ăn, Thời tiết...) chứ không phải theo độ khó tăng dần, nên bắt
+      // học xong "Số đếm" mới được học "Đồ ăn" là vô lý. Research về lộ
+      // trình học cũng cho thấy giới hạn nhân tạo là nguồn khó chịu chính,
+      // còn người học tiến bộ tốt hơn khi được chọn thứ tự.
+      //
+      // Định hướng vẫn giữ qua `currentLessonId` (bài nên học tiếp) để người
+      // mới không mất phương hướng — gợi ý thay vì cấm.
+      const status: LessonStatus = completed
+        ? 'COMPLETED'
+        : agg.started > 0
+          ? 'IN_PROGRESS'
+          : 'AVAILABLE';
       return {
         id: l.id,
         orderIndex: l.orderIndex,
