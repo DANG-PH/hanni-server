@@ -110,7 +110,12 @@ export class ReviewService {
       reps: out.reps,
       lapses: out.lapses,
       lastRating: dto.rating,
-      isLeech: out.lapses >= LEECH_LAPSES,
+      // Gỡ đánh dấu "từ khó nhớ" khi cuối cùng đã nhớ được: sai nhiều lần
+      // nhưng nay đã đạt chu kỳ ôn của từ đã thuộc thì không còn khó nữa.
+      // Trước đây `isLeech` một khi bật là bật MÃI, nên từ đã nhớ vẫn nằm
+      // trong danh sách "Từ khó nhớ" ở /progress — vừa sai vừa làm người học
+      // nản vì danh sách chỉ dài thêm, không bao giờ ngắn lại.
+      isLeech: out.lapses >= LEECH_LAPSES && !nowLearned,
       easeFactor: out.easeFactor,
       intervalDays: out.intervalDays,
       stability: out.stability,

@@ -251,9 +251,12 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `dueAt` (khác `getQueue()`) vì đây là màn "xem toàn bộ từ khó" để người học biết, không phải
   hàng đợi ôn hôm nay. `getStats()` cũng trả thêm `leechCount` cho tiện hiện số lượng nhanh.
   Client: section "Từ khó nhớ" ở `/progress` (chỉ hiện khi có ít nhất 1 từ, không ép hiện rỗng).
-  **Chưa làm**: cơ chế "gỡ leech" khi cuối cùng nhớ được (Anki tự bỏ đánh dấu khi ôn đúng lại
-  nhiều lần liên tiếp — ở đây `isLeech` vẫn `true` mãi trừ khi ghi đè logic trong `review()`,
-  chấp nhận tạm vì set lại về false cần quyết định ngưỡng riêng, để dành sau); chế độ "cram" ôn
+  **Gỡ leech (làm 2026-09-22)**: `isLeech = out.lapses >= LEECH_LAPSES && !nowLearned` — sai
+  nhiều lần nhưng nay đã đạt chu kỳ ôn của từ "đã thuộc" thì bỏ đánh dấu. Trước đó `isLeech`
+  một khi bật là bật MÃI, nên từ đã nhớ được vẫn nằm trong "Từ khó nhớ" ở `/progress`: vừa sai
+  vừa làm người học nản vì danh sách chỉ dài thêm, không bao giờ ngắn lại. Dùng chính ngưỡng
+  `nowLearned` có sẵn thay vì nghĩ ra ngưỡng riêng — một từ đạt mức "đã thuộc" thì theo định
+  nghĩa không còn là từ khó nữa. **Chưa làm**: chế độ "cram" ôn
   riêng từ khó bất kể có đến hạn hay không (enum `ReviewType.CRAM` cũng đang mồ côi tương tự,
   ghi nhận nhưng chưa làm vì cần thiết kế lại `review()` để không ảnh hưởng lịch SRS thật).
 - **Push GỬI CHO CẢ TIN NHẮN + TƯƠNG TÁC (sửa 2026-09-22)** — lỗi thật user báo: "chưa thấy
