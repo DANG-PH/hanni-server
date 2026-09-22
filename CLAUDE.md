@@ -211,6 +211,27 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   **Client hiện ảnh ở đâu**: từ điển công khai, popup bấm từ trong video, thẻ "Từ vựng hôm nay",
   bộ thẻ học thử, VÀ (từ 2026-09-22) mặt sau flashcard ôn tập + danh sách từ ở `/learn/[lessonId]`
   — trước đó luồng học chính không render ảnh nên người dùng tưởng chưa cào được ảnh nào.
+- **Nghĩa tiếng Việt hỏng do nguồn CVDICT (sửa 2026-09-22, `data/curated/meaning-fixes.json`
+  + `scripts/apply-meaning-fixes.ts`)** — quét chất lượng dữ liệu sau khi từ điển thành trang
+  công khai (mỗi từ = 1 trang Google đọc được, nghĩa hỏng là hỏng ngay ngoài mặt tiền). Ba loại:
+  (1) **Nghĩa VÒNG VO**: CVDICT dịch nguyên văn mục "variant of X" của CC-CEDICT → 歌 = "biến thể
+  của 歌[ge1]", 玩 = "biến thể của 玩[wan2]", 花 = "biến thể của 花[hua1]". Đo: 156 từ dính, 30
+  trong đó ở HSK1-3 — toàn từ rất thông dụng (那, 回, 歌, 玩, 床, 鞋, 糖, 冰). Tiếng Anh của chính
+  những từ đó lại ĐÚNG ("song", "to play", "spend") nên chỉ thiếu phần tiếng Việt.
+  (2) **Nghĩa chỉ là tham chiếu chéo**: 千 = "xem 鞦韆|秋千" (đúng ra là "nghìn"), 体检 = "viết tắt
+  của 體格檢查", 众所周知 = "xem 眾所周知".
+  (3) **ETL CHỌN NHẦM CÁCH ĐỌC** — gốc rễ của (1)(2): trong `build-words.ts`, chữ đa âm mà pinyin
+  đại cương không khớp được CC-CEDICT thì rơi về `ced.pinyin[0]`, đôi khi trúng cách đọc hiếm và
+  nghĩa kéo theo cũng lệch. **Nặng nhất là 个**: lưu `gě` với nghĩa "dùng trong 自个儿" trong khi
+  đây là LƯỢNG TỪ THÔNG DỤNG NHẤT tiếng Trung (gè = cái, chiếc). Cùng loại: 那 (nǎ/nà), 草 (cào —
+  biến thể tục — thay vì cǎo), 压, 并, 扎, 挣, 恶, 嘛, 尽快.
+  **Cách sửa**: 42 mục soạn tay (KHÔNG dịch máy, cùng cách làm câu ví dụ HSK1), đánh dấu
+  `translationStatus = REVIEWED`; script chỉ sửa cột `pinyin` HIỂN THỊ, **KHÔNG đụng
+  `pinyinNumeric`** vì đó là khoá khớp của `seed-word-examples.ts`. `cleanDef()` trong ETL cũng
+  đã lọc chú thích lượng từ `(LT:...)` để bản seed dựng lại sau này sạch sẵn (22 từ, xem
+  `scripts/clean-meaning-annotations.ts`).
+  **Chưa làm**: sửa tận gốc phần chọn cách đọc trong ETL — cần chạy lại `data:build-words` với
+  nguồn thô, và còn phải rà xem bao nhiêu từ khác đang dính cùng lỗi.
 - **SRS**: `SchedulerRegistry.get(name)` chọn `Sm2Scheduler` | `FsrsScheduler` theo
   `UserSettings.srsScheduler`. `UserWordProgress` có cả trường SM-2 (easeFactor/intervalDays)
   lẫn FSRS (stability/difficulty) → đổi thuật toán không cần migration.
