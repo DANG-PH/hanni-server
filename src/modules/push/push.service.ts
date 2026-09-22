@@ -9,6 +9,11 @@ import type { Env } from '../../config/env.validation';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import type { SubscribeDto } from './dto/push.dto';
 
+/** Giờ nhắc học mặc định khi người dùng vừa bật thông báo (giờ địa phương
+ * của họ). Chọn 20h: sau giờ cơm tối, trước giờ đi ngủ — vẫn còn đủ thời
+ * gian để ôn nốt và giữ chuỗi ngày. */
+const DEFAULT_REMINDER_HOUR = 20;
+
 @Injectable()
 export class PushService {
   private readonly enabled: boolean;
@@ -60,6 +65,23 @@ export class PushService {
         auth: dto.keys.auth,
         userAgent,
       },
+    });
+
+    // Bật thông báo xong thì đặt luôn GIỜ NHẮC mặc định nếu chưa có.
+    //
+    // Đo production 2026-09-22: `reminderHour` NULL ở 102/102 tài khoản, tức
+    // là job nhắc học mỗi ngày (`ReminderService`) chưa từng gửi được cho ai
+    // — cả tính năng chết lặng. Lý do: giờ nhắc chỉ đặt được bằng một ô chọn
+    // nằm SÂU trong `/settings`, sau khi đã bật thông báo; gần như không ai
+    // đi hết quãng đó.
+    //
+    // Người dùng vừa chủ động cấp quyền thông báo thì "nhắc học mỗi ngày"
+    // chính là thứ họ vừa đồng ý — mặc định `DEFAULT_REMINDER_HOUR` và vẫn
+    // đổi/tắt được ở `/settings`. Job cũng đã tự bỏ qua ai đạt mục tiêu ngày
+    // hôm đó nên không thành phiền.
+    await this.prisma.userSettings.updateMany({
+      where: { userId, reminderHour: null },
+      data: { reminderHour: DEFAULT_REMINDER_HOUR },
     });
     return { ok: true as const };
   }
