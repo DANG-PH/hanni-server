@@ -33,6 +33,11 @@ function parseDuration(input: string): number {
   return n * mult;
 }
 
+/** Khoảng ân hạn cho refresh trùng nhau (nhiều request song song cùng xoay
+ * 1 token). Ngắn vừa đủ để không thành lỗ hổng: token bị đánh cắp dùng lại
+ * SAU khoảng này vẫn bị phát hiện và huỷ cả family. */
+const REUSE_GRACE_MS = 30_000;
+
 @Injectable()
 export class TokenService {
   private readonly logger = new Logger(TokenService.name);
@@ -99,11 +104,31 @@ export class TokenService {
     if (!row) throw new UnauthorizedException('Refresh token không hợp lệ');
 
     if (row.revokedAt) {
-      this.logger.warn(
-        `Phát hiện dùng lại refresh token (family ${row.familyId}), revoke toàn bộ family`,
+      // Cửa sổ ÂN HẠN cho refresh trùng nhau, KHÔNG phải token bị đánh cắp.
+      //
+      // Đo production 2026-09-22: 661 lần "phát hiện dùng lại" với chỉ 6 người
+      // dùng thật — mỗi lần là một lần ĐĂNG XUẤT OAN. Nguyên nhân: trang
+      // dashboard bắn cả chục request song song, access token hết hạn thì tất
+      // cả cùng 401 rồi cùng gọi /auth/refresh với CÙNG một cookie. Request
+      // đầu xoay token thành công, các request còn lại mang token vừa bị
+      // revoke tới → bị coi là trộm → revoke cả family → token MỚI cũng chết
+      // theo. Đây là lỗi kinh điển của refresh token rotation.
+      //
+      // Trong `REUSE_GRACE_MS` kể từ lúc xoay: cấp cặp mới trong CÙNG family
+      // thay vì huỷ tất cả (cách Auth0/Okta gọi là "reuse interval"). Ngoài
+      // cửa sổ đó vẫn xử lý như token bị đánh cắp.
+      const revokedAgoMs = Date.now() - row.revokedAt.getTime();
+      if (revokedAgoMs > REUSE_GRACE_MS) {
+        this.logger.warn(
+          `Phát hiện dùng lại refresh token (family ${row.familyId}), revoke toàn bộ family`,
+        );
+        await this.revokeFamily(row.familyId);
+        throw new UnauthorizedException('Phiên đăng nhập không còn hợp lệ');
+      }
+      this.logger.debug(
+        `Refresh trùng trong ${revokedAgoMs}ms (family ${row.familyId}) — cấp lại, không revoke`,
       );
-      await this.revokeFamily(row.familyId);
-      throw new UnauthorizedException('Phiên đăng nhập không còn hợp lệ');
+      return this.issueForUser(row.user, ctx, row.familyId);
     }
 
     if (row.expiresAt.getTime() < Date.now()) {
