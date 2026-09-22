@@ -117,6 +117,12 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   và tạo liên kết nội bộ giúp bot bò sâu. `hanViet` lưu dạng "điện não" (âm cách nhau bởi khoảng
   trắng, theo THỨ TỰ ký tự) nên tách theo khoảng trắng là khớp 1-1 với từng chữ — nhưng CHỈ gán
   khi số âm KHỚP số chữ, lệch thì để `null` (thà thiếu còn hơn gán sai âm cho nhầm chữ).
+  Kèm `videos[]` — video có lời thoại chứa từ này (tên + số câu), để người học nghe nó trong
+  ngữ cảnh thật. **CỐ TÌNH không trích câu thoại ra làm "câu ví dụ"**: đã thử hướng đó và bỏ
+  sau khi xem mẫu thật — video Hanni chủ yếu phim tu tiên/ngôn tình, phụ đề DỊCH MÁY, trích ra
+  toàn câu sai/cụt (vd 等我用剑一草突破回去就是你的死期 → "Khi tôi sử dụng kiếm và cỏ đột phá,
+  bạn sẽ ch…") hoặc từ vựng tu tiên vô dụng với người học HSK. Dạy sai hại hơn thiếu, Google
+  cũng đánh giá thấp nội dung kiểu đó. Xem `FEATURES.md` mục 21.
 - **Ngữ pháp CÔNG KHAI (`GET /grammar*` đều `@Public()`, từ 2026-09-22)**: 235 điểm có giải
   thích soạn tay là tài sản hiếm NHẤT của Hanni (không phải dữ liệu mở cào về như từ vựng), lại
   cạnh tranh SEO thấp hơn từ vựng nhiều. Client `/ngu-phap` + `/ngu-phap/[slug]`; `/grammar`
