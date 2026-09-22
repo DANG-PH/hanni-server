@@ -58,11 +58,19 @@ function need(path: string, hint: string): void {
 }
 
 function cleanDef(def: string): string {
-  return def
-    .replace(/\s*;\s*$/, '')
-    .replace(/\s+/g, ' ')
-    .replace(/;\s*/g, '; ')
-    .trim();
+  return (
+    def
+      // Chú thích LƯỢNG TỪ của CEDICT lọt sang bản dịch tiếng Việt, vd
+      // "thế giới (LT:個|个[ge4])" hay "khủng long; LT:頭|头[tou2]" — người
+      // học Việt đọc không hiểu gì, lại rơi đúng vào những từ rất thông
+      // dụng (世界, 猫, 路, 菜). Đo 2026-09-22: 22/10.894 từ dính.
+      .replace(/\s*\(LT:[^)]*\)/g, '')
+      .replace(/\s*;?\s*LT:\s*\S+/g, '')
+      .replace(/\s*;\s*$/, '')
+      .replace(/\s+/g, ' ')
+      .replace(/;\s*/g, '; ')
+      .trim()
+  );
 }
 
 /** Gọn nghĩa tiếng Anh Pleco (đôi khi liệt kê 15 từ đồng nghĩa). */
