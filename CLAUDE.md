@@ -228,6 +228,18 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   chấp nhận tạm vì set lại về false cần quyết định ngưỡng riêng, để dành sau); chế độ "cram" ôn
   riêng từ khó bất kể có đến hạn hay không (enum `ReviewType.CRAM` cũng đang mồ côi tương tự,
   ghi nhận nhưng chưa làm vì cần thiết kế lại `review()` để không ảnh hưởng lịch SRS thật).
+- **Push GỬI CHO CẢ TIN NHẮN + TƯƠNG TÁC (sửa 2026-09-22)** — lỗi thật user báo: "chưa thấy
+  app gửi thông báo, ví dụ tin nhắn tới". Kiểm tra đúng vậy: `PushService.sendToUser()` CHỈ
+  được `ReminderService` gọi (nhắc học theo lịch). `NotificationsService.create()` chỉ lưu DB +
+  `emitToUser` WebSocket, còn `MessagesService` thậm chí KHÔNG tạo `Notification` — chỉ emit
+  `message:new`. Nghĩa là mọi thông báo tương tác (trả lời bình luận / thích video / theo dõi /
+  mở khoá huy hiệu) lẫn tin nhắn chỉ tới được người đang MỞ SẴN app; đóng app là im lặng hoàn
+  toàn, dù hạ tầng Web Push đã có đủ. Giờ `create()` gửi push kèm nội dung theo từng
+  `NotificationType` (`pushTextFor()`), và `sendMessage()` gọi `sendMessagePush()` (tên người
+  gửi + trích 80 ký tự đầu). Cả hai đều **không `await`** — push chậm/lỗi không được làm chậm
+  luồng chính, lỗi chỉ `logger.warn`. `PushModule` phải `exports: [PushService]`.
+  **Vấn đề gốc còn lại**: đo production **0 người từng bật thông báo**, vì chỗ bật duy nhất nằm
+  trong `/settings`. Client đã thêm `NotificationNudge` ở dashboard (xem `hanni-client/CLAUDE.md`).
 - **Push (`src/modules/push`)**: dùng `web-push` + khóa VAPID (`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`
   trong env, sinh bằng `npx web-push generate-vapid-keys`). Để trống 2 khóa thì API trả 503 rõ ràng,
   không chặn app khởi động. `PushSubscription` xoá tự động khi gửi gặp lỗi 404/410 (thiết bị đã gỡ
