@@ -15,6 +15,7 @@ import {
   QueueQueryDto,
   ReviewDto,
   StartSessionDto,
+  SuspendWordDto,
 } from './dto/srs.dto';
 import { ReviewService } from './review.service';
 import { StudySessionService } from './study-session.service';
@@ -46,6 +47,22 @@ export class SrsController {
   @Post('review')
   review(@CurrentUser() user: AuthUser, @Body() dto: ReviewDto) {
     return this.reviews.review(user.id, dto);
+  }
+
+  @Get('suspended')
+  suspended(@CurrentUser() user: AuthUser) {
+    return this.reviews.getSuspended(user.id);
+  }
+
+  /** "Tôi biết từ này rồi" — ẩn khỏi mọi hàng đợi ôn, bỏ ẩn được bất cứ lúc
+   * nào ở `/progress`. */
+  @Post('words/:wordId/suspend')
+  suspend(
+    @CurrentUser() user: AuthUser,
+    @Param('wordId', ParseUUIDPipe) wordId: string,
+    @Body() dto: SuspendWordDto,
+  ) {
+    return this.reviews.setSuspended(user.id, wordId, dto.suspended);
   }
 
   @Post('add-word')

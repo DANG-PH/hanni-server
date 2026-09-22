@@ -1,5 +1,13 @@
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 import { ReviewRating, StudySource } from '@prisma/client';
 
 export class AddWordDto {
@@ -48,4 +56,10 @@ export class QueueQueryDto {
 export class StartSessionDto {
   @IsEnum(StudySource)
   source!: StudySource;
+}
+
+/** Ẩn / bỏ ẩn 1 từ khỏi hàng đợi ôn ("tôi biết từ này rồi"). */
+export class SuspendWordDto {
+  @IsBoolean()
+  suspended!: boolean;
 }

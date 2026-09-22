@@ -356,6 +356,7 @@ export class ReviewService {
       reviewsDoneToday,
       newDoneToday,
       leechCount,
+      suspendedCount,
     ] = await Promise.all([
       this.prisma.userWordProgress.count({
         where: {
@@ -376,7 +377,12 @@ export class ReviewService {
       this.prisma.userWordProgress.count({
         where: { userId, learnedAt: { not: null } },
       }),
-      this.prisma.userWordProgress.count({ where: { userId } }),
+      // Từ đang ẩn KHÔNG tính vào "vốn từ đang học": ẩn 1 từ chưa từng học
+      // cũng tạo ra 1 dòng tiến độ (xem setSuspended), không trừ ra thì con
+      // số này tăng mà người dùng chẳng học thêm gì.
+      this.prisma.userWordProgress.count({
+        where: { userId, isSuspended: false },
+      }),
       this.prisma.reviewLog.count({
         where: { userId, reviewedAt: { gte: dayStart } },
       }),
@@ -385,6 +391,9 @@ export class ReviewService {
       }),
       this.prisma.userWordProgress.count({
         where: { userId, isLeech: true },
+      }),
+      this.prisma.userWordProgress.count({
+        where: { userId, isSuspended: true },
       }),
     ]);
 
@@ -397,6 +406,7 @@ export class ReviewService {
       newDoneToday,
       newRemaining: Math.max(0, newPerDay - newDoneToday),
       leechCount,
+      suspendedCount,
     };
   }
 
@@ -410,6 +420,66 @@ export class ReviewService {
    * đầu. Không lọc theo `dueAt` (khác `getQueue()`) vì đây là màn "xem toàn
    * bộ từ khó", không phải hàng đợi ôn hôm nay — từ khó có thể chưa tới hạn
    * ôn lại nhưng vẫn đáng để người học biết mình từng sai nhiều lần. */
+  /**
+   * Ẩn / bỏ ẩn 1 từ khỏi mọi hàng đợi ôn — "tôi biết từ này rồi".
+   *
+   * `UserWordProgress.isSuspended` đã được ĐỌC đúng ở khắp nơi từ lâu
+   * (`getQueue()`, `getStats()`, `progress.service`, `reminder.service`)
+   * nhưng CHƯA CÓ chỗ nào GHI — field mồ côi y hệt `isLeech` trước đây.
+   *
+   * Vì sao đáng làm: người Việt học tiếng Trung gặp rất nhiều từ đã biết sẵn
+   * qua âm Hán Việt (chính Hanni có hẳn trang `/tu-da-biet` liệt kê 773 từ
+   * như vậy) — bắt họ ôn đi ôn lại những từ đó là lý do bỏ app rất thật.
+   *
+   * Từ CHƯA từng học thì tạo sẵn một dòng tiến độ đang ẩn: `getQueue()` lấy
+   * từ mới bằng `progress: { none: { userId } }` nên chỉ cần TỒN TẠI dòng là
+   * từ đó không vào hàng đợi nữa.
+   *
+   * CỐ Ý KHÔNG đánh dấu `learnedAt` cho từ bị ẩn dù người dùng nói "đã biết":
+   * "từ đã thuộc" là một tiêu chí BẢNG XẾP HẠNG, cho tự khai là mở đường
+   * gian lận. Ẩn chỉ có nghĩa "đừng hỏi tôi nữa", không phải "tôi đã thuộc".
+   */
+  async setSuspended(userId: string, wordId: string, suspended: boolean) {
+    const word = await this.prisma.word.findUnique({ where: { id: wordId } });
+    if (!word) throw new NotFoundException('Không tìm thấy từ');
+
+    await this.prisma.userWordProgress.upsert({
+      where: { userId_wordId: { userId, wordId } },
+      update: { isSuspended: suspended },
+      create: {
+        userId,
+        wordId,
+        hskLevel: word.hskLevel,
+        state: SrsState.NEW,
+        isSuspended: suspended,
+        dueAt: null,
+      },
+    });
+    return { wordId, suspended };
+  }
+
+  /** Danh sách từ đang ẩn — để người dùng bỏ ẩn khi đổi ý. */
+  async getSuspended(userId: string) {
+    const rows = await this.prisma.userWordProgress.findMany({
+      where: { userId, isSuspended: true },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        word: {
+          select: {
+            id: true,
+            simplified: true,
+            pinyin: true,
+            meaningVi: true,
+            hanViet: true,
+            hskLevel: true,
+            audioUrl: true,
+          },
+        },
+      },
+    });
+    return rows.map((r) => ({ word: r.word, hiddenAt: r.updatedAt }));
+  }
+
   async getLeeches(userId: string) {
     const rows = await this.prisma.userWordProgress.findMany({
       where: { userId, isLeech: true },
