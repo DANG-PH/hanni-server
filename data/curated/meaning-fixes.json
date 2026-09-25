@@ -243,5 +243,660 @@
     "simplified": "只",
     "pinyinNumeric": "zhi3",
     "meaningVi": "chỉ; chỉ có"
+  },
+  {
+    "simplified": "为",
+    "pinyinNumeric": "wei2",
+    "meaningVi": "làm; là; cho là (như trong 认为, 成为, 作为); bị, được (trong cấu trúc bị động 为…所…)"
+  },
+  {
+    "simplified": "弄",
+    "pinyinNumeric": "nong4",
+    "meaningVi": "làm; xử lý; nghịch, đùa nghịch"
+  },
+  {
+    "simplified": "场",
+    "pinyinNumeric": "chang3",
+    "meaningVi": "buổi; trận; lượt (lượng từ cho sự kiện, trận đấu, buổi biểu diễn...)"
+  },
+  {
+    "simplified": "留",
+    "pinyinNumeric": "liu2",
+    "meaningVi": "ở lại; giữ lại; để lại"
+  },
+  {
+    "simplified": "法",
+    "pinyinNumeric": "fa3",
+    "meaningVi": "pháp luật; cách thức; phương pháp"
+  },
+  {
+    "simplified": "强",
+    "pinyinNumeric": "qiang2",
+    "meaningVi": "mạnh; mạnh mẽ; kiên cường"
+  },
+  {
+    "simplified": "克",
+    "pinyinNumeric": "ke4",
+    "meaningVi": "gam (đơn vị khối lượng); khắc phục, chiến thắng, chế ngự"
+  },
+  {
+    "simplified": "假",
+    "pinyinNumeric": "jia3",
+    "meaningVi": "giả; giả dối; không thật"
+  },
+  {
+    "simplified": "修",
+    "pinyinNumeric": "xiu1",
+    "meaningVi": "sửa chữa; tu sửa, xây dựng; tu dưỡng, trau dồi"
+  },
+  {
+    "simplified": "乘",
+    "pinyinNumeric": "cheng2",
+    "meaningVi": "đi, đáp (phương tiện); nhân (phép tính)"
+  },
+  {
+    "simplified": "村",
+    "pinyinNumeric": "cun1",
+    "meaningVi": "làng, thôn"
+  },
+  {
+    "simplified": "琴",
+    "pinyinNumeric": "qin2",
+    "meaningVi": "đàn (tên gọi chung cho nhạc cụ dây như đàn tranh, đàn piano...)"
+  },
+  {
+    "simplified": "干活儿",
+    "pinyinNumeric": "gan4 huo2 r5",
+    "meaningVi": "làm việc, lao động (thường là lao động chân tay)"
+  },
+  {
+    "simplified": "窗",
+    "pinyinNumeric": "chuang1",
+    "meaningVi": "cửa sổ"
+  },
+  {
+    "simplified": "怪",
+    "pinyinNumeric": "guai4",
+    "meaningVi": "kỳ lạ, quái lạ; trách móc, đổ lỗi"
+  },
+  {
+    "simplified": "碰",
+    "pinyinNumeric": "peng4",
+    "meaningVi": "chạm, va chạm; gặp, gặp phải (tình cờ)"
+  },
+  {
+    "simplified": "锁",
+    "pinyinNumeric": "suo3",
+    "meaningVi": "khóa; ổ khóa; khóa lại"
+  },
+  {
+    "simplified": "咬",
+    "pinyinNumeric": "yao3",
+    "meaningVi": "cắn"
+  },
+  {
+    "simplified": "翻",
+    "pinyinNumeric": "fan1",
+    "meaningVi": "lật, giở; dịch (ngôn ngữ); lục lọi"
+  },
+  {
+    "simplified": "合",
+    "pinyinNumeric": "he2",
+    "meaningVi": "hợp, kết hợp; phù hợp, vừa"
+  },
+  {
+    "simplified": "匹",
+    "pinyinNumeric": "pi3",
+    "meaningVi": "con, tấm (lượng từ cho ngựa, vải vóc...)"
+  },
+  {
+    "simplified": "重复",
+    "pinyinNumeric": "chong2 fu4",
+    "meaningVi": "lặp lại; trùng lặp"
+  },
+  {
+    "simplified": "插",
+    "pinyinNumeric": "cha1",
+    "meaningVi": "cắm, chèn, xen vào"
+  },
+  {
+    "simplified": "绕",
+    "pinyinNumeric": "rao4",
+    "meaningVi": "vòng quanh, quấn quanh; đi vòng"
+  },
+  {
+    "simplified": "挡",
+    "pinyinNumeric": "dang3",
+    "meaningVi": "chắn, ngăn cản, cản trở"
+  },
+  {
+    "simplified": "升",
+    "pinyinNumeric": "sheng1",
+    "meaningVi": "lít (đơn vị đo dung tích); tăng lên, thăng lên"
+  },
+  {
+    "simplified": "骂",
+    "pinyinNumeric": "ma4",
+    "meaningVi": "mắng, chửi"
+  },
+  {
+    "simplified": "纪录",
+    "pinyinNumeric": "ji4 lu4",
+    "meaningVi": "kỷ lục; biên bản, ghi chép"
+  },
+  {
+    "simplified": "罚",
+    "pinyinNumeric": "fa2",
+    "meaningVi": "phạt, trừng phạt"
+  },
+  {
+    "simplified": "软",
+    "pinyinNumeric": "ruan3",
+    "meaningVi": "mềm; yếu, yếu đuối"
+  },
+  {
+    "simplified": "朵",
+    "pinyinNumeric": "duo3",
+    "meaningVi": "bông, đóa (lượng từ cho hoa, mây...)"
+  },
+  {
+    "simplified": "胡同",
+    "pinyinNumeric": "hu2 tong4",
+    "meaningVi": "ngõ, hẻm (đặc trưng ở Bắc Kinh)"
+  },
+  {
+    "simplified": "枪",
+    "pinyinNumeric": "qiang1",
+    "meaningVi": "súng"
+  },
+  {
+    "simplified": "罪",
+    "pinyinNumeric": "zui4",
+    "meaningVi": "tội, tội lỗi"
+  },
+  {
+    "simplified": "塔",
+    "pinyinNumeric": "ta3",
+    "meaningVi": "tháp"
+  },
+  {
+    "simplified": "剑",
+    "pinyinNumeric": "jian4",
+    "meaningVi": "kiếm, gươm"
+  },
+  {
+    "simplified": "针",
+    "pinyinNumeric": "zhen1",
+    "meaningVi": "kim; mũi tiêm; châm cứu"
+  },
+  {
+    "simplified": "小偷儿",
+    "pinyinNumeric": "xiao3 tou1 r5",
+    "meaningVi": "kẻ trộm, tên trộm"
+  },
+  {
+    "simplified": "趁",
+    "pinyinNumeric": "chen4",
+    "meaningVi": "nhân lúc, tranh thủ (thời gian, cơ hội)"
+  },
+  {
+    "simplified": "罐",
+    "pinyinNumeric": "guan4",
+    "meaningVi": "lon, hũ, bình (đựng đồ)"
+  },
+  {
+    "simplified": "妙",
+    "pinyinNumeric": "miao4",
+    "meaningVi": "tuyệt diệu, tài tình, khéo léo"
+  },
+  {
+    "simplified": "端",
+    "pinyinNumeric": "duan1",
+    "meaningVi": "đầu, đầu mối; bưng, bê (bằng hai tay)"
+  },
+  {
+    "simplified": "暖",
+    "pinyinNumeric": "nuan3",
+    "meaningVi": "ấm, ấm áp"
+  },
+  {
+    "simplified": "折",
+    "pinyinNumeric": "zhe2",
+    "meaningVi": "gãy, gập, uốn cong; giảm giá, chiết khấu"
+  },
+  {
+    "simplified": "赖",
+    "pinyinNumeric": "lai4",
+    "meaningVi": "dựa dẫm, ỷ lại; chối bỏ, nuốt lời; đổ lỗi vô cớ"
+  },
+  {
+    "simplified": "掏",
+    "pinyinNumeric": "tao1",
+    "meaningVi": "móc, lấy ra (từ túi...)"
+  },
+  {
+    "simplified": "大伙儿",
+    "pinyinNumeric": "da4 huo3 r5",
+    "meaningVi": "mọi người, tất cả mọi người"
+  },
+  {
+    "simplified": "拐",
+    "pinyinNumeric": "guai3",
+    "meaningVi": "rẽ, quẹo (ở góc đường); bắt cóc, lừa gạt; gậy chống"
+  },
+  {
+    "simplified": "肠",
+    "pinyinNumeric": "chang2",
+    "meaningVi": "ruột (nội tạng)"
+  },
+  {
+    "simplified": "汇",
+    "pinyinNumeric": "hui4",
+    "meaningVi": "chuyển (tiền); hợp lại, tụ hội; ngoại hối, đổi (tiền tệ)"
+  },
+  {
+    "simplified": "灾",
+    "pinyinNumeric": "zai1",
+    "meaningVi": "tai họa, thiên tai"
+  },
+  {
+    "simplified": "券",
+    "pinyinNumeric": "quan4",
+    "meaningVi": "vé, phiếu, chứng khoán"
+  },
+  {
+    "simplified": "玩意儿",
+    "pinyinNumeric": "wan2 yi4 r5",
+    "meaningVi": "đồ chơi; thứ, món đồ (khẩu ngữ)"
+  },
+  {
+    "simplified": "卤味",
+    "pinyinNumeric": "lu3 wei4",
+    "meaningVi": "đồ ăn kho/ướp nước tương và gia vị (kiểu đồ nguội Trung Hoa)"
+  },
+  {
+    "simplified": "没准儿",
+    "pinyinNumeric": "mei2 zhun3 r5",
+    "meaningVi": "không chắc, có thể, biết đâu"
+  },
+  {
+    "simplified": "纳闷儿",
+    "pinyinNumeric": "na4 men4 r5",
+    "meaningVi": "bối rối, khó hiểu, thắc mắc"
+  },
+  {
+    "simplified": "毁",
+    "pinyinNumeric": "hui3",
+    "meaningVi": "hủy hoại, phá hủy"
+  },
+  {
+    "simplified": "吻",
+    "pinyinNumeric": "wen3",
+    "meaningVi": "hôn; nụ hôn"
+  },
+  {
+    "simplified": "娘",
+    "pinyinNumeric": "niang2",
+    "meaningVi": "mẹ; cô gái, thiếu nữ"
+  },
+  {
+    "simplified": "扯",
+    "pinyinNumeric": "che3",
+    "meaningVi": "kéo, giằng; xé rách"
+  },
+  {
+    "simplified": "绝",
+    "pinyinNumeric": "jue2",
+    "meaningVi": "cực kỳ, tuyệt đối; dứt tuyệt, cắt đứt"
+  },
+  {
+    "simplified": "斗",
+    "pinyinNumeric": "dou4",
+    "meaningVi": "đấu tranh, giao đấu, chọi nhau"
+  },
+  {
+    "simplified": "涂",
+    "pinyinNumeric": "tu2",
+    "meaningVi": "bôi, quét (sơn...); nguệch ngoạc, viết bậy"
+  },
+  {
+    "simplified": "幕",
+    "pinyinNumeric": "mu4",
+    "meaningVi": "màn, rèm (sân khấu); màn, hồi (lượng từ cho vở kịch)"
+  },
+  {
+    "simplified": "得意扬扬",
+    "pinyinNumeric": "de2 yi4 yang2 yang2",
+    "meaningVi": "vênh váo tự đắc, đắc ý ra mặt (thành ngữ)"
+  },
+  {
+    "simplified": "沾",
+    "pinyinNumeric": "zhan1",
+    "meaningVi": "thấm, dính (nước...); nhờ vả, hưởng lợi (từ ai/việc gì)"
+  },
+  {
+    "simplified": "裸",
+    "pinyinNumeric": "luo3",
+    "meaningVi": "trần trụi, khỏa thân"
+  },
+  {
+    "simplified": "昏",
+    "pinyinNumeric": "hun1",
+    "meaningVi": "mê muội, lú lẫn; hoàng hôn, chạng vạng; ngất xỉu"
+  },
+  {
+    "simplified": "核",
+    "pinyinNumeric": "he2",
+    "meaningVi": "hạt, hột (quả); hạt nhân; lõi"
+  },
+  {
+    "simplified": "坑",
+    "pinyinNumeric": "keng1",
+    "meaningVi": "hố, hầm"
+  },
+  {
+    "simplified": "捏",
+    "pinyinNumeric": "nie1",
+    "meaningVi": "bóp, nặn, véo (bằng ngón tay)"
+  },
+  {
+    "simplified": "废",
+    "pinyinNumeric": "fei4",
+    "meaningVi": "phế bỏ, bỏ đi; tàn phế"
+  },
+  {
+    "simplified": "炮",
+    "pinyinNumeric": "pao4",
+    "meaningVi": "pháo, súng đại bác"
+  },
+  {
+    "simplified": "筒",
+    "pinyinNumeric": "tong3",
+    "meaningVi": "ống, ống trụ (đồ vật hình ống)"
+  },
+  {
+    "simplified": "剃",
+    "pinyinNumeric": "ti4",
+    "meaningVi": "cạo (tóc, râu)"
+  },
+  {
+    "simplified": "捆",
+    "pinyinNumeric": "kun3",
+    "meaningVi": "bó, buộc; bó (lượng từ)"
+  },
+  {
+    "simplified": "鹅",
+    "pinyinNumeric": "e2",
+    "meaningVi": "con ngỗng"
+  },
+  {
+    "simplified": "席",
+    "pinyinNumeric": "xi2",
+    "meaningVi": "chiếu; bữa (tiệc); chỗ ngồi; buổi (lượng từ cho cuộc trò chuyện, bữa tiệc)"
+  },
+  {
+    "simplified": "柜台",
+    "pinyinNumeric": "gui4 tai2",
+    "meaningVi": "quầy (bán hàng, lễ tân)"
+  },
+  {
+    "simplified": "掺",
+    "pinyinNumeric": "chan1",
+    "meaningVi": "trộn lẫn, pha trộn"
+  },
+  {
+    "simplified": "兜",
+    "pinyinNumeric": "dou1",
+    "meaningVi": "túi (áo, quần); đi vòng, chào mời (khách)"
+  },
+  {
+    "simplified": "扬",
+    "pinyinNumeric": "yang2",
+    "meaningVi": "giơ lên, nâng lên; truyền đi, phát huy (danh tiếng)"
+  },
+  {
+    "simplified": "嫩",
+    "pinyinNumeric": "nen4",
+    "meaningVi": "non, mềm, tươi non"
+  },
+  {
+    "simplified": "略",
+    "pinyinNumeric": "lüe4",
+    "meaningVi": "hơi, một chút; sơ lược, tóm tắt; lược bỏ"
+  },
+  {
+    "simplified": "仇",
+    "pinyinNumeric": "chou2",
+    "meaningVi": "thù hận, oán thù; kẻ thù"
+  },
+  {
+    "simplified": "复苏",
+    "pinyinNumeric": "fu4 su1",
+    "meaningVi": "hồi phục, phục hồi (sức khỏe, kinh tế)"
+  },
+  {
+    "simplified": "奔",
+    "pinyinNumeric": "ben4",
+    "meaningVi": "chạy nhanh, lao tới; hướng tới, sắp đến (tuổi...)"
+  },
+  {
+    "simplified": "矿",
+    "pinyinNumeric": "kuang4",
+    "meaningVi": "mỏ, quặng"
+  },
+  {
+    "simplified": "乃",
+    "pinyinNumeric": "nai3",
+    "meaningVi": "là, chính là; bèn, mới (văn viết, trang trọng)"
+  },
+  {
+    "simplified": "僵",
+    "pinyinNumeric": "jiang1",
+    "meaningVi": "cứng đờ, cứng nhắc; bế tắc"
+  },
+  {
+    "simplified": "享",
+    "pinyinNumeric": "xiang3",
+    "meaningVi": "hưởng, hưởng thụ"
+  },
+  {
+    "simplified": "堤",
+    "pinyinNumeric": "di1",
+    "meaningVi": "đê, đê điều"
+  },
+  {
+    "simplified": "融",
+    "pinyinNumeric": "rong2",
+    "meaningVi": "tan chảy; hòa tan, dung hợp"
+  },
+  {
+    "simplified": "俊",
+    "pinyinNumeric": "jun4",
+    "meaningVi": "tuấn tú, đẹp trai/xinh xắn"
+  },
+  {
+    "simplified": "弥漫",
+    "pinyinNumeric": "mi2 man4",
+    "meaningVi": "lan tỏa, tràn ngập khắp nơi (khói, sương...)"
+  },
+  {
+    "simplified": "炼",
+    "pinyinNumeric": "lian4",
+    "meaningVi": "luyện, tinh luyện (kim loại...); rèn luyện"
+  },
+  {
+    "simplified": "挽",
+    "pinyinNumeric": "wan3",
+    "meaningVi": "kéo, dắt (tay); cứu vãn; viếng, than khóc người đã mất"
+  },
+  {
+    "simplified": "凶恶",
+    "pinyinNumeric": "xiong1 e4",
+    "meaningVi": "hung ác, dữ tợn"
+  },
+  {
+    "simplified": "瞅",
+    "pinyinNumeric": "chou3",
+    "meaningVi": "nhìn, ngó (khẩu ngữ vùng miền)"
+  },
+  {
+    "simplified": "亩",
+    "pinyinNumeric": "mu3",
+    "meaningVi": "mẫu (đơn vị đo diện tích của Trung Quốc)"
+  },
+  {
+    "simplified": "冤",
+    "pinyinNumeric": "yuan1",
+    "meaningVi": "oan, oan ức"
+  },
+  {
+    "simplified": "别致",
+    "pinyinNumeric": "bie2 zhi4",
+    "meaningVi": "độc đáo, khác lạ (về kiểu dáng)"
+  },
+  {
+    "simplified": "捶",
+    "pinyinNumeric": "chui2",
+    "meaningVi": "đấm, đập (bằng nắm tay)"
+  },
+  {
+    "simplified": "窑",
+    "pinyinNumeric": "yao2",
+    "meaningVi": "lò (nung gốm, gạch); hang động (nhà ở đào trong núi)"
+  },
+  {
+    "simplified": "效仿",
+    "pinyinNumeric": "xiao4 fang3",
+    "meaningVi": "bắt chước, noi theo"
+  },
+  {
+    "simplified": "无可厚非",
+    "pinyinNumeric": "wu2 ke3 hou4 fei1",
+    "meaningVi": "không đáng trách quá đáng, có thể thông cảm được (thành ngữ)"
+  },
+  {
+    "simplified": "扎实",
+    "pinyinNumeric": "zha1 shi5",
+    "meaningVi": "vững chắc, chắc chắn, thiết thực"
+  },
+  {
+    "simplified": "纯朴",
+    "pinyinNumeric": "chun2 pu3",
+    "meaningVi": "chất phác, thật thà"
+  },
+  {
+    "simplified": "哗然",
+    "pinyinNumeric": "hua2 ran2",
+    "meaningVi": "xôn xao, náo động, gây xôn xao dư luận"
+  },
+  {
+    "simplified": "抑扬顿挫",
+    "pinyinNumeric": "yi4 yang2 dun4 cuo4",
+    "meaningVi": "trầm bổng, du dương (ngữ điệu lên xuống nhịp nhàng, thành ngữ)"
+  },
+  {
+    "simplified": "老伴儿",
+    "pinyinNumeric": "lao3 ban4 r5",
+    "meaningVi": "vợ/chồng già (bạn đời lúc về già)"
+  },
+  {
+    "simplified": "打盹儿",
+    "pinyinNumeric": "da3 dun3 r5",
+    "meaningVi": "ngủ gật, chợp mắt"
+  },
+  {
+    "simplified": "离谱儿",
+    "pinyinNumeric": "li2 pu3 r5",
+    "meaningVi": "quá đáng, vô lý, không hợp lẽ thường"
+  },
+  {
+    "simplified": "人缘儿",
+    "pinyinNumeric": "ren2 yuan2 r5",
+    "meaningVi": "quan hệ với mọi người, được lòng người, có duyên giao tiếp"
+  },
+  {
+    "simplified": "做证",
+    "pinyinNumeric": "zuo4 zheng4",
+    "meaningVi": "làm chứng"
+  },
+  {
+    "simplified": "磨炼",
+    "pinyinNumeric": "mo2 lian4",
+    "meaningVi": "rèn luyện, tôi luyện (qua khó khăn, thử thách)"
+  },
+  {
+    "simplified": "概",
+    "pinyinNumeric": "gai4",
+    "meaningVi": "đại khái, khái quát; nhất loạt, hoàn toàn (như trong 一概)"
+  },
+  {
+    "simplified": "注释",
+    "pinyinNumeric": "zhu4 shi4",
+    "meaningVi": "chú thích, chú giải"
+  },
+  {
+    "simplified": "做主",
+    "pinyinNumeric": "zuo4 zhu3",
+    "meaningVi": "quyết định, làm chủ (tự quyết định việc gì)"
+  },
+  {
+    "simplified": "标识",
+    "pinyinNumeric": "biao1 zhi4",
+    "meaningVi": "biểu tượng, dấu hiệu, nhãn hiệu"
+  },
+  {
+    "simplified": "灶",
+    "pinyinNumeric": "zao4",
+    "meaningVi": "bếp, bếp lò"
+  },
+  {
+    "simplified": "愈",
+    "pinyinNumeric": "yu4",
+    "meaningVi": "càng... càng...; khỏi bệnh, bình phục; hơn (so sánh, văn viết)"
+  },
+  {
+    "simplified": "揠苗助长",
+    "pinyinNumeric": "ya4 miao2 zhu4 zhang3",
+    "meaningVi": "nhổ mạ lên cho mau lớn — làm việc nóng vội, phản tác dụng (thành ngữ)"
+  },
+  {
+    "simplified": "臀",
+    "pinyinNumeric": "tun2",
+    "meaningVi": "mông, hông"
+  },
+  {
+    "simplified": "啰唆",
+    "pinyinNumeric": "luo1 suo5",
+    "meaningVi": "dài dòng, lải nhải, rườm rà"
+  },
+  {
+    "simplified": "呼",
+    "pinyinNumeric": "hu1",
+    "meaningVi": "gọi, hô, kêu; thở ra"
+  },
+  {
+    "simplified": "同仁",
+    "pinyinNumeric": "tong2 ren2",
+    "meaningVi": "đồng nghiệp, đồng sự"
+  },
+  {
+    "simplified": "函",
+    "pinyinNumeric": "han2",
+    "meaningVi": "thư từ, công văn; hộp, vỏ bọc"
+  },
+  {
+    "simplified": "锤",
+    "pinyinNumeric": "chui2",
+    "meaningVi": "búa; đập, rèn (bằng búa)"
+  },
+  {
+    "simplified": "星系",
+    "pinyinNumeric": "xing1 xi4",
+    "meaningVi": "thiên hà"
+  },
+  {
+    "simplified": "溪",
+    "pinyinNumeric": "xi1",
+    "meaningVi": "suối, khe suối"
   }
 ]

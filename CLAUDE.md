@@ -231,6 +231,18 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   đã lọc chú thích lượng từ `(LT:...)` để bản seed dựng lại sau này sạch sẵn (22 từ, xem
   `scripts/clean-meaning-annotations.ts`).
   **ĐÃ sửa tận gốc (cùng ngày)** — xem mục "Chọn cách đọc cho chữ đa âm" ngay dưới.
+  **Mở rộng HSK4-9 (2026-09-25)**: sau khi làm từ điển công khai, quét lại toàn bộ (không chỉ
+  HSK1-3) bằng regex bắt các mẫu "biến thể của X" / "xem X" / "viết tắt của X" — ra 145 từ,
+  nhưng 14 trong đó là DƯƠNG TÍNH GIẢ (regex quá rộng bắt nhầm bản dịch ĐÚNG và đầy đủ, chỉ tình
+  cờ mở đầu bằng đúng những chữ đó — vd 查看 "xem xét", 收看 "xem (chương trình TV)", 家用 "dùng
+  trong nhà" đều là nghĩa thật, không phải tham chiếu chéo CEDICT). Lọc bằng kiểm tra chữ theo
+  SAU tiền tố nghi vấn có phải ký tự Hán hay không (chỉ tham chiếu chéo thật mới có dạng "xem
+  查看[cha2 kan4]" — theo sau bởi Hán tự) mới ra đúng 131 từ genuinely hỏng, toàn HSK4-9 —
+  ngược với HSK1-3, các từ này ít thông dụng hơn (đa số là chữ đơn hiếm gặp: 灶, 冤, 臀, 溪...)
+  nhưng CEDICT của chính chúng cũng thường liệt kê "variant of X" trước nghĩa thật, nên bản dịch
+  máy CVDICT bắt nhầm ngay chữ đầu tiên. 131 mục soạn tay thêm vào (`meaning-fixes.json` tổng
+  178 mục) theo đúng phương pháp cũ — không mục nào cần sửa `pinyin` (khác đợt HSK1-3, lần này
+  thuần là lỗi nghĩa, không phải lỗi chọn nhầm cách đọc).
 - **Chọn cách đọc cho chữ ĐA ÂM trong ETL (sửa 2026-09-22)** — `build-words.ts` BỎ DẤU THANH
   trước khi khớp pinyin đại cương với CC-CEDICT, nên với chữ đa âm mà 2 cách đọc chung phụ âm +
   vần thì `.find()` lấy đại cái ĐẦU TIÊN trong mảng CEDICT, trong khi đại cương HSK đã ghi sẵn
