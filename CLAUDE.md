@@ -77,13 +77,22 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   "hiệu" đứng CUỐI; (2) chỉ 1 âm nhưng hiếm/khác biệt rõ với âm phổ biến, vd 好 Unihan ghi
   "háo", âm phổ biến là "hảo"). `hanVietOf()` trả `null` cho từ nào THIẾU âm ở BẤT KỲ ký tự nào
   — "thà thiếu còn hơn hiện âm sai, không đoán mò cho đủ", khớp phong cách "best-effort, có ghi
-  giới hạn" đã áp dụng cho ảnh minh hoạ từ vựng ở dưới. Kết quả: phủ **85.4%** (9.324/10.912
-  từ). **Giới hạn đã biết, CHẤP NHẬN không sửa**: một số ký tự đa âm có 2 nghĩa/2 cách đọc Hán
-  Việt khác nhau tuỳ ngữ cảnh (vd 樂/乐 vừa đọc "lạc" — vui vẻ — vừa đọc "nhạc" — âm nhạc — map
-  1-ký-tự-1-âm không phân biệt được ngữ cảnh) — chọn giữ âm PHỔ BIẾN HƠN trong bộ từ Hanni
-  (khảo sát 22 từ chứa ký tự này: "lạc" chiếm đa số) thay vì đoán mò theo hướng khác, chấp nhận
-  vài từ như 音乐 hiện "âm lạc" thay vì "âm nhạc" đúng nghĩa hơn — tương tự cách 你 (chỉ 2 từ,
-  không đủ tần suất để đáng sửa) cũng cố tình để nguyên âm Unihan gốc "nể" dù hiếm gặp. Backfill
+  giới hạn" đã áp dụng cho ảnh minh hoạ từ vựng ở dưới. Kết quả: phủ **87.2%** (9.560/10.958
+  từ, đo 2026-09-26).
+  **Unihan trộn ÂM NÔM (phát hiện + sửa 2026-09-26)**: `kVietnamese` phần lớn chỉ có MỘT âm, và
+  với rất nhiều chữ thông dụng đó là âm Nôm/thuần Việt chứ không phải Hán Việt — 子 "tí" (tử),
+  對 "đỗi" (đối), 主 "chúa" (chủ), 年 "nên" (niên), 計 "kể" (kế), 貓 "mèo" (miêu), 乳 "vú" (nhũ)...
+  nên trang từ điển công khai từng hiện 孩子 = "hài tí", 对不起 = "đỗi bất khởi". Phát hiện nhờ
+  **quy luật thanh điệu** (xem mục "Đoán thanh điệu" bên dưới): âm Nôm thường phá quy luật tương
+  ứng thanh Hán Việt ↔ thanh tiếng Trung, lọc các chữ lệch quy luật rồi rà tay → ~250 chữ sửa ở
+  `hanviet-overrides.json` + ~50 chữ thiếu hẳn (這 做 她 坐 懂 爸...) ở `hanviet-supplement.json`.
+  1.734 từ đổi âm. Chữ lệch quy luật mà âm ĐÚNG (听 thính → tīng, 期 kì → qī) là ngoại lệ thật,
+  giữ nguyên — đừng "sửa" cho khớp quy luật. Chữ hiếm HSK7-9 chỉ rà qua bộ lọc đó, chưa rà hết.
+  **Chữ ĐA ÂM chọn âm theo cách đọc** (`data/curated/hanviet-by-reading.json`, khoá = chữ tra
+  (phồn thể) → âm tiết pinyin có số thanh): trước đây 1 chữ 1 âm nên 音乐 = "âm lạc", 要求 =
+  "yếu cầu"; giờ `hanVietOf()` nhận thêm `pinyinNumeric` và chọn âm theo âm tiết tương ứng (chỉ
+  khi số âm tiết khớp số chữ) → "âm nhạc", "yêu cầu", 将来 "tương lai", 几乎 "cơ hồ", 投降 "đầu
+  hàng" — đúng những từ khớp nguyên văn tiếng Việt, tức là nhiều từ "đã biết sẵn" hơn. Backfill
   cho DB đã seed sẵn: `npx tsx scripts/backfill-hanviet.ts` (UPDATE theo LÔ 500 dòng/câu SQL
   thay vì 1 updateMany/từ — nhanh hơn nhiều qua tunnel SSH, xem cách làm cũ từng chậm ở
   `migrate-lesson-themes.ts`). Trả về tự nhiên trong `GET /words/:id`, `/words/of-the-day`,

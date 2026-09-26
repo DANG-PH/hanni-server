@@ -60,16 +60,19 @@ async function main() {
     byLevel.get(k)!.push(r);
   }
 
+  // Nhận hết các cặp khớp CHÍNH XÁC trước: ghép gần đúng trong cùng 1 vòng
+  // từng biến dòng 得 děi thành 得 dé chỉ vì seed liệt kê dé đứng trước, dù
+  // seed có đủ cả hai cách đọc — mất hẳn děi.
   const used = new Set<string>();
+  for (const w of seed) {
+    const exact = byKey.get(`${w.simplified}|${w.pinyinNumeric}`);
+    if (exact) used.add(exact.id);
+  }
   const fixes: { id: string; s: SeedWord; old: string }[] = [];
   const inserts: SeedWord[] = [];
 
   for (const w of seed) {
-    const exact = byKey.get(`${w.simplified}|${w.pinyinNumeric}`);
-    if (exact) {
-      used.add(exact.id);
-      continue; // cách đọc đã đúng
-    }
+    if (byKey.has(`${w.simplified}|${w.pinyinNumeric}`)) continue; // cách đọc đã đúng
     // cùng chữ + cùng cấp, chưa bị dùng -> chính là dòng bị chọn nhầm cách đọc
     const cand = (byLevel.get(`${w.simplified}|${w.hskLevel}`) ?? []).find(
       (r) => !used.has(r.id),

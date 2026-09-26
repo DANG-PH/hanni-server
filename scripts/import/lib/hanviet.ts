@@ -65,16 +65,37 @@ export function loadHanVietOverrides(curatedDir: string): Map<string, string> {
   return loadJsonMap(join(curatedDir, 'hanviet-overrides.json'));
 }
 
+/** Âm Hán Việt THEO CÁCH ĐỌC cho chữ đa âm: `{ "樂": { "yue4": "nhạc", "le4":
+ * "lạc" } }`. Map 1-chữ-1-âm buộc 音乐 thành "âm lạc", 要求 thành "yếu cầu"
+ * trong khi pinyin của chính từ đó đã cho biết đang đọc thế nào. */
+export function loadHanVietByReading(
+  curatedDir: string,
+): Map<string, Record<string, string>> {
+  const raw = JSON.parse(
+    readFileSync(join(curatedDir, 'hanviet-by-reading.json'), 'utf8'),
+  ) as Record<string, Record<string, string>>;
+  return new Map(Object.entries(raw));
+}
+
 /** Ghép âm Hán Việt cho 1 từ — trả `null` nếu THIẾU âm cho BẤT KỲ ký tự nào
  * (không hiện nửa vời gây hiểu lầm). Ưu tiên tra theo `traditional` (chính
- * xác hơn), rơi về `simplified` nếu từ không có dạng phồn thể riêng. */
+ * xác hơn), rơi về `simplified` nếu từ không có dạng phồn thể riêng. Chữ nào
+ * có trong `byReading` thì chọn âm theo âm tiết pinyin tương ứng — chỉ khi số
+ * âm tiết khớp số chữ, lệch thì không dám ghép cặp. */
 export function hanVietOf(
   simplified: string,
   traditional: string | null,
   map: Map<string, string>,
+  pinyinNumeric = '',
+  byReading: Map<string, Record<string, string>> = new Map(),
 ): string | null {
   const chars = Array.from(traditional || simplified);
-  const readings = chars.map((c) => map.get(c));
+  const syllables = pinyinNumeric.toLowerCase().split(/\s+/).filter(Boolean);
+  const aligned = syllables.length === chars.length;
+  const readings = chars.map(
+    (c, i) =>
+      (aligned ? byReading.get(c)?.[syllables[i]] : undefined) ?? map.get(c),
+  );
   if (readings.some((r) => !r)) return null;
   return readings.join(' ');
 }

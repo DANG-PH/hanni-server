@@ -15,6 +15,7 @@ import { join } from 'node:path';
 import { indexCedict, parseCedict } from './lib/cedict';
 import {
   hanVietOf,
+  loadHanVietByReading,
   loadHanVietOverrides,
   loadHanVietSupplement,
   parseUnihanVietnamese,
@@ -119,6 +120,7 @@ function main(): void {
   }
   const hanVietOverrides = loadHanVietOverrides(CURATED_DIR);
   for (const [char, reading] of hanVietOverrides) hanVietMap.set(char, reading);
+  const hanVietByReading = loadHanVietByReading(CURATED_DIR);
   console.log(
     `  Hán Việt: ${hanVietMap.size} ký tự (${hanVietFilled} từ supplement, ${hanVietOverrides.size} ghi đè)`,
   );
@@ -236,7 +238,13 @@ function main(): void {
     const hasAudio = audioWords ? audioWords.has(simp) : true;
     if (hasAudio) withAudio += 1;
 
-    const hanViet = hanVietOf(simp, traditional, hanVietMap);
+    const hanViet = hanVietOf(
+      simp,
+      traditional,
+      hanVietMap,
+      pinyinNumeric,
+      hanVietByReading,
+    );
     if (hanViet) hanVietCount += 1;
 
     const record: Record<string, unknown> = {
