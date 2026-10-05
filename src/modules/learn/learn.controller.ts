@@ -35,6 +35,14 @@ export class LearnController {
     private readonly sessions: LessonSessionService,
   ) {}
 
+  /** Bài ĐẦU TIÊN của 1 cấp — nút "Học bài đầu tiên" ở trang chủ/khảo sát
+   * đưa khách vào thẳng phiên học, không qua đăng ký. */
+  @Public()
+  @Get('start')
+  start(@Query() q: PathQuery) {
+    return this.learn.firstLesson(q.level ?? 1);
+  }
+
   /** Kế hoạch phiên học của 1 bài (giới thiệu từ → luyện → ôn trộn). Công
    * khai để khách học thử bài đầu tiên trước khi có tài khoản. */
   @Public()

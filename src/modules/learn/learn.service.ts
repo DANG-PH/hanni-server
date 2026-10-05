@@ -52,6 +52,16 @@ export class LearnService {
     return totals[0]?.hskLevel ?? 1;
   }
 
+  async firstLesson(level: number) {
+    const lesson = await this.prisma.lesson.findFirst({
+      where: { hskLevel: Math.min(level, 7) },
+      orderBy: { orderIndex: 'asc' },
+      select: { id: true, title: true, hskLevel: true, orderIndex: true },
+    });
+    if (!lesson) throw new NotFoundException('Cấp này chưa có bài học');
+    return lesson;
+  }
+
   async path(userId: string, level?: number) {
     const lvl = level ?? (await this.currentLevel(userId));
 
