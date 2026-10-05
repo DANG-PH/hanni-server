@@ -297,7 +297,15 @@ export class ReviewService {
           })
         : [];
 
-    const newRemaining = byLesson ? 25 : Math.max(0, newPerDay - newDoneToday);
+    // Ôn tự do (không bài, không cấp) CHỈ ôn từ đã học — không lấy từ mới.
+    // Trước đây rơi về lấy từ mới trên CẢ 9 cấp sắp theo tần suất, nên người
+    // mới mở flashcard gặp ngay 著名 (HSK4), 显著 (HSK6)... không theo cấp lẫn
+    // chủ đề (lỗi thật user báo). Từ mới giờ chỉ đến từ bài học trong lộ trình.
+    const newRemaining = byLesson
+      ? 25
+      : query.level
+        ? Math.max(0, newPerDay - newDoneToday)
+        : 0;
     const newRows =
       newRemaining > 0
         ? await this.prisma.word.findMany({

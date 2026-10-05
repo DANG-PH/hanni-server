@@ -51,6 +51,16 @@ export class OnboardingService {
     );
     const targetDate = dto.targetDate ? new Date(dto.targetDate) : null;
 
+    // Cấp đề xuất thành cấp của lộ trình chính — khảo sát trước đây chỉ in
+    // ra lời khuyên, còn lộ trình/flashcard vẫn tự đoán cấp theo cách riêng.
+    // Dữ liệu bài học gộp HSK7-9 thành cấp 7.
+    const courseLevel = Math.min(recommendedLevel, 7);
+    await this.prisma.userSettings.upsert({
+      where: { userId },
+      create: { userId, courseLevel },
+      update: { courseLevel },
+    });
+
     return this.prisma.onboardingProfile.upsert({
       where: { userId },
       create: {

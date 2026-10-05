@@ -23,8 +23,16 @@ export interface LessonNode {
 export class LearnService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Cấp học "hiện tại" = cấp thấp nhất chưa thuộc hết. */
-  private async currentLevel(userId: string): Promise<number> {
+  /** Cấp học "hiện tại": cấp người học ĐÃ CHỌN (`UserSettings.courseLevel`),
+   * chưa chọn thì cấp thấp nhất chưa thuộc hết. Trước đây chỉ có cách suy
+   * ra, nên người muốn học HSK1 không có chỗ nào để nói "tôi học HSK1" — mọi
+   * trang tự đoán theo cách riêng (lỗi thật user báo: flashcard nhảy HSK4). */
+  async currentLevel(userId: string): Promise<number> {
+    const settings = await this.prisma.userSettings.findUnique({
+      where: { userId },
+      select: { courseLevel: true },
+    });
+    if (settings?.courseLevel) return settings.courseLevel;
     const [totals, learned] = await Promise.all([
       this.prisma.word.groupBy({
         by: ['hskLevel'],

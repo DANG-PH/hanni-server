@@ -1,10 +1,21 @@
-import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import type { AuthUser } from '../../common/types';
+import { CompleteLessonDto } from './dto/lesson-session.dto';
 import { LearnService } from './learn.service';
+import { LessonSessionService } from './lesson-session.service';
 
 class PathQuery {
   @IsOptional()
@@ -19,7 +30,27 @@ class PathQuery {
 @ApiBearerAuth()
 @Controller('learn')
 export class LearnController {
-  constructor(private readonly learn: LearnService) {}
+  constructor(
+    private readonly learn: LearnService,
+    private readonly sessions: LessonSessionService,
+  ) {}
+
+  /** Kế hoạch phiên học của 1 bài (giới thiệu từ → luyện → ôn trộn). Công
+   * khai để khách học thử bài đầu tiên trước khi có tài khoản. */
+  @Public()
+  @Get('lessons/:id/session')
+  session(@Param('id', ParseUUIDPipe) id: string) {
+    return this.sessions.session(id);
+  }
+
+  @Post('lessons/:id/complete')
+  complete(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CompleteLessonDto,
+  ) {
+    return this.sessions.complete(user.id, id, dto);
+  }
 
   @Get('path')
   path(@CurrentUser() user: AuthUser, @Query() q: PathQuery) {

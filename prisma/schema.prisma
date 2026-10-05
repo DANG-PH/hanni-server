@@ -254,6 +254,7 @@ model UserSettings {
   weeklyDigestEnabled Boolean  @default(true) // email tổng kết tuần
   equippedFrame       String? // key trong AVATAR_FRAMES (frame-catalog.ts), null = không dùng khung
   equippedTitle       String? // key trong TITLE_CATALOG (title-catalog.ts), null = không dùng danh hiệu
+  courseLevel         Int? // cấp HSK người học CHỌN theo (1-7, 7 = HSK7-9); null = tự suy từ tiến độ
   updatedAt           DateTime @updatedAt
 }
 

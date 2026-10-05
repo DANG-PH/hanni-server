@@ -85,6 +85,13 @@ export class UpdateSettingsDto {
   @IsOptional()
   @IsBoolean()
   weeklyDigestEnabled?: boolean;
+
+  /** Cấp HSK của lộ trình chính (7 = HSK7-9 gộp chung như trong dữ liệu). */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(7)
+  courseLevel?: number;
 }
 
 export class SearchUsersQuery {
