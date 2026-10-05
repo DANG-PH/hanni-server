@@ -173,10 +173,10 @@ export class LearnService {
       band: levelInfo.band,
       totalLessons: nodes.length,
       completedLessons: nodes.filter((n) => n.status === 'COMPLETED').length,
-      currentLessonId:
-        nodes.find((n) => n.status === 'IN_PROGRESS')?.id ??
-        nodes.find((n) => n.status === 'AVAILABLE')?.id ??
-        null,
+      // Bài ĐẦU TIÊN chưa xong theo đúng thứ tự — không ưu tiên bài "đang
+      // dở": vài từ lẻ (lưu từ video, hay lỗi flashcard cũ nhét vào) là đủ
+      // đánh dấu bài 7 "đang học", và nút "Học tiếp" nhảy cóc khỏi bài 1.
+      currentLessonId: nodes.find((n) => n.status !== 'COMPLETED')?.id ?? null,
       lessons: nodes,
       levels: [...totalLessonsBy.keys()].sort((a, b) => a - b),
     };
@@ -214,11 +214,9 @@ export class LearnService {
       progress.filter((p) => !p.completedAt).map((p) => p.lessonId),
     );
 
-    // Ưu tiên bài đang dở, sau đó tới bài chưa học đầu tiên.
+    // Bài đầu tiên chưa xong theo thứ tự — cùng luật với `path()`.
     const lesson =
-      lessons.find((l) => startedIds.has(l.id)) ??
-      lessons.find((l) => !doneIds.has(l.id)) ??
-      lessons[lessons.length - 1];
+      lessons.find((l) => !doneIds.has(l.id)) ?? lessons[lessons.length - 1];
 
     return {
       ...lesson,
