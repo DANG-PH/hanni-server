@@ -222,7 +222,7 @@
   {
     "simplified": "和",
     "pinyinNumeric": "he2",
-    "meaningVi": "và; với; hoà"
+    "meaningVi": "và; với"
   },
   {
     "simplified": "没（有）",
@@ -898,5 +898,615 @@
     "simplified": "溪",
     "pinyinNumeric": "xi1",
     "meaningVi": "suối, khe suối"
+  },
+  {
+    "simplified": "本",
+    "pinyinNumeric": "ben3",
+    "meaningVi": "quyển; cuốn (lượng từ cho sách, vở); gốc"
+  },
+  {
+    "simplified": "店",
+    "pinyinNumeric": "dian4",
+    "meaningVi": "cửa hàng; tiệm; quán"
+  },
+  {
+    "simplified": "点",
+    "pinyinNumeric": "dian3",
+    "meaningVi": "giờ (khi nói giờ); điểm; chấm"
+  },
+  {
+    "simplified": "饭",
+    "pinyinNumeric": "fan4",
+    "meaningVi": "cơm; bữa ăn"
+  },
+  {
+    "simplified": "分",
+    "pinyinNumeric": "fen1",
+    "meaningVi": "phút; điểm (số điểm); chia"
+  },
+  {
+    "simplified": "好看",
+    "pinyinNumeric": "hao3 kan4",
+    "meaningVi": "đẹp; ưa nhìn; (phim, sách) hay"
+  },
+  {
+    "simplified": "号",
+    "pinyinNumeric": "hao4",
+    "meaningVi": "ngày (trong tháng); số"
+  },
+  {
+    "simplified": "件",
+    "pinyinNumeric": "jian4",
+    "meaningVi": "chiếc, cái (lượng từ cho quần áo, sự việc)"
+  },
+  {
+    "simplified": "块",
+    "pinyinNumeric": "kuai4",
+    "meaningVi": "đồng (tiền tệ, khẩu ngữ); miếng; cục"
+  },
+  {
+    "simplified": "课",
+    "pinyinNumeric": "ke4",
+    "meaningVi": "bài học; tiết học; môn học"
+  },
+  {
+    "simplified": "里",
+    "pinyinNumeric": "li3",
+    "meaningVi": "trong; bên trong"
+  },
+  {
+    "simplified": "零",
+    "pinyinNumeric": "ling2",
+    "meaningVi": "số không (0); lẻ"
+  },
+  {
+    "simplified": "哪",
+    "pinyinNumeric": "na3",
+    "meaningVi": "nào"
+  },
+  {
+    "simplified": "年",
+    "pinyinNumeric": "nian2",
+    "meaningVi": "năm"
+  },
+  {
+    "simplified": "日",
+    "pinyinNumeric": "ri4",
+    "meaningVi": "ngày; mặt trời"
+  },
+  {
+    "simplified": "月",
+    "pinyinNumeric": "yue4",
+    "meaningVi": "tháng; mặt trăng"
+  },
+  {
+    "simplified": "上",
+    "pinyinNumeric": "shang4",
+    "meaningVi": "trên; lên; (thời gian) trước"
+  },
+  {
+    "simplified": "事",
+    "pinyinNumeric": "shi4",
+    "meaningVi": "việc; chuyện"
+  },
+  {
+    "simplified": "时候",
+    "pinyinNumeric": "shi2 hou5",
+    "meaningVi": "lúc; khi"
+  },
+  {
+    "simplified": "岁",
+    "pinyinNumeric": "sui4",
+    "meaningVi": "tuổi"
+  },
+  {
+    "simplified": "太",
+    "pinyinNumeric": "tai4",
+    "meaningVi": "quá; lắm"
+  },
+  {
+    "simplified": "同学",
+    "pinyinNumeric": "tong2 xue2",
+    "meaningVi": "bạn học"
+  },
+  {
+    "simplified": "喂",
+    "pinyinNumeric": "wei4",
+    "meaningVi": "alô (khi nghe điện thoại); này"
+  },
+  {
+    "simplified": "请问",
+    "pinyinNumeric": "qing3 wen4",
+    "meaningVi": "xin hỏi; cho tôi hỏi"
+  },
+  {
+    "simplified": "先生",
+    "pinyinNumeric": "xian1 sheng5",
+    "meaningVi": "ông; ngài (cách gọi lịch sự); chồng"
+  },
+  {
+    "simplified": "小时",
+    "pinyinNumeric": "xiao3 shi2",
+    "meaningVi": "tiếng (đồng hồ); giờ"
+  },
+  {
+    "simplified": "些",
+    "pinyinNumeric": "xie1",
+    "meaningVi": "một vài; một ít; những"
+  },
+  {
+    "simplified": "元",
+    "pinyinNumeric": "yuan2",
+    "meaningVi": "đồng; tệ (đơn vị tiền)"
+  },
+  {
+    "simplified": "再",
+    "pinyinNumeric": "zai4",
+    "meaningVi": "lại; nữa"
+  },
+  {
+    "simplified": "找",
+    "pinyinNumeric": "zhao3",
+    "meaningVi": "tìm; tìm kiếm"
+  },
+  {
+    "simplified": "正在",
+    "pinyinNumeric": "zheng4 zai4",
+    "meaningVi": "đang (làm gì)"
+  },
+  {
+    "simplified": "只",
+    "pinyinNumeric": "zhi1",
+    "meaningVi": "con, chiếc (lượng từ cho con vật; một chiếc trong đôi)"
+  },
+  {
+    "simplified": "住",
+    "pinyinNumeric": "zhu4",
+    "meaningVi": "ở; sống"
+  },
+  {
+    "simplified": "做饭",
+    "pinyinNumeric": "zuo4 fan4",
+    "meaningVi": "nấu cơm; nấu ăn"
+  },
+  {
+    "simplified": "汉语",
+    "pinyinNumeric": "han4 yu3",
+    "meaningVi": "tiếng Hán; tiếng Trung"
+  },
+  {
+    "simplified": "中文",
+    "pinyinNumeric": "zhong1 wen2",
+    "meaningVi": "tiếng Trung"
+  },
+  {
+    "simplified": "超市",
+    "pinyinNumeric": "chao1 shi4",
+    "meaningVi": "siêu thị"
+  },
+  {
+    "simplified": "第",
+    "pinyinNumeric": "di4",
+    "meaningVi": "thứ (chỉ thứ tự: 第一 thứ nhất)"
+  },
+  {
+    "simplified": "们",
+    "pinyinNumeric": "men5",
+    "meaningVi": "các, những (hậu tố số nhiều chỉ người)"
+  },
+  {
+    "simplified": "您",
+    "pinyinNumeric": "nin2",
+    "meaningVi": "ông, bà, ngài (cách gọi kính trọng của 你)"
+  },
+  {
+    "simplified": "我们",
+    "pinyinNumeric": "wo3 men5",
+    "meaningVi": "chúng tôi; chúng ta"
+  },
+  {
+    "simplified": "开",
+    "pinyinNumeric": "kai1",
+    "meaningVi": "mở; lái (xe); bật"
+  },
+  {
+    "simplified": "吧",
+    "pinyinNumeric": "ba5",
+    "meaningVi": "nhé; nhỉ; đi (trợ từ gợi ý, phỏng đoán)"
+  },
+  {
+    "simplified": "也",
+    "pinyinNumeric": "ye3",
+    "meaningVi": "cũng"
+  },
+  {
+    "simplified": "爸爸",
+    "pinyinNumeric": "ba4 ba5",
+    "meaningVi": "bố; ba"
+  },
+  {
+    "simplified": "杯子",
+    "pinyinNumeric": "bei1 zi5",
+    "meaningVi": "cốc; ly"
+  },
+  {
+    "simplified": "国",
+    "pinyinNumeric": "guo2",
+    "meaningVi": "nước; quốc gia"
+  },
+  {
+    "simplified": "后",
+    "pinyinNumeric": "hou4",
+    "meaningVi": "sau; phía sau"
+  },
+  {
+    "simplified": "觉得",
+    "pinyinNumeric": "jue2 de5",
+    "meaningVi": "cảm thấy; thấy rằng"
+  },
+  {
+    "simplified": "晚",
+    "pinyinNumeric": "wan3",
+    "meaningVi": "muộn; trễ; tối"
+  },
+  {
+    "simplified": "问题",
+    "pinyinNumeric": "wen4 ti2",
+    "meaningVi": "câu hỏi; vấn đề"
+  },
+  {
+    "simplified": "知道",
+    "pinyinNumeric": "zhi1 dao4",
+    "meaningVi": "biết"
+  },
+  {
+    "simplified": "坐",
+    "pinyinNumeric": "zuo4",
+    "meaningVi": "ngồi; đi (xe, tàu, máy bay)"
+  },
+  {
+    "simplified": "做",
+    "pinyinNumeric": "zuo4",
+    "meaningVi": "làm"
+  },
+  {
+    "simplified": "菜",
+    "pinyinNumeric": "cai4",
+    "meaningVi": "món ăn; rau"
+  },
+  {
+    "simplified": "见",
+    "pinyinNumeric": "jian4",
+    "meaningVi": "gặp; thấy"
+  },
+  {
+    "simplified": "认识",
+    "pinyinNumeric": "ren4 shi5",
+    "meaningVi": "quen biết; nhận ra"
+  },
+  {
+    "simplified": "说话",
+    "pinyinNumeric": "shuo1 hua4",
+    "meaningVi": "nói chuyện"
+  },
+  {
+    "simplified": "休息",
+    "pinyinNumeric": "xiu1 xi5",
+    "meaningVi": "nghỉ ngơi"
+  },
+  {
+    "simplified": "没事",
+    "pinyinNumeric": "mei2 shi4",
+    "meaningVi": "không sao; không có việc gì"
+  },
+  {
+    "simplified": "女士",
+    "pinyinNumeric": "nü3 shi4",
+    "meaningVi": "bà; quý cô (cách gọi lịch sự)"
+  },
+  {
+    "simplified": "啊",
+    "pinyinNumeric": "a5",
+    "meaningVi": "a; à (trợ từ cảm thán cuối câu)"
+  },
+  {
+    "simplified": "爱好",
+    "pinyinNumeric": "ai4 hao4",
+    "meaningVi": "sở thích; yêu thích"
+  },
+  {
+    "simplified": "班",
+    "pinyinNumeric": "ban1",
+    "meaningVi": "lớp (học); ca (làm việc)"
+  },
+  {
+    "simplified": "包",
+    "pinyinNumeric": "bao1",
+    "meaningVi": "túi; cặp; gói"
+  },
+  {
+    "simplified": "本子",
+    "pinyinNumeric": "ben3 zi5",
+    "meaningVi": "vở; quyển sổ"
+  },
+  {
+    "simplified": "别",
+    "pinyinNumeric": "bie2",
+    "meaningVi": "đừng; khác"
+  },
+  {
+    "simplified": "不好意思",
+    "pinyinNumeric": "bu4 hao3 yi4 si5",
+    "meaningVi": "ngại quá; xin lỗi (lịch sự)"
+  },
+  {
+    "simplified": "不错",
+    "pinyinNumeric": "bu4 cuo4",
+    "meaningVi": "không tệ; khá tốt"
+  },
+  {
+    "simplified": "长",
+    "pinyinNumeric": "chang2",
+    "meaningVi": "dài"
+  },
+  {
+    "simplified": "车站",
+    "pinyinNumeric": "che1 zhan4",
+    "meaningVi": "bến xe; nhà ga"
+  },
+  {
+    "simplified": "次",
+    "pinyinNumeric": "ci4",
+    "meaningVi": "lần (lượng từ)"
+  },
+  {
+    "simplified": "错",
+    "pinyinNumeric": "cuo4",
+    "meaningVi": "sai; nhầm"
+  },
+  {
+    "simplified": "打",
+    "pinyinNumeric": "da3",
+    "meaningVi": "đánh; gọi (điện); chơi (bóng)"
+  },
+  {
+    "simplified": "动",
+    "pinyinNumeric": "dong4",
+    "meaningVi": "động; cử động"
+  },
+  {
+    "simplified": "跟",
+    "pinyinNumeric": "gen1",
+    "meaningVi": "với; cùng; theo"
+  },
+  {
+    "simplified": "公交车",
+    "pinyinNumeric": "gong1 jiao1 che1",
+    "meaningVi": "xe buýt"
+  },
+  {
+    "simplified": "过来",
+    "pinyinNumeric": "guo4 lai2",
+    "meaningVi": "qua đây; lại đây"
+  },
+  {
+    "simplified": "还是",
+    "pinyinNumeric": "hai2 shi5",
+    "meaningVi": "hay là (câu hỏi lựa chọn); vẫn"
+  },
+  {
+    "simplified": "红茶",
+    "pinyinNumeric": "hong2 cha2",
+    "meaningVi": "hồng trà; trà đen"
+  },
+  {
+    "simplified": "坏",
+    "pinyinNumeric": "huai4",
+    "meaningVi": "hỏng; xấu"
+  },
+  {
+    "simplified": "间",
+    "pinyinNumeric": "jian1",
+    "meaningVi": "gian, phòng (lượng từ); giữa"
+  },
+  {
+    "simplified": "进",
+    "pinyinNumeric": "jin4",
+    "meaningVi": "vào; tiến vào"
+  },
+  {
+    "simplified": "进来",
+    "pinyinNumeric": "jin4 lai2",
+    "meaningVi": "vào đây; đi vào"
+  },
+  {
+    "simplified": "就",
+    "pinyinNumeric": "jiu4",
+    "meaningVi": "thì; liền; ngay"
+  },
+  {
+    "simplified": "酒店",
+    "pinyinNumeric": "jiu3 dian4",
+    "meaningVi": "khách sạn"
+  },
+  {
+    "simplified": "考",
+    "pinyinNumeric": "kao3",
+    "meaningVi": "thi; kiểm tra"
+  },
+  {
+    "simplified": "考试",
+    "pinyinNumeric": "kao3 shi4",
+    "meaningVi": "thi; kỳ thi"
+  },
+  {
+    "simplified": "离",
+    "pinyinNumeric": "li2",
+    "meaningVi": "cách (xa, gần); rời khỏi"
+  },
+  {
+    "simplified": "楼",
+    "pinyinNumeric": "lou2",
+    "meaningVi": "tòa nhà; tầng"
+  },
+  {
+    "simplified": "旅游",
+    "pinyinNumeric": "lü3 you2",
+    "meaningVi": "du lịch"
+  },
+  {
+    "simplified": "门",
+    "pinyinNumeric": "men2",
+    "meaningVi": "cửa; cổng"
+  },
+  {
+    "simplified": "面",
+    "pinyinNumeric": "mian4",
+    "meaningVi": "mì (sợi); mặt"
+  },
+  {
+    "simplified": "名",
+    "pinyinNumeric": "ming2",
+    "meaningVi": "tên; (lượng từ cho người)"
+  },
+  {
+    "simplified": "那样",
+    "pinyinNumeric": "na4 yang4",
+    "meaningVi": "như thế; như vậy"
+  },
+  {
+    "simplified": "旁边",
+    "pinyinNumeric": "pang2 bian1",
+    "meaningVi": "bên cạnh"
+  },
+  {
+    "simplified": "跑步",
+    "pinyinNumeric": "pao3 bu4",
+    "meaningVi": "chạy bộ"
+  },
+  {
+    "simplified": "起来",
+    "pinyinNumeric": "qi5 lai5",
+    "meaningVi": "dậy; đứng lên; (sau động từ) bắt đầu"
+  },
+  {
+    "simplified": "让",
+    "pinyinNumeric": "rang4",
+    "meaningVi": "để, bảo, cho (ai làm gì); nhường"
+  },
+  {
+    "simplified": "时",
+    "pinyinNumeric": "shi2",
+    "meaningVi": "lúc; khi; giờ"
+  },
+  {
+    "simplified": "送",
+    "pinyinNumeric": "song4",
+    "meaningVi": "tặng; đưa; tiễn"
+  },
+  {
+    "simplified": "虽然",
+    "pinyinNumeric": "sui1 ran2",
+    "meaningVi": "mặc dù"
+  },
+  {
+    "simplified": "题",
+    "pinyinNumeric": "ti2",
+    "meaningVi": "đề bài; câu hỏi (bài tập)"
+  },
+  {
+    "simplified": "条",
+    "pinyinNumeric": "tiao2",
+    "meaningVi": "con, chiếc, cái (lượng từ cho vật dài: cá, đường, quần)"
+  },
+  {
+    "simplified": "外面",
+    "pinyinNumeric": "wai4 mian4",
+    "meaningVi": "bên ngoài"
+  },
+  {
+    "simplified": "完",
+    "pinyinNumeric": "wan2",
+    "meaningVi": "xong; hết"
+  },
+  {
+    "simplified": "位",
+    "pinyinNumeric": "wei4",
+    "meaningVi": "vị, người (lượng từ lịch sự cho người)"
+  },
+  {
+    "simplified": "下面",
+    "pinyinNumeric": "xia4 mian4",
+    "meaningVi": "phía dưới; bên dưới; tiếp theo"
+  },
+  {
+    "simplified": "意思",
+    "pinyinNumeric": "yi4 si5",
+    "meaningVi": "ý nghĩa; ý"
+  },
+  {
+    "simplified": "游",
+    "pinyinNumeric": "you2",
+    "meaningVi": "bơi; du ngoạn"
+  },
+  {
+    "simplified": "右",
+    "pinyinNumeric": "you4",
+    "meaningVi": "phải; bên phải"
+  },
+  {
+    "simplified": "运动",
+    "pinyinNumeric": "yun4 dong4",
+    "meaningVi": "thể thao; vận động"
+  },
+  {
+    "simplified": "站",
+    "pinyinNumeric": "zhan4",
+    "meaningVi": "đứng; trạm; bến"
+  },
+  {
+    "simplified": "这么",
+    "pinyinNumeric": "zhe4 me5",
+    "meaningVi": "như thế này; như vậy"
+  },
+  {
+    "simplified": "正",
+    "pinyinNumeric": "zheng4",
+    "meaningVi": "đang; đúng; thẳng"
+  },
+  {
+    "simplified": "这样",
+    "pinyinNumeric": "zhe4 yang4",
+    "meaningVi": "như thế này"
+  },
+  {
+    "simplified": "准备",
+    "pinyinNumeric": "zhun3 bei4",
+    "meaningVi": "chuẩn bị"
+  },
+  {
+    "simplified": "一起",
+    "pinyinNumeric": "yi1 qi3",
+    "meaningVi": "cùng nhau"
+  },
+  {
+    "simplified": "足球",
+    "pinyinNumeric": "zu2 qiu2",
+    "meaningVi": "bóng đá"
+  },
+  {
+    "simplified": "帮忙",
+    "pinyinNumeric": "bang1 mang2",
+    "meaningVi": "giúp đỡ"
+  },
+  {
+    "simplified": "从",
+    "pinyinNumeric": "cong2",
+    "meaningVi": "từ"
+  },
+  {
+    "simplified": "过",
+    "pinyinNumeric": "guo4",
+    "meaningVi": "qua; đi qua; trải qua (ngày lễ)"
   }
 ]

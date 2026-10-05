@@ -141,11 +141,30 @@ function main(): void {
     }
   }
 
-  // xếp hạng tần suất toàn cục
+  // Xếp hạng: theo CẤP HSK trước, tần suất trong cấp sau. Số đếm của krmanik
+  // nằm ở file RIÊNG cho từng cấp (Final-Merged-{cấp}.txt) nên không so được
+  // giữa các cấp — xếp chung thì 著名 (HSK4, đếm 1.73 triệu) đứng hạng 1, trên
+  // cả 的, và mọi chỗ sắp theo `frequencyRank` (từ vựng hôm nay, minigame, độ
+  // khó đấu 1v1...) đưa từ HSK4-6 lên trước từ HSK1.
+  const levelOf = new Map<string, number>();
+  for (const row of syllabus)
+    levelOf.set(
+      row.simplified,
+      Math.min(levelOf.get(row.simplified) ?? 99, row.hskLevel),
+    );
   const rankOf = new Map<string, number>();
   [...freq.entries()]
-    .sort((a, b) => b[1] - a[1])
+    .sort(
+      (a, b) =>
+        (levelOf.get(a[0]) ?? 99) - (levelOf.get(b[0]) ?? 99) || b[1] - a[1],
+    )
     .forEach(([w], i) => rankOf.set(w, i + 1));
+  // Thứ tự từ TRONG bài vẫn theo số đếm gốc như trước: đổi nó là xáo trộn
+  // thành phần các bài người học đang theo (280 từ đổi chỗ, 27 từ đổi bài).
+  const countRankOf = new Map<string, number>();
+  [...freq.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([w], i) => countRankOf.set(w, i + 1));
 
   let withVi = 0;
   let missingVi = 0;
@@ -285,8 +304,10 @@ function main(): void {
   let lessonTotal = 0;
   for (const [lv, list] of byLvl) {
     list.sort((a, b) => {
-      const fa = (a.frequencyRank as number | null) ?? Number.MAX_SAFE_INTEGER;
-      const fb = (b.frequencyRank as number | null) ?? Number.MAX_SAFE_INTEGER;
+      const fa =
+        countRankOf.get(a.simplified as string) ?? Number.MAX_SAFE_INTEGER;
+      const fb =
+        countRankOf.get(b.simplified as string) ?? Number.MAX_SAFE_INTEGER;
       return fa - fb || (a.origIndex as number) - (b.origIndex as number);
     });
 
