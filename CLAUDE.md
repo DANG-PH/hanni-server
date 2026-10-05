@@ -331,6 +331,39 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `COMPLETED | IN_PROGRESS | AVAILABLE` (giá trị `LOCKED` XOÁ khỏi cả type union ở client). Định
   hướng vẫn giữ nguyên qua `currentLessonId` — gợi ý thay vì cấm; client đổi sang nhãn chữ "Bắt
   đầu từ đây"/"Học tiếp" trên đúng bài đó (xem `hanni-client/CLAUDE.md`).
+- **Phiên học bài + cấp lộ trình (2026-10-05)** — user báo flashcard "tự nhảy vào HSK4 khi muốn
+  học HSK1, không theo chủ đề". **Gốc**: `getQueue()` không có `lessonId`/`level` thì lấy từ MỚI
+  trên CẢ 9 cấp theo `frequencyRank` → tài khoản mới mở flashcard gặp ngay 著名 (HSK4), 显著
+  (HSK6). Giờ ôn tự do CHỈ ôn từ đã học (`newRemaining = 0`); từ mới chỉ đến từ bài học.
+  - `GET /learn/lessons/:id/session` (**`@Public()`** — khách học thử bài 1 trước khi có tài
+    khoản): `LessonSessionService` + hàm thuần `buildLessonSession()` (`lesson-session.util.ts`,
+    có spec): giới thiệu nhóm 4 từ → luyện ngay (`choice` prompt hanzi/meaning/audio) → `match`
+    → ôn trộn bằng DẠNG KHÁC lần đầu + `sentence` (điền từ vào câu ví dụ). Luật chống câu hỏi 2
+    đáp án đúng: phương án nhiễu KHÔNG dùng chung chữ Hán với đáp án (那里/那儿, 没事/没关系 gần
+    nghĩa), ghép cặp không 2 nghĩa trùng; câu điền từ lấy nhiễu từ BÀI KHÁC (cùng bài cùng loại từ
+    hay điền vừa câu: "我是学生" nhiễu 有). Trả kèm `nextLesson` (khách không gọi được complete)
+    và `toneHints` từng chữ.
+  - `POST /learn/lessons/:id/complete` `{results:[{wordId, mistakes}], durationMs}`: từ CHƯA có
+    tiến độ đi qua đúng `ReviewService.review()` (0 sai → GOOD, 1 → HARD, ≥2 → AGAIN) nên chuỗi
+    ngày/nhiệm vụ/giải đấu/huy hiệu tự chạy theo; từ đã có tiến độ (học lại bài) KHÔNG đụng lịch
+    ôn. Luôn `recordActivity()` thêm phút học để học lại bài cũ vẫn giữ chuỗi ngày.
+  - `UserSettings.courseLevel` (migration `20261005090000_add_course_level`): cấp người học CHỌN
+    (1-7); `currentLevel()` dùng nó trước khi tự suy. Khảo sát đầu vào ghi luôn vào đây (gộp
+    HSK8/9 về 7). `GET /learn/start?level=` (`@Public()`) — bài đầu tiên của cấp, cho nút "Học bài
+    đầu tiên" ở client.
+  - **Quy luật thanh điệu** (`src/modules/hanviet/tone-rule.util.ts`, có spec): dấu Hán Việt →
+    thanh tiếng Trung (ngang→1, huyền→2, hỏi/ngã→3, sắc/nặng→4; ngang + phụ âm vang m/n/l/v/d →
+    2; nhập thanh -p/-t/-c/-ch nặng → 2 hoặc 4 nếu âm vang; nhập thanh sắc → không đoán). Đo trên
+    bộ từ Hanni sau khi sửa âm Nôm: **87% tổng, ~90% HSK1-4; bằng/trắc đúng 95%**. Đây là thứ
+    chỉ người Việt khai thác được — đặt NGAY trong thẻ giới thiệu từ của phiên học thay vì làm
+    trang riêng (tính năng phải nối vào luồng học chính).
+  - Nghĩa HSK1-2 rà tay toàn bộ (500 từ): ~120 từ chọn nhầm nét nghĩa — 年 "ngũ cốc", 太 "cao
+    nhất", 先生 "giáo viên", 下面 "luộc mì", 喂 "cho ăn" — sửa ở `meaning-fixes.json`, nét nghĩa
+    dùng ở cấp đó đứng ĐẦU vì trắc nghiệm lấy vế trước dấu ";".
+  - `frequencyRank` giờ xếp theo CẤP trước, tần suất trong cấp sau (`build-words.ts` — số đếm
+    krmanik tách file theo cấp, không so được giữa các cấp; 著名 từng hạng 1 trên cả 的). Thứ tự
+    từ TRONG bài vẫn theo số đếm gốc để không xáo bài người học đang theo. Nạp DB:
+    `npx tsx scripts/backfill-frequency-rank.ts`.
 - **"Tôi đã biết từ này rồi" — ẩn từ khỏi hàng đợi ôn (`isSuspended`, từ 2026-09-22)**: field
   `UserWordProgress.isSuspended` được ĐỌC đúng ở khắp nơi từ rất lâu (`getQueue()`,
   `getStats()`, `progress.service`, `reminder.service` đều lọc `isSuspended: false`) nhưng CHƯA
@@ -1008,7 +1041,8 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 
 ## Lệnh
 `npm run start:dev` · `npm run build` · `npm run prisma:migrate` · `npm run db:seed` ·
-`npm run data:build-words` · `npm test` · `npm run test:e2e`
+`npm run data:build-words` · `npm test` (jest, `src/**/*.spec.ts` — cấu hình ở khối `jest` trong
+package.json) · `npm run test:e2e`
 
 ## Trạng thái hiện tại
 Core đã dựng: auth (email + Google), vocabulary, SRS (SM-2 + FSRS), progress, gamification
