@@ -66,12 +66,27 @@ export class LessonSessionService {
       }),
       this.prisma.lesson.count({ where: { hskLevel: lesson.hskLevel } }),
     ]);
+    // Khách không gọi được `complete` (cần đăng nhập) nên bài kế tiếp trả
+    // sẵn ở đây — học xong bài 1 vẫn đi tiếp được mà không bị chặn ở cửa đăng ký.
+    const nextLesson = await this.nextLesson(lesson);
 
     return {
       lesson: { ...lesson, totalLessons },
+      nextLesson,
       words: words.map((w) => ({ ...w, toneHints: toneHintsOf(w) })),
       steps: buildLessonSession(words, distractors),
     };
+  }
+
+  private nextLesson(lesson: { hskLevel: number; orderIndex: number }) {
+    return this.prisma.lesson.findFirst({
+      where: {
+        hskLevel: lesson.hskLevel,
+        orderIndex: { gt: lesson.orderIndex },
+      },
+      orderBy: { orderIndex: 'asc' },
+      select: { id: true, title: true, orderIndex: true },
+    });
   }
 
   /** Ghi kết quả 1 phiên học: từ CHƯA có tiến độ được đưa vào SRS qua đúng
@@ -118,14 +133,7 @@ export class LessonSessionService {
     });
 
     const [nextLesson, streak] = await Promise.all([
-      this.prisma.lesson.findFirst({
-        where: {
-          hskLevel: lesson.hskLevel,
-          orderIndex: { gt: lesson.orderIndex },
-        },
-        orderBy: { orderIndex: 'asc' },
-        select: { id: true, title: true, orderIndex: true },
-      }),
+      this.nextLesson(lesson),
       this.prisma.userStreak.findUnique({
         where: { userId },
         select: { currentStreak: true, longestStreak: true },
