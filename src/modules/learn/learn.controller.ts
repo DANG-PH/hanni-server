@@ -16,6 +16,7 @@ import type { AuthUser } from '../../common/types';
 import { CompleteLessonDto } from './dto/lesson-session.dto';
 import { LearnService } from './learn.service';
 import { LessonSessionService } from './lesson-session.service';
+import { PlacementService } from './placement.service';
 
 class PathQuery {
   @IsOptional()
@@ -33,6 +34,7 @@ export class LearnController {
   constructor(
     private readonly learn: LearnService,
     private readonly sessions: LessonSessionService,
+    private readonly placementTest: PlacementService,
   ) {}
 
   /** Bài ĐẦU TIÊN của 1 cấp — nút "Học bài đầu tiên" ở trang chủ/khảo sát
@@ -41,6 +43,14 @@ export class LearnController {
   @Get('start')
   start(@Query() q: PathQuery) {
     return this.learn.firstLesson(q.level ?? 1);
+  }
+
+  /** Đề kiểm tra trình độ đầu vào (mỗi cấp vài câu, client hỏi dần từ HSK1
+   * lên). Công khai — khách làm được trước khi có tài khoản. */
+  @Public()
+  @Get('placement')
+  placement() {
+    return this.placementTest.questions();
   }
 
   /** Kế hoạch phiên học của 1 bài (giới thiệu từ → luyện → ôn trộn). Công

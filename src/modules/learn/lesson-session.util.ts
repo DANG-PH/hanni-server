@@ -123,6 +123,40 @@ function buildOptions(
   return { options, answer: options.indexOf(target.value) };
 }
 
+/** 1 câu trắc nghiệm ĐỨNG RIÊNG (không thuộc phiên học) — cho bài kiểm tra
+ * trình độ: phương án nhiễu lấy từ `pool` (từ cùng cấp), cùng luật chống câu
+ * hỏi 2 đáp án đúng như phiên học. */
+export function buildChoiceStep(
+  w: SessionWordInput,
+  prompt: ChoicePrompt,
+  pool: DistractorInput[],
+  rand: () => number = Math.random,
+): Extract<SessionStep, { kind: 'choice' }> | null {
+  if (prompt === 'hanzi') {
+    if (!w.meaningVi) return null;
+    const built = buildOptions(
+      { simplified: w.simplified, value: shortMeaning(w.meaningVi) },
+      [],
+      pool.flatMap((d) =>
+        d.meaningVi
+          ? [{ simplified: d.simplified, value: shortMeaning(d.meaningVi) }]
+          : [],
+      ),
+      rand,
+    );
+    return built && { kind: 'choice', wordId: w.id, prompt, ...built };
+  }
+  if (prompt === 'audio' && !w.audioUrl) return null;
+  if (prompt === 'meaning' && !w.meaningVi) return null;
+  const built = buildOptions(
+    { simplified: w.simplified, value: w.simplified },
+    [],
+    pool.map((d) => ({ simplified: d.simplified, value: d.simplified })),
+    rand,
+  );
+  return built && { kind: 'choice', wordId: w.id, prompt, ...built };
+}
+
 /** Nhóm ghép cặp không được có 2 nghĩa trùng nhau hay 2 từ dùng chung chữ
  * Hán (没事/没关系 đều là "không sao") — bấm cặp nào cũng "đúng" mà bị chấm
  * sai. */

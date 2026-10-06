@@ -1,4 +1,5 @@
 import {
+  buildChoiceStep,
   buildLessonSession,
   shortMeaning,
   type SessionStep,
@@ -123,6 +124,37 @@ describe('buildLessonSession', () => {
     const silent = LESSON.map((x) => ({ ...x, audioUrl: null }));
     const s = buildLessonSession(silent, POOL, seeded(3));
     expect(choices(s).some((c) => c.prompt === 'audio')).toBe(false);
+  });
+});
+
+describe('buildChoiceStep', () => {
+  it('đáp án đúng vị trí, nhiễu không dùng chung chữ Hán với đáp án', () => {
+    const pool = [
+      ...LESSON,
+      ...POOL.map((p, i) => w(`p${i}`, p.simplified, p.meaningVi)),
+    ];
+    for (const prompt of ['hanzi', 'meaning', 'audio'] as const) {
+      const target = LESSON[0]; // 那里 — 那儿/哪里 không được làm nhiễu
+      const step = buildChoiceStep(target, prompt, pool, seeded(11));
+      expect(step).not.toBeNull();
+      const expected =
+        prompt === 'hanzi'
+          ? shortMeaning(target.meaningVi!)
+          : target.simplified;
+      expect(step!.options[step!.answer]).toBe(expected);
+      if (prompt !== 'hanzi')
+        for (const o of step!.options)
+          if (o !== target.simplified)
+            expect(
+              Array.from(o).some((c) => target.simplified.includes(c)),
+            ).toBe(false);
+    }
+  });
+
+  it('không có audio thì không tạo câu nghe', () => {
+    expect(
+      buildChoiceStep({ ...LESSON[0], audioUrl: null }, 'audio', POOL),
+    ).toBeNull();
   });
 });
 

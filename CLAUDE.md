@@ -359,7 +359,20 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
     trang riêng (tính năng phải nối vào luồng học chính).
   - Nghĩa HSK1-2 rà tay toàn bộ (500 từ): ~120 từ chọn nhầm nét nghĩa — 年 "ngũ cốc", 太 "cao
     nhất", 先生 "giáo viên", 下面 "luộc mì", 喂 "cho ăn" — sửa ở `meaning-fixes.json`, nét nghĩa
-    dùng ở cấp đó đứng ĐẦU vì trắc nghiệm lấy vế trước dấu ";".
+    dùng ở cấp đó đứng ĐẦU vì trắc nghiệm lấy vế trước dấu ";". **HSK3 rà tay toàn bộ
+    (2026-10-06)**: 140/482 từ sai nét nghĩa — 伞 "lụa trơn" (ô, dù), 电 "sét", 刚 "cứng" (vừa
+    mới), 被 "chăn" (bị), 带 "dải" (mang theo), 季节 "thời gian" (mùa). Kèm ~60 từ HSK4-7 nằm
+    trong nhóm ra đề kiểm tra trình độ (家伙 "món ăn, dụng cụ…" → gã, thằng cha). HSK4-9 còn lại
+    CHƯA rà hết. `meaning-fixes.json` tổng 499 mục.
+  - **Kiểm tra trình độ (`GET /learn/placement`, `@Public()`, `PlacementService`, 2026-10-06)**
+    — trước đây chỉ có khảo sát TỰ KHAI cấp; Hanbeego/Hanpeak/XieHanzi đều có bài kiểm tra.
+    Trả CẢ đề một lần (client tự chấm — không có thưởng nên không cần giấu đáp án): mỗi cấp
+    `PER_LEVEL` (4) câu `choice` lấy từ 80 từ thông dụng nhất của cấp, dựng bằng CHÍNH
+    `buildChoiceStep()` của phiên học (cùng luật chống 2 đáp án đúng). **Loại chữ có nhiều mục
+    trong từ điển** (đa âm/trùng mặt chữ, 60 chữ): `frequencyRank` đếm theo CHỮ nên 好 hào, 看
+    kān, 地方 dì fāng... đứng đầu HSK5-6 — hỏi "好" mà đáp án "thích" thì người biết 好 = tốt bị
+    chấm sai. Client hỏi dần từ HSK1, đúng `PASS_PER_LEVEL` (3) là qua cấp, sai 2 là dừng và đề
+    xuất cấp đó (xem `hanni-client/CLAUDE.md`).
   - `frequencyRank` giờ xếp theo CẤP trước, tần suất trong cấp sau (`build-words.ts` — số đếm
     krmanik tách file theo cấp, không so được giữa các cấp; 著名 từng hạng 1 trên cả 的). Thứ tự
     từ TRONG bài vẫn theo số đếm gốc để không xáo bài người học đang theo. Nạp DB:
