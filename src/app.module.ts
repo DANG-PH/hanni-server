@@ -19,6 +19,7 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { GamificationModule } from './modules/gamification/gamification.module';
 import { GrammarModule } from './modules/grammar/grammar.module';
 import { ExamsModule } from './modules/exams/exams.module';
+import { MockExamsModule } from './modules/mock-exams/mock-exams.module';
 import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
 import { LearnModule } from './modules/learn/learn.module';
 import { VideosModule } from './modules/videos/videos.module';
@@ -86,6 +87,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
     GamificationModule,
     GrammarModule,
     ExamsModule,
+    MockExamsModule,
     LeaderboardModule,
     PushModule,
     NotificationsModule,

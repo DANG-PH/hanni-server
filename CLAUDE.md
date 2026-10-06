@@ -37,7 +37,11 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   sẽ khiến `plainToInstance` cố gán giá trị vào getter-only đó và crash 500 (`whitelist` không
   kịp lọc vì lỗi xảy ra TRƯỚC bước đó, trong lúc transform) — lỗi thật đã gặp ở `GET /words`,
   phát hiện tình cờ lúc test tính năng khác, không phải do client thật gửi sai.
-- Guard mặc định toàn app là `JwtAuthGuard`; route công khai gắn `@Public()`.
+- Guard mặc định toàn app là `JwtAuthGuard`; route công khai gắn `@Public()`. Route khách gọi
+  được NHƯNG cần biết ai đang gọi nếu đã đăng nhập thì gắn `@OptionalAuth()` (không có token →
+  khách, `@CurrentUser()` = undefined; có token mà hết hạn → 401 để client tự làm mới rồi gửi
+  lại — không âm thầm coi là khách, kẻo mất dữ liệu của người đã đăng nhập). `@Public()` thì
+  KHÔNG đọc token nên `@CurrentUser()` luôn rỗng.
 - Đọc token từ cookie `hanni_access` (fallback `Authorization: Bearer`).
 - Không hardcode connection string — đọc qua `ConfigService` (đã validate bằng zod).
 - Tên biến/hàm/log: tiếng Việt cho comment và message hướng người dùng; code identifier tiếng Anh.
@@ -377,6 +381,29 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
     krmanik tách file theo cấp, không so được giữa các cấp; 著名 từng hạng 1 trên cả 的). Thứ tự
     từ TRONG bài vẫn theo số đếm gốc để không xáo bài người học đang theo. Nạp DB:
     `npx tsx scripts/backfill-frequency-rank.ts`.
+- **Đề thi thử HSK (`src/modules/mock-exams`, 2026-10-06)** — doanh thu đã chọn là luyện thi,
+  Hanbeego/HiHSK/XieHanzi đều có đề đúng cấu trúc, `/exams` cũ của Hanni chỉ là trắc nghiệm từ
+  vựng. Bám cấu trúc đề HSK HIỆN HÀNH (kỳ thi HSK 1–6 thường kỳ 2026 vẫn dùng; đề HSK 3.0 mới thi
+  ở vài đợt riêng, chưa công bố đủ cấu trúc) — HSK 1: Nghe 4 phần × 5 + Đọc 4 phần × 5, mỗi phần
+  thi quy về 100 điểm, đạt 60% (120/200, 180/300).
+  - **Đề viết bằng TypeScript** (`papers/hsk1.ts`, 3 đề Hanni tự soạn, chỉ dùng 300 từ HSK 1) chứ
+    không phải JSON/DB: sai cấu trúc là lỗi lúc build, deploy cùng code, không cần seed.
+    `mock-exam.content.spec.ts` kiểm tra MỌI đề: đúng số câu/dạng câu từng phần, đáp án trong
+    phạm vi, phần ghép A–F mỗi phương án dùng đúng 1 lần (thừa 1), câu điền từ có đúng 1 "（ ）".
+  - **Tranh là emoji** (không vướng bản quyền ảnh đề thật, hiện được mọi máy); **phần nghe**
+    client đọc bằng giọng tiếng Trung của trình duyệt (2 giọng nam/nữ, mỗi câu 2 lần như đề
+    thật); câu nghe chỉ có 1 từ trùng mục từ điển có ghi âm thì server gắn `audio.url` (ghi âm
+    thật).
+  - **Pinyin từng chữ do server sinh** (`rubyOf`): `pinyin-pro` (tắt biến điệu 一/不) + ghi đè
+    bằng từ điển Hanni cho từ/chữ có ĐÚNG 1 cách đọc (名字 "míng zi" chứ không "míng zì", 谁
+    "shéi", 哪儿 "nǎ r"); 儿 hoá ngoài từ điển đọc "r". Câu điền từ tính pinyin trên cả câu ĐÃ LẮP
+    đáp án rồi mới cắt — để riêng "了。" thì bị đọc "liǎo". Đề dựng 1 lần rồi cache trong tiến trình.
+  - `GET /mock-exams` (`@OptionalAuth`, kèm điểm cao nhất nếu đã đăng nhập), `GET /mock-exams/:slug`
+    (`@Public`, KHÔNG kèm đáp án/bản dịch/nhãn tranh — spec kiểm tra), `POST /mock-exams/:slug/submit`
+    (`@OptionalAuth`, chấm ở server, trả chữa bài: đáp án + lời thoại có pinyin + bản dịch + giải
+    thích; đã đăng nhập thì lưu `MockExamAttempt` + giữ chuỗi ngày), `GET /mock-exams/attempts/me`.
+  - **Chưa làm**: HSK 2–6 (HSK 3+ có phần viết: sắp xếp câu, viết chữ theo pinyin), khoá đề cho
+    Premium (chưa bật payOS thì khoá là không ai trả được tiền).
 - **"Tôi đã biết từ này rồi" — ẩn từ khỏi hàng đợi ôn (`isSuspended`, từ 2026-09-22)**: field
   `UserWordProgress.isSuspended` được ĐỌC đúng ở khắp nơi từ rất lâu (`getQueue()`,
   `getStats()`, `progress.service`, `reminder.service` đều lọc `isSuspended: false`) nhưng CHƯA

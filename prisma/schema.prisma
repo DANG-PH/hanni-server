@@ -159,6 +159,7 @@ model User {
   videoComments       VideoComment[]
   videoLikes          VideoLike[]
   examAttempts        ExamAttempt[]
+  mockExamAttempts    MockExamAttempt[]
   pushSubscriptions   PushSubscription[]
   notifications       Notification[]       @relation("NotificationRecipient")
   notificationsCaused Notification[]       @relation("NotificationActor")
@@ -755,6 +756,29 @@ model GrammarPoint {
 // ===================================================================
 //  KIỂM TRA HSK
 // ===================================================================
+
+/// Một lần làm ĐỀ THI THỬ HSK đúng cấu trúc đề thật (đề nằm trong code —
+/// `src/modules/mock-exams/papers/`, khoá theo `examSlug`). Khác `ExamAttempt`
+/// (trắc nghiệm từ vựng tính giờ).
+model MockExamAttempt {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  examSlug      String
+  hskLevel      Int
+  score         Int
+  maxScore      Int
+  passed        Boolean
+  /// [{kind, correct, total, score}] từng phần thi (nghe/đọc/viết).
+  sectionScores Json
+  /// Đáp án đã chọn, `answers[no - 1]` — để xem lại bài làm sau này.
+  answers       Json
+  durationSec   Int?
+  createdAt     DateTime @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, examSlug])
+}
 
 /// Kết quả một lần làm bài Kiểm tra HSK (quiz sinh từ từ vựng theo cấp).
 model ExamAttempt {
