@@ -110,5 +110,11 @@ jobs:
             # `pm2 restart all` sẽ restart cả app của dịch vụ KHÁC trên cùng
             # VPS — chỉ restart đúng app của mình.
             pm2 restart hanni-server --update-env
-            sleep 5
-            curl -fsS http://localhost:8000/api/health
+            # Khởi động mất 5-10s tuỳ tải VPS — `sleep 5` rồi curl 1 lần từng
+            # báo đỏ oan (2026-10-06: curl lúc 02:42:16, app lên lúc 02:42:18).
+            # Thử lại tới 60s rồi mới coi là lỗi.
+            for i in $(seq 1 30); do
+              curl -fsS http://localhost:8000/api/health && break
+              [ "$i" = 30 ] && exit 1
+              sleep 2
+            done
