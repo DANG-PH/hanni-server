@@ -404,6 +404,13 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
     thích; đã đăng nhập thì lưu `MockExamAttempt` + giữ chuỗi ngày), `GET /mock-exams/attempts/me`.
   - **Chưa làm**: HSK 2–6 (HSK 3+ có phần viết: sắp xếp câu, viết chữ theo pinyin), khoá đề cho
     Premium (chưa bật payOS thì khoá là không ai trả được tiền).
+- **Bảng phiên âm (`GET /pinyin/overview`, `@Public()`, `src/modules/pinyin`, 2026-10-15)** — cho
+  trang `/phien-am` (bước 拼/声 của "Sáu chặng", trước đó trỏ sang từ điển = hứa suông). Âm thanh
+  từng âm tiết = ghi âm thật của CHỮ ĐƠN trong từ điển (八 → bā); **bỏ chữ có nhiều cách đọc** vì
+  file ghi âm đặt theo mặt chữ (`cmn-好.mp3`), không biết đọc âm nào → 367 âm tiết, 868 tổ hợp
+  thanh. Kèm thống kê quy luật Hán Việt → thanh (`toneHintsOf`, HSK 1–4) đo trên chính bộ từ: không
+  dấu → thanh 1 đúng 96%, sắc/nặng → 4 đúng 94%, hỏi/ngã → 3 đúng 92%, huyền → 2 đúng 91%. Dựng 1
+  lần rồi cache trong tiến trình (dữ liệu từ điển gần như không đổi).
 - **"Tôi đã biết từ này rồi" — ẩn từ khỏi hàng đợi ôn (`isSuspended`, từ 2026-09-22)**: field
   `UserWordProgress.isSuspended` được ĐỌC đúng ở khắp nơi từ rất lâu (`getQueue()`,
   `getStats()`, `progress.service`, `reminder.service` đều lọc `isSuspended: false`) nhưng CHƯA

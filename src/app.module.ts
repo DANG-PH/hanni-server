@@ -20,6 +20,7 @@ import { GamificationModule } from './modules/gamification/gamification.module';
 import { GrammarModule } from './modules/grammar/grammar.module';
 import { ExamsModule } from './modules/exams/exams.module';
 import { MockExamsModule } from './modules/mock-exams/mock-exams.module';
+import { PinyinModule } from './modules/pinyin/pinyin.module';
 import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
 import { LearnModule } from './modules/learn/learn.module';
 import { VideosModule } from './modules/videos/videos.module';
@@ -88,6 +89,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
     GrammarModule,
     ExamsModule,
     MockExamsModule,
+    PinyinModule,
     LeaderboardModule,
     PushModule,
     NotificationsModule,
