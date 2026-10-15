@@ -100,6 +100,8 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `data/curated/hanviet-word-overrides.json` (đè chữ 麵 thì hỏng 面包 "miến bao"). 10 từ, nạp
   production bằng 1 câu UPDATE có điều kiện giá trị cũ (sao lưu ở `HanNi/backups/`). Soát lại:
   lọc từ có `traditional` khác `simplified` rồi đọc lướt cột `hanViet`.
+  Cùng ngày sửa thêm 3 ghi đè cũ dùng âm thuần Việt thay vì Hán Việt: 添 "thêm" → thiêm (画蛇添足
+  "hoạ xà thiêm túc"), 瓷 "sứ" → từ (瓷器 "từ khí"), 痕 "ngấn" → ngân (痕迹 "ngân tích") — 10 từ HSK 6–7.
   **Chữ ĐA ÂM chọn âm theo cách đọc** (`data/curated/hanviet-by-reading.json`, khoá = chữ tra
   (phồn thể) → âm tiết pinyin có số thanh): trước đây 1 chữ 1 âm nên 音乐 = "âm lạc", 要求 =
   "yếu cầu"; giờ `hanVietOf()` nhận thêm `pinyinNumeric` và chọn âm theo âm tiết tương ứng (chỉ
