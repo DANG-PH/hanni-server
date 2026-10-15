@@ -5,15 +5,25 @@ import { StreakService } from '../gamification/streak/streak.service';
 import {
   PAPERS,
   paperMeta,
+  partStats,
   publicPaper,
   reviewOf,
   scorePaper,
   type PinyinOverrides,
+  type Vocab,
 } from './mock-exam.content';
 import type { AnswerValue, MockPaper } from './mock-exam.types';
 
 /** Từ điển chỉ cần tới cấp này để sửa pinyin/gắn ghi âm cho lời thoại đề. */
 const DICTIONARY_MAX_LEVEL = 6;
+/** Nghĩa chú thích khi chữa bài: tối đa 2 nét nghĩa đầu cho gọn. */
+const shortMeaning = (vi: string) =>
+  vi
+    .split(';')
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('; ');
 
 @Injectable()
 export class MockExamsService {
@@ -21,6 +31,7 @@ export class MockExamsService {
    * điển) rồi dùng lại cho mọi lượt gọi tới khi khởi động lại. */
   private built?: Promise<{
     overrides: PinyinOverrides;
+    vocab: Vocab;
     papers: Map<string, ReturnType<typeof publicPaper>>;
   }>;
 
@@ -33,7 +44,14 @@ export class MockExamsService {
     this.built ??= (async () => {
       const words = await this.prisma.word.findMany({
         where: { hskLevel: { lte: DICTIONARY_MAX_LEVEL } },
-        select: { simplified: true, pinyin: true, audioUrl: true },
+        select: {
+          id: true,
+          simplified: true,
+          pinyin: true,
+          audioUrl: true,
+          hanViet: true,
+          meaningVi: true,
+        },
       });
       const readings = new Map<string, Set<string>>();
       const audioByWord = new Map<string, string>();
@@ -53,10 +71,23 @@ export class MockExamsService {
         if (syllables.length === chars.length)
           overrides.set(simplified, syllables);
       }
+      const entries = new Map<string, number>();
+      for (const w of words)
+        entries.set(w.simplified, (entries.get(w.simplified) ?? 0) + 1);
+      const vocab: Vocab = new Map();
+      for (const w of words)
+        if (entries.get(w.simplified) === 1 && w.meaningVi)
+          vocab.set(w.simplified, {
+            id: w.id,
+            zh: w.simplified,
+            pinyin: w.pinyin,
+            hanViet: w.hanViet,
+            vi: shortMeaning(w.meaningVi),
+          });
       const papers = new Map(
         PAPERS.map((p) => [p.slug, publicPaper(p, overrides, audioByWord)]),
       );
-      return { overrides, papers };
+      return { overrides, vocab, papers };
     })().catch((err: unknown) => {
       this.built = undefined;
       throw err;
@@ -105,7 +136,7 @@ export class MockExamsService {
     userId?: string,
   ) {
     const paper = this.find(slug);
-    const { overrides } = await this.build();
+    const { overrides, vocab } = await this.build();
     const result = scorePaper(paper, answers);
     let attemptId: string | null = null;
     if (userId) {
@@ -136,7 +167,7 @@ export class MockExamsService {
       passScore: result.passScore,
       passed: result.passed,
       sections: result.sections,
-      review: reviewOf(paper, overrides).map((r) => ({
+      review: reviewOf(paper, overrides, vocab).map((r) => ({
         ...r,
         given: correctByNo.get(r.no)?.given ?? null,
         correct: correctByNo.get(r.no)?.correct ?? false,
@@ -161,5 +192,14 @@ export class MockExamsService {
         createdAt: true,
       },
     });
+  }
+
+  /** Điểm mạnh/yếu theo từng phần đề, cộng dồn mọi lượt đã làm. */
+  async analysis(userId: string) {
+    const attempts = await this.prisma.mockExamAttempt.findMany({
+      where: { userId },
+      select: { examSlug: true, answers: true },
+    });
+    return { attempts: attempts.length, parts: partStats(attempts) };
   }
 }

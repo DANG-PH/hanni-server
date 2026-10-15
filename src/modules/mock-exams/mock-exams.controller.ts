@@ -25,6 +25,11 @@ export class MockExamsController {
     return this.exams.history(user.id);
   }
 
+  @Get('analysis/me')
+  analysis(@CurrentUser() user: AuthUser) {
+    return this.exams.analysis(user.id);
+  }
+
   @Public()
   @Get(':slug')
   paper(@Param('slug') slug: string) {

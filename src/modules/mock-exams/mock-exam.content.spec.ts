@@ -3,10 +3,14 @@ import {
   answerOf,
   PAPERS,
   numberItems,
+  partStats,
   publicPaper,
+  reviewOf,
   rubyOf,
   scorePaper,
+  wordsIn,
   type PinyinOverrides,
+  type Vocab,
 } from './mock-exam.content';
 
 /** Cấu trúc đề HSK hiện hành theo cấp: số câu mỗi phần, theo thứ tự. */
@@ -178,5 +182,70 @@ describe('rubyOf', () => {
 
   it('không biến điệu 一/不 (giữ thanh gốc như từ điển)', () => {
     expect(rubyOf('不是', NO_OVERRIDES).py[0]).toBe('bù');
+  });
+});
+
+describe('từ vựng chú thích khi chữa bài', () => {
+  const entry = (zh: string, pinyin: string, hanViet: string, vi: string) => ({
+    id: zh,
+    zh,
+    pinyin,
+    hanViet,
+    vi,
+  });
+  const vocab: Vocab = new Map(
+    [
+      entry('打电话', 'dǎ diàn huà', 'đả điện thoại', 'gọi điện thoại'),
+      entry('电话', 'diàn huà', 'điện thoại', 'điện thoại'),
+      entry('喜欢', 'xǐ huan', 'hỉ hoan', 'thích'),
+      entry('我', 'wǒ', 'ngã', 'tôi'),
+      entry('喝', 'hē', 'hát', 'uống'),
+      entry('茶', 'chá', 'trà', 'trà'),
+    ].map((e) => [e.zh, e]),
+  );
+
+  it('khớp từ dài nhất trước, bỏ đại từ quá phổ biến, không trùng', () => {
+    const words = wordsIn(['我喜欢打电话。', '我喜欢喝茶。'], vocab);
+    expect(words.map((w) => w.zh)).toEqual(['喜欢', '打电话', '喝', '茶']);
+  });
+
+  it('câu điền từ: tìm từ trên câu ĐÃ điền đáp án', () => {
+    const paper = PAPERS.find((p) => p.slug === 'hsk1-de-2')!;
+    const fill = numberItems(paper).find((n) => n.part.type === 'fill-blank')!;
+    const raw = fill.part.items[fill.itemIndex] as { answer: number };
+    const answerWord =
+      fill.part.type === 'fill-blank' ? fill.part.options[raw.answer] : '';
+    const withAnswer: Vocab = new Map([
+      [answerWord, entry(answerWord, 'x', 'x', 'x')],
+    ]);
+    const review = reviewOf(paper, NO_OVERRIDES, withAnswer);
+    expect(review[fill.no - 1].words?.map((w) => w.zh)).toContain(answerWord);
+  });
+
+  it('không có từ điển thì không gửi trường words', () => {
+    const review = reviewOf(PAPERS[0], NO_OVERRIDES);
+    expect(review.every((r) => !('words' in r))).toBe(true);
+  });
+});
+
+describe('partStats', () => {
+  it('cộng dồn theo từng phần, đúng 5 câu mỗi phần HSK 1', () => {
+    const paper = PAPERS[0];
+    const key = numberItems(paper).map(answerOf);
+    const stats = partStats([
+      { examSlug: paper.slug, answers: key },
+      { examSlug: paper.slug, answers: [] },
+      { examSlug: 'khong-co', answers: key },
+    ]);
+    expect(stats).toHaveLength(8);
+    for (const s of stats) {
+      expect(s.total).toBe(10);
+      expect(s.correct).toBe(5);
+    }
+    expect(stats[0]).toMatchObject({
+      section: 'listening',
+      part: 1,
+      type: 'judge',
+    });
   });
 });

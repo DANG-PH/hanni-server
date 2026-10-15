@@ -65,6 +65,15 @@ export function loadHanVietOverrides(curatedDir: string): Map<string, string> {
   return loadJsonMap(join(curatedDir, 'hanviet-overrides.json'));
 }
 
+/** Ghi đè cả TỪ khi nguồn gán nhầm dạng phồn thể (CEDICT có cả 下面 "bên
+ * dưới" lẫn 下麵 "nấu mì" cùng giản thể 下面 → từ "bên dưới" thành "hạ
+ * miến"). Không sửa được bằng ghi đè chữ vì 麵 vẫn đúng là "miến" ở 面包. */
+export function loadHanVietWordOverrides(
+  curatedDir: string,
+): Map<string, string> {
+  return loadJsonMap(join(curatedDir, 'hanviet-word-overrides.json'));
+}
+
 /** Âm Hán Việt THEO CÁCH ĐỌC cho chữ đa âm: `{ "樂": { "yue4": "nhạc", "le4":
  * "lạc" } }`. Map 1-chữ-1-âm buộc 音乐 thành "âm lạc", 要求 thành "yếu cầu"
  * trong khi pinyin của chính từ đó đã cho biết đang đọc thế nào. */

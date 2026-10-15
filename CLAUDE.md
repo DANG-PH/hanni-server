@@ -92,6 +92,14 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `hanviet-overrides.json` + ~50 chữ thiếu hẳn (這 做 她 坐 懂 爸...) ở `hanviet-supplement.json`.
   1.734 từ đổi âm. Chữ lệch quy luật mà âm ĐÚNG (听 thính → tīng, 期 kì → qī) là ngoại lệ thật,
   giữ nguyên — đừng "sửa" cho khớp quy luật. Chữ hiếm HSK7-9 chỉ rà qua bộ lọc đó, chưa rà hết.
+  **Bẫy dạng phồn thể biến thể (sửa 2026-10-15)**: tra theo `traditional` nên khi nguồn ghi
+  phồn thể là chữ BIẾN THỂ thì lấy nhầm âm của chữ biến thể — 吃→喫 "khịt", 床→牀 "giường",
+  篮球→籃球 "xờm cầu", 必须→必須 "tất tua", 借→藉 "chạ". Sửa bằng ghi đè chữ biến thể (喫 ngật,
+  籃 lam, 牀 sàng, 須 tu, 藉 tá — mỗi chữ chỉ xuất hiện ở đúng các từ đó). CEDICT còn gán nhầm cả
+  dạng phồn thể (下面 "bên dưới" lấy 下麵 "nấu mì" → "hạ miến"; 面子 → "miến tử"): ghi đè CẢ TỪ ở
+  `data/curated/hanviet-word-overrides.json` (đè chữ 麵 thì hỏng 面包 "miến bao"). 10 từ, nạp
+  production bằng 1 câu UPDATE có điều kiện giá trị cũ (sao lưu ở `HanNi/backups/`). Soát lại:
+  lọc từ có `traditional` khác `simplified` rồi đọc lướt cột `hanViet`.
   **Chữ ĐA ÂM chọn âm theo cách đọc** (`data/curated/hanviet-by-reading.json`, khoá = chữ tra
   (phồn thể) → âm tiết pinyin có số thanh): trước đây 1 chữ 1 âm nên 音乐 = "âm lạc", 要求 =
   "yếu cầu"; giờ `hanVietOf()` nhận thêm `pinyinNumeric` và chọn âm theo âm tiết tương ứng (chỉ
@@ -401,7 +409,14 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   - `GET /mock-exams` (`@OptionalAuth`, kèm điểm cao nhất nếu đã đăng nhập), `GET /mock-exams/:slug`
     (`@Public`, KHÔNG kèm đáp án/bản dịch/nhãn tranh — spec kiểm tra), `POST /mock-exams/:slug/submit`
     (`@OptionalAuth`, chấm ở server, trả chữa bài: đáp án + lời thoại có pinyin + bản dịch + giải
-    thích; đã đăng nhập thì lưu `MockExamAttempt` + giữ chuỗi ngày), `GET /mock-exams/attempts/me`.
+    thích + **từ vựng trong câu** `words[]` (pinyin, âm Hán Việt, nghĩa, `id` để lưu vào ôn tập);
+    đã đăng nhập thì lưu `MockExamAttempt` + giữ chuỗi ngày), `GET /mock-exams/attempts/me` (30 lượt
+    gần nhất), `GET /mock-exams/analysis/me` (tỉ lệ đúng từng phần đề cộng dồn mọi lượt — "điểm
+    mạnh, yếu", tính lại từ `answers` đã lưu nên không cần cột mới).
+  - **Từ vựng chữa bài** (`wordsIn`): tách lời thoại/câu đọc/câu ĐÃ điền đáp án/câu trả lời đúng
+    theo từ điển, khớp dài nhất trước (≤4 chữ), chỉ từ có ĐÚNG 1 mục từ điển (chữ đa âm chọn bừa
+    dễ sai), bỏ đại từ/hư từ có ở mọi câu (我 你 的 了 吗…) và chữ dẫn "问：", tối đa 6 từ/câu.
+    Giống lớp "dựa vào từ khoá" của Migii HSK, riêng Hanni có âm Hán Việt.
   - **Chưa làm**: HSK 2–6 (HSK 3+ có phần viết: sắp xếp câu, viết chữ theo pinyin), khoá đề cho
     Premium (chưa bật payOS thì khoá là không ai trả được tiền).
 - **Bảng phiên âm (`GET /pinyin/overview`, `@Public()`, `src/modules/pinyin`, 2026-10-15)** — cho

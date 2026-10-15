@@ -77,6 +77,52 @@ export function rubyOf(zh: string, overrides: PinyinOverrides): Ruby {
   };
 }
 
+/** Từ trong từ điển Hanni dùng để chú thích phần chữa bài. */
+export interface VocabEntry {
+  id: string;
+  zh: string;
+  pinyin: string;
+  hanViet: string | null;
+  vi: string;
+}
+/** Chỉ từ có ĐÚNG 1 mục trong từ điển — chữ đa âm (还, 得) chọn bừa 1 mục dễ sai. */
+export type Vocab = Map<string, VocabEntry>;
+
+/** Đại từ/hư từ có trong gần như mọi câu — liệt kê ra chỉ thêm nhiễu. */
+const TOO_COMMON = new Set([
+  ...Array.from('的了吗呢吧啊是我你他她它们很不也都和个这那在有'),
+  '我们',
+  '你们',
+  '他们',
+]);
+const MAX_WORDS = 6;
+
+/** Tách câu theo từ điển (khớp dài nhất trước) → các từ đáng chú ý, không trùng. */
+export function wordsIn(texts: string[], vocab: Vocab): VocabEntry[] {
+  const out: VocabEntry[] = [];
+  const seen = new Set<string>();
+  for (const text of texts) {
+    const chars = Array.from(text);
+    for (let i = 0; i < chars.length;) {
+      let hit: VocabEntry | undefined;
+      for (let len = Math.min(MAX_WORD, chars.length - i); len >= 1; len--) {
+        hit = vocab.get(chars.slice(i, i + len).join(''));
+        if (hit) break;
+      }
+      if (!hit) {
+        i++;
+        continue;
+      }
+      if (!TOO_COMMON.has(hit.zh) && !seen.has(hit.zh)) {
+        seen.add(hit.zh);
+        out.push(hit);
+      }
+      i += Array.from(hit.zh).length;
+    }
+  }
+  return out.slice(0, MAX_WORDS);
+}
+
 type AnyItem = PaperPart['items'][number];
 
 /** `part.items` là hợp nhiều KIỂU MẢNG — gọi `.map`/đánh chỉ số trên đó ra
@@ -252,14 +298,40 @@ export function publicPaper(
   };
 }
 
-/** Phần chữa bài gửi SAU khi nộp: đáp án + bản dịch + lời thoại có pinyin. */
-export function reviewOf(paper: MockPaper, overrides: PinyinOverrides) {
+/** Câu chữ của 1 câu hỏi kèm đáp án đúng (lời thoại, câu đọc, câu đã điền
+ * từ, câu trả lời đúng) — để tìm từ vựng chú thích khi chữa bài. */
+function textsOf(n: NumberedItem): string[] {
+  const raw = itemsOf(n.part)[n.itemIndex];
+  const texts: string[] = [];
+  // Bỏ chữ dẫn "问：" của câu hỏi — là khuôn đề, không phải từ cần học.
+  if ('audio' in raw && raw.audio)
+    texts.push(...raw.audio.map((l) => l.zh.replace(/^问[：:]/, '')));
+  if (n.part.type === 'fill-blank' && 'text' in raw && raw.text)
+    texts.push(raw.text.replace(BLANK, n.part.options[raw.answer as number]));
+  else if ('text' in raw && raw.text) texts.push(raw.text);
+  if (n.part.type === 'match-text')
+    texts.push(n.part.options[raw.answer as number]);
+  if ('options' in raw && typeof raw.answer === 'number')
+    texts.push(raw.options[raw.answer]);
+  return texts;
+}
+
+/** Phần chữa bài gửi SAU khi nộp: đáp án + bản dịch + lời thoại có pinyin +
+ * từ vựng trong câu (pinyin, âm Hán Việt, nghĩa) — lớp giải thích thứ ba
+ * như app Migii HSK ("dựa vào từ khoá…"), riêng Hanni có âm Hán Việt. */
+export function reviewOf(
+  paper: MockPaper,
+  overrides: PinyinOverrides,
+  vocab: Vocab = new Map(),
+) {
   return numberItems(paper).map((n) => {
     const raw = itemsOf(n.part)[n.itemIndex];
+    const words = wordsIn(textsOf(n), vocab);
     return {
       no: n.no,
       answer: raw.answer,
       vi: raw.vi,
+      ...(words.length ? { words } : {}),
       ...(raw.explain ? { explain: raw.explain } : {}),
       ...('audio' in raw && raw.audio
         ? {
@@ -277,4 +349,42 @@ export function reviewOf(paper: MockPaper, overrides: PinyinOverrides) {
           : {}),
     };
   });
+}
+
+export interface PartStat {
+  level: number;
+  section: SectionKind;
+  /** Phần thứ mấy trong phần thi (1-based), như "第一部分". */
+  part: number;
+  type: PaperPart['type'];
+  correct: number;
+  total: number;
+}
+
+/** Tỉ lệ đúng theo từng phần đề, cộng dồn mọi lượt làm — "điểm mạnh, yếu".
+ * Gom theo (cấp, phần thi, thứ tự phần) vì cùng cấp thì mọi đề cùng cấu trúc. */
+export function partStats(
+  attempts: { examSlug: string; answers: unknown }[],
+): PartStat[] {
+  const stats = new Map<string, PartStat>();
+  for (const attempt of attempts) {
+    const paper = PAPERS.find((p) => p.slug === attempt.examSlug);
+    if (!paper || !Array.isArray(attempt.answers)) continue;
+    const answers = attempt.answers as unknown[];
+    for (const n of numberItems(paper)) {
+      const key = `${paper.level}:${n.section}:${n.partIndex}`;
+      const stat = stats.get(key) ?? {
+        level: paper.level,
+        section: n.section,
+        part: n.partIndex + 1,
+        type: n.part.type,
+        correct: 0,
+        total: 0,
+      };
+      stat.total++;
+      if (answers[n.no - 1] === answerOf(n)) stat.correct++;
+      stats.set(key, stat);
+    }
+  }
+  return [...stats.values()];
 }
