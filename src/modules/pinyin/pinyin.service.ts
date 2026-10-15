@@ -37,6 +37,8 @@ export interface PinyinOverview {
 /** Đo tỉ lệ quy luật trên HSK 1–4 — nhóm từ người mới thật sự gặp. */
 const RULE_MAX_LEVEL = 4;
 const EXAMPLES_PER_RULE = 4;
+/** Ứng viên ví dụ gom mỗi quy luật trước khi chọn (đủ để còn chữ có ghi âm). */
+const EXAMPLE_POOL = 24;
 const SINGLE = /^([a-zü]+)([1-4])$/;
 
 /**
@@ -121,18 +123,19 @@ export class PinyinService {
         s.total += 1;
         if (h.follows) s.follows += 1;
         // Ví dụ: chữ ĐƠN theo đúng quy luật (quy luật không đoán thì lấy chữ
-        // bất kỳ để minh hoạ sự phân tán), ưu tiên chữ có ghi âm.
-        const single = Array.from(w.simplified).length === 1;
+        // bất kỳ để minh hoạ sự phân tán), không trùng cách đọc (他/她 cùng
+        // "tha → tā"); chọn chữ có ghi âm ở bước cuối.
+        const mark = convert(w.pinyinNumeric.trim(), { format: 'numToSymbol' });
         if (
-          single &&
+          Array.from(w.simplified).length === 1 &&
           (h.follows || PREDICTED_TONE[h.rule] === null) &&
-          s.examples.length < EXAMPLES_PER_RULE &&
-          !s.examples.some((e) => e.char === h.char)
+          s.examples.length < EXAMPLE_POOL &&
+          !s.examples.some((e) => e.char === h.char || e.mark === mark)
         )
           s.examples.push({
             char: h.char,
             hanViet: h.hanViet,
-            mark: convert(w.pinyinNumeric.trim(), { format: 'numToSymbol' }),
+            mark,
             url: soundOf(w),
           });
       }
@@ -142,11 +145,19 @@ export class PinyinService {
       syllables: [...byBase.entries()]
         .map(([base, tones]) => ({ base, tones }))
         .sort((a, b) => a.base.localeCompare(b.base)),
-      toneRules: TONE_RULE_KEYS.map((key) => ({
-        key,
-        predicted: PREDICTED_TONE[key],
-        ...stats.get(key)!,
-      })),
+      toneRules: TONE_RULE_KEYS.map((key) => {
+        const { examples, ...rest } = stats.get(key)!;
+        return {
+          key,
+          predicted: PREDICTED_TONE[key],
+          ...rest,
+          // Giữ thứ tự thông dụng, nhưng chữ có ghi âm lên trước.
+          examples: [
+            ...examples.filter((e) => e.url),
+            ...examples.filter((e) => !e.url),
+          ].slice(0, EXAMPLES_PER_RULE),
+        };
+      }),
     };
   }
 }
