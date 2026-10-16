@@ -1,6 +1,8 @@
 import {
   BLANK,
   answerOf,
+  isCorrect,
+  normalizeSentence,
   PAPERS,
   numberItems,
   partStats,
@@ -19,6 +21,11 @@ import {
 const STRUCTURE: Record<number, Record<string, number[]>> = {
   1: { listening: [5, 5, 5, 5], reading: [5, 5, 5, 5] },
   2: { listening: [10, 5, 5, 10, 5], reading: [5, 5, 5, 5, 5] },
+  3: {
+    listening: [5, 5, 10, 10, 10],
+    reading: [5, 5, 5, 5, 10],
+    writing: [5, 5],
+  },
 };
 const PART_TYPES: Record<number, Record<string, string[]>> = {
   1: {
@@ -41,13 +48,31 @@ const PART_TYPES: Record<number, Record<string, string[]>> = {
       'match-text',
     ],
   },
+  3: {
+    listening: [
+      'match-picture',
+      'match-picture',
+      'judge-text',
+      'choose-text',
+      'choose-text',
+    ],
+    reading: [
+      'match-text',
+      'match-text',
+      'fill-blank',
+      'fill-blank',
+      'choose-text',
+    ],
+    writing: ['order', 'pinyin-char'],
+  },
 };
 /** Phần nào là nửa sau (`continues`) — vị trí theo dữ liệu. */
 const CONTINUES: Record<number, Record<string, number[]>> = {
   1: { listening: [], reading: [] },
   2: { listening: [2], reading: [4] },
+  3: { listening: [1], reading: [1, 3], writing: [] },
 };
-const DURATION: Record<number, number> = { 1: 35, 2: 50 };
+const DURATION: Record<number, number> = { 1: 35, 2: 50, 3: 85 };
 
 const NO_OVERRIDES: PinyinOverrides = new Map();
 
@@ -63,6 +88,7 @@ describe('nội dung đề thi thử', () => {
         const shape = STRUCTURE[paper.level];
         const types = PART_TYPES[paper.level];
         expect(shape).toBeDefined();
+        expect(paper.sections.map((s) => s.kind)).toEqual(Object.keys(shape));
         for (const section of paper.sections) {
           expect(section.parts.map((p) => p.items.length)).toEqual(
             shape[section.kind],
@@ -122,6 +148,42 @@ describe('nội dung đề thi thử', () => {
               for (const it of part.items) {
                 expect(typeof it.answer).toBe('boolean');
                 expect(it.statement.trim().length).toBeGreaterThan(0);
+                // Phần nghe chỉ có lời đọc, phần đọc chỉ có đoạn văn in sẵn.
+                if (section.kind === 'listening')
+                  expect(it.text).toBeUndefined();
+                else expect(it.text?.trim()).toBeTruthy();
+              }
+            if (part.type === 'choose-text' && section.kind === 'reading')
+              for (const it of part.items) {
+                expect(it.text?.trim()).toBeTruthy();
+                expect(it.question?.trim()).toBeTruthy();
+              }
+            if (part.type === 'order')
+              for (const it of part.items) {
+                expect(it.pieces.length).toBeGreaterThanOrEqual(3);
+                const accepted = [it.answer, ...(it.alternatives ?? [])];
+                // Mảnh ghép lại (theo 1 thứ tự nào đó) ra đúng từng câu đáp án…
+                for (const a of accepted)
+                  expect(canForm(it.pieces, normalizeSentence(a))).toBe(true);
+                // …nhưng thứ tự in trên đề không phải là đáp án.
+                expect(accepted.map(normalizeSentence)).not.toContain(
+                  it.pieces.join(''),
+                );
+              }
+            if (part.type === 'pinyin-char')
+              for (const it of part.items) {
+                expect(it.text.split(BLANK)).toHaveLength(2);
+                expect(it.choices).toHaveLength(6);
+                expect(new Set(it.choices).size).toBe(6);
+                for (const c of it.choices)
+                  expect(Array.from(c)).toHaveLength(1);
+                expect(it.answer).toBeLessThan(6);
+                // Pinyin in trên đề khớp cách đọc của chữ đáp án TRONG câu.
+                const full = it.text.replace(BLANK, it.choices[it.answer]);
+                const at = Array.from(it.text.split(BLANK)[0]).length;
+                expect(rubyOf(full, NO_OVERRIDES).py[at]).toBe(
+                  it.pinyin.toLowerCase(),
+                );
               }
           }
       });
@@ -140,11 +202,24 @@ describe('nội dung đề thi thử', () => {
         const json = JSON.stringify(
           publicPaper(paper, NO_OVERRIDES, new Map()),
         );
-        expect(json).not.toMatch(/"answer"|"vi"|"explain"/);
+        expect(json).not.toMatch(/"answer"|"vi"|"explain"|"alternatives"/);
       });
     });
   }
 });
+
+/** Ghép được `target` từ đúng toàn bộ các mảnh (mỗi mảnh 1 lần) không. */
+function canForm(pieces: string[], target: string): boolean {
+  if (pieces.length === 0) return target === '';
+  return pieces.some(
+    (p, i) =>
+      target.startsWith(p) &&
+      canForm(
+        pieces.filter((_, j) => j !== i),
+        target.slice(p.length),
+      ),
+  );
+}
 
 describe('scorePaper', () => {
   const paper = PAPERS[0];
@@ -175,6 +250,42 @@ describe('scorePaper', () => {
     expect(r.score).toBe(120);
     expect(r.passed).toBe(true);
     expect(scorePaper(paper, answers.slice(0, -21)).passed).toBe(false);
+  });
+});
+
+describe('chấm câu sắp xếp (HSK 3 phần viết)', () => {
+  const paper = PAPERS.find((p) => p.slug === 'hsk3-de-1')!;
+  const items = numberItems(paper);
+  const order = items.filter((n) => n.part.type === 'order');
+  const alt = order.find((n) => {
+    const raw = n.part.items[n.itemIndex];
+    return 'alternatives' in raw && raw.alternatives?.length;
+  })!;
+
+  it('không cần dấu câu/khoảng trắng; nhận cả thứ tự thay thế', () => {
+    const raw = alt.part.items[alt.itemIndex] as {
+      answer: string;
+      alternatives: string[];
+    };
+    expect(isCorrect(alt, raw.answer)).toBe(true);
+    expect(isCorrect(alt, normalizeSentence(raw.answer))).toBe(true);
+    expect(isCorrect(alt, ` ${raw.alternatives[0]} `)).toBe(true);
+    expect(isCorrect(alt, '八点我们出发明天早上')).toBe(false);
+    expect(isCorrect(alt, 2)).toBe(false);
+  });
+
+  it('đề HSK 3 đủ 3 phần thi, đúng hết = 300, mốc đạt 180', () => {
+    const r = scorePaper(paper, items.map(answerOf));
+    expect(r.maxScore).toBe(300);
+    expect(r.score).toBe(300);
+    expect(r.passScore).toBe(180);
+    const writing = partStats([
+      { examSlug: paper.slug, answers: items.map(answerOf) },
+    ]).filter((s) => s.section === 'writing');
+    expect(writing.map((s) => [s.part, s.type, s.correct, s.total])).toEqual([
+      [1, 'order', 5, 5],
+      [2, 'pinyin-char', 5, 5],
+    ]);
   });
 });
 
@@ -234,6 +345,12 @@ describe('rubyOf', () => {
     expect(rubyOf('我得走了。', NO_OVERRIDES).py[1]).not.toBe('de');
     expect(rubyOf('喝了睡不着。', NO_OVERRIDES).py[4]).toBe('zháo');
     expect(rubyOf('你穿着很漂亮。', NO_OVERRIDES).py[2]).toBe('zhe');
+  });
+
+  it('只 sau số đếm là lượng từ "zhī", còn lại là "zhǐ"', () => {
+    expect(rubyOf('他只来过一次。', NO_OVERRIDES).py[1]).toBe('zhǐ');
+    expect(rubyOf('我家有两只猫。', NO_OVERRIDES).py[4]).toBe('zhī');
+    expect(rubyOf('这只小狗很漂亮。', NO_OVERRIDES).py[1]).toBe('zhī');
   });
 
   it('không biến điệu 一/不 (giữ thanh gốc như từ điển)', () => {
@@ -337,8 +454,12 @@ describe('đề chỉ dùng chữ trong phạm vi cấp', () => {
             ...((it.audio as { zh: string }[] | undefined) ?? []).map(
               (l) => l.zh,
             ),
-            ...['text', 'statement'].map((k) => (it[k] as string) ?? ''),
+            ...['text', 'statement', 'question', 'answer'].map((k) =>
+              typeof it[k] === 'string' ? it[k] : '',
+            ),
             ...((it.options as string[] | undefined) ?? []),
+            ...((it.pieces as string[] | undefined) ?? []),
+            ...((it.alternatives as string[] | undefined) ?? []),
           ],
         ),
       ]),
@@ -352,4 +473,20 @@ describe('đề chỉ dùng chữ trong phạm vi cấp', () => {
           if (HAN.test(c) && !ok.has(c)) outside.add(c);
       expect([...outside].join('')).toBe('');
     });
+  // Chữ nhiễu ở câu viết chữ theo pinyin chỉ cần là chữ THẬT người học có
+  // thể gặp (như danh sách của bộ gõ), không bắt cùng cấp — nhưng không lấy
+  // chữ hiếm ngoài HSK 6.
+  it('chữ để chọn ở câu viết chữ nằm trong từ vựng HSK ≤ 6', () => {
+    const ok = allowed(6);
+    const outside = PAPERS.flatMap((paper) =>
+      paper.sections.flatMap((s) =>
+        s.parts.flatMap((part) =>
+          part.type === 'pinyin-char'
+            ? part.items.flatMap((it) => it.choices.filter((c) => !ok.has(c)))
+            : [],
+        ),
+      ),
+    );
+    expect(outside.join('')).toBe('');
+  });
 });

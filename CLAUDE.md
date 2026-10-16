@@ -409,6 +409,21 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
     án tránh chuỗi đoán được (C-D-E-A-B, T-F-T-F-T) — bot bấm xen kẽ từng ăn trọn 5/5 câu ★.
     `mock-exam.content.spec.ts` kiểm tra MỌI đề: đúng số câu/dạng câu từng phần, đáp án trong
     phạm vi, phần ghép A–F mỗi phương án dùng đúng 1 lần (thừa 1), câu điền từ có đúng 1 "（ ）".
+  - **HSK 3 (2026-10-16)**: 80 câu (nghe 10·10·10·10, đọc 10·10·10, viết 5·5), 85 phút (đề thật
+    "约90分钟" gồm 5 phút điền thông tin — cùng cách tính 35/50 phút của HSK 1/2), 300 điểm, đạt 180.
+    Đề mẫu chính thức H31001 đã đối chiếu từng phần. Mở rộng 2 dạng có sẵn: `judge-text` phần NGHE
+    (chỉ `audio` + câu ★ in trên đề, không có `text`), `choose-text` phần ĐỌC (`text` đoạn văn +
+    `question` câu hỏi ★). 2 dạng mới phần VIẾT: `order` (sắp xếp mảnh thành câu — `answer` là câu
+    có dấu, `alternatives` cho thứ tự khác cũng đúng như trạng ngữ thời gian trước/sau chủ ngữ;
+    `isCorrect()` + `normalizeSentence()` bỏ dấu câu/khoảng trắng rồi so, dùng chung cho
+    `scorePaper` lẫn `partStats`) và `pinyin-char` (nhìn pinyin viết chữ: chọn 1 trong 6 chữ đồng âm
+    `choices` — thi trên máy cũng gõ pinyin rồi chọn chữ; đáp án là số như các dạng chọn khác).
+    Spec thêm: mảnh ghép lại ra ĐÚNG từng câu đáp án nhưng thứ tự in trên đề không phải đáp án;
+    pinyin in trên chỗ trống khớp `rubyOf` của chữ đáp án TRONG câu; chữ nhiễu nằm trong từ vựng
+    HSK ≤ 6. Pinyin từng mảnh lấy theo vị trí trong câu đúng (đứng riêng thì 了/地 dễ đọc sai).
+    Luật 只: sau số đếm/từ chỉ định là lượng từ "zhī", còn lại "zhǐ" (他只来过一次 từng bị đọc zhī) —
+    so pinyin 9 đề trước/sau: đổi đúng 1 chỗ. **Tránh 得 nghĩa "được" (得了一百分) và 还得/都得
+    (děi)** khi soạn — luật 得 → "de" sẽ đọc sai; viết 考了一百分, 还要.
   - **Tranh là emoji** (không vướng bản quyền ảnh đề thật, hiện được mọi máy); **phần nghe**
     client đọc bằng giọng tiếng Trung của trình duyệt (2 giọng nam/nữ, mỗi câu 2 lần như đề
     thật); câu nghe chỉ có 1 từ trùng mục từ điển có ghi âm thì server gắn `audio.url` (ghi âm
@@ -432,8 +447,8 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
     theo từ điển, khớp dài nhất trước (≤4 chữ), chỉ từ có ĐÚNG 1 mục từ điển (chữ đa âm chọn bừa
     dễ sai), bỏ đại từ/hư từ có ở mọi câu (我 你 的 了 吗…) và chữ dẫn "问：", tối đa 6 từ/câu.
     Giống lớp "dựa vào từ khoá" của Migii HSK, riêng Hanni có âm Hán Việt.
-  - **Chưa làm**: HSK 2–6 (HSK 3+ có phần viết: sắp xếp câu, viết chữ theo pinyin), khoá đề cho
-    Premium (chưa bật payOS thì khoá là không ai trả được tiền).
+  - **Chưa làm**: HSK 4–6 (HSK 4+ phần viết có viết câu theo tranh/viết đoạn — cần chấm bằng AI),
+    khoá đề cho Premium (chưa bật payOS thì khoá là không ai trả được tiền).
 - **Bảng phiên âm (`GET /pinyin/overview`, `@Public()`, `src/modules/pinyin`, 2026-10-15)** — cho
   trang `/phien-am` (bước 拼/声 của "Sáu chặng", trước đó trỏ sang từ điển = hứa suông). Âm thanh
   từng âm tiết = ghi âm thật của CHỮ ĐƠN trong từ điển (八 → bā); **bỏ chữ có nhiều cách đọc** vì

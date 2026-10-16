@@ -51,19 +51,49 @@ export interface MatchPictureItem extends ItemBase {
   answer: number;
 }
 
-/** Nghe câu + câu hỏi, chọn 1 trong 3 đáp án chữ. */
+/** Nghe câu + câu hỏi, chọn 1 trong 3 đáp án chữ; HSK 3 phần đọc 3 thì đọc
+ * đoạn văn + câu hỏi ★ in trên đề. */
 export interface ChooseTextItem extends ItemBase {
-  audio: SpeechLine[];
+  audio?: SpeechLine[];
+  text?: string;
+  /** Câu hỏi ★ in trên đề (phần đọc) — phần nghe hỏi bằng lời ("问：…"). */
+  question?: string;
   options: string[];
   answer: number;
 }
 
-/** Đọc 1 đoạn rồi xét câu có dấu ★ đúng hay sai (HSK 2 phần đọc 3). */
+/** Đọc 1 đoạn (HSK 2 phần đọc 3) hoặc nghe 1 đoạn (HSK 3 phần nghe 2) rồi xét
+ * câu có dấu ★ in trên đề đúng hay sai. */
 export interface JudgeTextItem extends ItemBase {
-  text: string;
+  audio?: SpeechLine[];
+  text?: string;
   /** Câu ★ cần xét (không ghi dấu ★, client tự thêm). */
   statement: string;
   answer: boolean;
+}
+
+/** Sắp xếp các mảnh cho sẵn thành câu (HSK 3 phần viết 1). */
+export interface OrderItem extends ItemBase {
+  /** Các mảnh theo thứ tự in trên đề (đã xáo — spec kiểm tra không trùng
+   * thứ tự đúng). */
+  pieces: string[];
+  /** Câu đúng, có dấu câu. Chấm sau khi bỏ dấu câu + khoảng trắng. */
+  answer: string;
+  /** Thứ tự khác cũng đúng (vd trạng ngữ thời gian trước/sau chủ ngữ). */
+  alternatives?: string[];
+}
+
+/** Nhìn pinyin viết chữ vào chỗ trống (HSK 3 phần viết 2). Thi trên máy thì
+ * gõ pinyin rồi chọn chữ trong danh sách bộ gõ đưa ra — ở đây chọn trong các
+ * chữ đồng âm, khỏi bắt người học cài bàn phím tiếng Trung. */
+export interface PinyinCharItem extends ItemBase {
+  /** Câu có đúng 1 chỗ trống "（ ）". */
+  text: string;
+  /** Pinyin in trên chỗ trống (đứng đầu câu thì viết hoa, như đề thật). */
+  pinyin: string;
+  /** Chữ đồng âm để chọn, không lặp. */
+  choices: string[];
+  answer: number;
 }
 
 /** Ghép câu hỏi với câu trả lời / điền từ vào chỗ trống, dùng bộ A–F chung. */
@@ -81,6 +111,8 @@ export type PaperPart = (
   | { type: 'match-text'; options: string[]; items: TextItem[] }
   | { type: 'fill-blank'; options: string[]; items: TextItem[] }
   | { type: 'judge-text'; items: JudgeTextItem[] }
+  | { type: 'order'; items: OrderItem[] }
+  | { type: 'pinyin-char'; items: PinyinCharItem[] }
 ) & {
   /** Nửa sau của CÙNG 1 phần đề nhưng dùng bộ tranh/đáp án riêng (HSK 2: câu
    * 11–15 và 16–20 cùng là "第二部分") — đánh số phần, phân tích điểm gộp chung. */
@@ -102,4 +134,5 @@ export interface MockPaper {
   sections: PaperSection[];
 }
 
-export type AnswerValue = number | boolean;
+/** Số thứ tự phương án, ✓/✗, hoặc câu đã sắp xếp (dạng `order`). */
+export type AnswerValue = number | boolean | string;

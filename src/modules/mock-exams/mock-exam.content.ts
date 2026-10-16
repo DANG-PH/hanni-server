@@ -8,8 +8,13 @@ import type {
 } from './mock-exam.types';
 import { HSK1_PAPERS } from './papers/hsk1';
 import { HSK2_PAPERS } from './papers/hsk2';
+import { HSK3_PAPERS } from './papers/hsk3';
 
-export const PAPERS: MockPaper[] = [...HSK1_PAPERS, ...HSK2_PAPERS];
+export const PAPERS: MockPaper[] = [
+  ...HSK1_PAPERS,
+  ...HSK2_PAPERS,
+  ...HSK3_PAPERS,
+];
 
 /** Mỗi phần thi tối đa 100 điểm (HSK 1–2: 200 điểm, HSK 3–6: 300 điểm), đạt
  * từ 60% tổng điểm — đúng mốc 120/200 và 180/300 của đề thật. */
@@ -37,6 +42,11 @@ const HAN = /\p{Script=Han}/u;
 const MAX_WORD = 4;
 /** Trước 得 mà là đại từ thì 得 thường là "děi" (我得走了) — không áp luật "de". */
 const PRONOUNS = new Set(Array.from('我你他她它您们'));
+/** 只 là lượng từ "zhī" khi đứng sau số đếm/từ chỉ định (一只狗, 这只猫); còn
+ * lại là phó từ "zhǐ" (他只来过一次 — pinyin-pro từng đọc nhầm "zhī"). */
+const BEFORE_MEASURE = new Set(
+  Array.from('一二三四五六七八九十两几这那哪每半'),
+);
 
 export function rubyOf(zh: string, overrides: PinyinOverrides): Ruby {
   const chars = Array.from(zh);
@@ -92,6 +102,8 @@ export function rubyOf(zh: string, overrides: PinyinOverrides): Ruby {
         return 'de';
       if (c === '着' && !fromDictionary[i] && (prev === '不' || prev === '得'))
         return 'zháo';
+      if (c === '只' && !fromDictionary[i])
+        return BEFORE_MEASURE.has(prev) ? 'zhī' : 'zhǐ';
       return py[i];
     }),
   };
@@ -189,6 +201,24 @@ export function answerOf(n: NumberedItem): AnswerValue {
   return itemsOf(n.part)[n.itemIndex].answer;
 }
 
+/** Bỏ dấu câu + khoảng trắng — câu sắp xếp chỉ chấm thứ tự từ, không bắt
+ * người làm thêm đúng dấu chấm/dấu hỏi cuối câu. */
+export const normalizeSentence = (s: string) => s.replace(/[\s\p{P}]/gu, '');
+
+/** `given` có phải đáp án đúng của câu `n` không. Câu sắp xếp nhận cả các
+ * thứ tự khác cũng đúng (`alternatives`); sai kiểu thì tính như sai. */
+export function isCorrect(n: NumberedItem, given: unknown): boolean {
+  const raw = itemsOf(n.part)[n.itemIndex];
+  if ('pieces' in raw) {
+    if (typeof given !== 'string') return false;
+    const g = normalizeSentence(given);
+    return [raw.answer, ...(raw.alternatives ?? [])].some(
+      (a) => normalizeSentence(a) === g,
+    );
+  }
+  return given === raw.answer;
+}
+
 export function paperMeta(paper: MockPaper) {
   const items = numberItems(paper);
   const maxScore = paper.sections.length * SECTION_MAX;
@@ -223,13 +253,12 @@ export function scorePaper(
   const items = numberItems(paper);
   const results = items.map((n) => {
     const given = answers[n.no - 1];
-    const answer = answerOf(n);
     return {
       no: n.no,
       section: n.section,
       given: given ?? null,
-      answer,
-      correct: given === answer,
+      answer: answerOf(n),
+      correct: isCorrect(n, given),
     };
   });
   const sections: SectionScore[] = paper.sections.map((s) => {
@@ -281,6 +310,22 @@ export function publicPaper(
       after: { zh: after, py: py.slice(head + Array.from(fill).length) },
     };
   };
+  /** Pinyin từng mảnh câu sắp xếp lấy theo vị trí trong câu ĐÚNG — đứng riêng
+   * thì "地"/"了" dễ bị đọc sai. Chỉ gửi pinyin, không lộ thứ tự. */
+  const piecesOf = (pieces: string[], answer: string) => {
+    const full = rubyOf(answer, overrides);
+    const chars = Array.from(answer);
+    const used = new Set<number>();
+    return pieces.map((piece) => {
+      const len = Array.from(piece).length;
+      for (let i = 0; i + len <= chars.length; i++)
+        if (!used.has(i) && chars.slice(i, i + len).join('') === piece) {
+          used.add(i);
+          return { zh: piece, py: full.py.slice(i, i + len) };
+        }
+      return ruby(piece);
+    });
+  };
   let no = 1;
   return {
     ...paperMeta(paper),
@@ -298,15 +343,25 @@ export function publicPaper(
               only ? audioByWord.get(only) : undefined,
             );
           }
-          if (
-            part.type === 'fill-blank' &&
-            'text' in raw &&
-            raw.text &&
-            typeof raw.answer === 'number'
-          )
-            item.blank = blank(raw.text, part.options[raw.answer]);
+          // Chữ lắp vào chỗ trống (điền từ / viết chữ theo pinyin) — chỉ để
+          // tính pinyin cả câu, không gửi xuống.
+          const fill =
+            part.type === 'fill-blank' && typeof raw.answer === 'number'
+              ? part.options[raw.answer]
+              : 'choices' in raw
+                ? raw.choices[raw.answer]
+                : null;
+          if (fill !== null && 'text' in raw && raw.text)
+            item.blank = blank(raw.text, fill);
           else if ('text' in raw && raw.text) item.text = ruby(raw.text);
+          if ('question' in raw && raw.question)
+            item.question = ruby(raw.question);
           if ('statement' in raw) item.statement = ruby(raw.statement);
+          if ('pieces' in raw) item.pieces = piecesOf(raw.pieces, raw.answer);
+          if ('choices' in raw) {
+            item.pinyin = raw.pinyin;
+            item.choices = raw.choices;
+          }
           if ('picture' in raw) item.picture = raw.picture.e;
           if ('pictures' in raw) item.pictures = raw.pictures.map((p) => p.e);
           if ('options' in raw) item.options = raw.options.map(ruby);
@@ -337,8 +392,12 @@ function textsOf(n: NumberedItem): string[] {
     texts.push(...raw.audio.map((l) => l.zh.replace(/^问[：:]/, '')));
   if (n.part.type === 'fill-blank' && 'text' in raw && raw.text)
     texts.push(raw.text.replace(BLANK, n.part.options[raw.answer as number]));
+  else if ('choices' in raw)
+    texts.push(raw.text.replace(BLANK, raw.choices[raw.answer]));
   else if ('text' in raw && raw.text) texts.push(raw.text);
+  if ('question' in raw && raw.question) texts.push(raw.question);
   if ('statement' in raw) texts.push(raw.statement);
+  if ('pieces' in raw) texts.push(raw.answer);
   if (n.part.type === 'match-text')
     texts.push(n.part.options[raw.answer as number]);
   if ('options' in raw && typeof raw.answer === 'number')
@@ -361,6 +420,9 @@ export function reviewOf(
       no: n.no,
       answer: raw.answer,
       vi: raw.vi,
+      ...('alternatives' in raw && raw.alternatives?.length
+        ? { alternatives: raw.alternatives }
+        : {}),
       ...(words.length ? { words } : {}),
       ...(raw.explain ? { explain: raw.explain } : {}),
       ...('audio' in raw && raw.audio
@@ -412,7 +474,7 @@ export function partStats(
         total: 0,
       };
       stat.total++;
-      if (answers[n.no - 1] === answerOf(n)) stat.correct++;
+      if (isCorrect(n, answers[n.no - 1])) stat.correct++;
       stats.set(key, stat);
     }
   }
