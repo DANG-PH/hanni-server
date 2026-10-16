@@ -600,9 +600,9 @@ export const HSK1_PAPERS: MockPaper[] = [
             ],
             items: [
               {
-                text: '出租车来了，我们走吧。',
+                text: '出租车来了，我们上车吧。',
                 answer: 0,
-                vi: 'Taxi đến rồi, chúng ta đi thôi.',
+                vi: 'Taxi đến rồi, chúng ta lên xe thôi.',
               },
               {
                 text: '王先生，请喝茶。',
@@ -1027,9 +1027,9 @@ export const HSK1_PAPERS: MockPaper[] = [
                 vi: 'Tôi biết viết chữ Hán.',
               },
               {
-                text: '女：我走了，明天见！男：（ ）！',
+                text: '女：我去上课了，明天见！男：（ ）！',
                 answer: 2,
-                vi: 'Nữ: Mình đi đây, mai gặp nhé! — Nam: Tạm biệt!',
+                vi: 'Nữ: Mình đi học đây, mai gặp nhé! — Nam: Tạm biệt!',
               },
               { text: '我想（ ）电视。', answer: 5, vi: 'Tôi muốn xem TV.' },
             ],

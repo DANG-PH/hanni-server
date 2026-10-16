@@ -7,8 +7,9 @@ import type {
   SpeechLine,
 } from './mock-exam.types';
 import { HSK1_PAPERS } from './papers/hsk1';
+import { HSK2_PAPERS } from './papers/hsk2';
 
-export const PAPERS: MockPaper[] = [...HSK1_PAPERS];
+export const PAPERS: MockPaper[] = [...HSK1_PAPERS, ...HSK2_PAPERS];
 
 /** Mỗi phần thi tối đa 100 điểm (HSK 1–2: 200 điểm, HSK 3–6: 300 điểm), đạt
  * từ 60% tổng điểm — đúng mốc 120/200 và 180/300 của đề thật. */
@@ -34,6 +35,8 @@ export type PinyinOverrides = Map<string, string[]>;
 
 const HAN = /\p{Script=Han}/u;
 const MAX_WORD = 4;
+/** Trước 得 mà là đại từ thì 得 thường là "děi" (我得走了) — không áp luật "de". */
+const PRONOUNS = new Set(Array.from('我你他她它您们'));
 
 export function rubyOf(zh: string, overrides: PinyinOverrides): Ruby {
   const chars = Array.from(zh);
@@ -48,21 +51,25 @@ export function rubyOf(zh: string, overrides: PinyinOverrides): Ruby {
       HAN.test(c) ? pinyin(c, { toneType: 'symbol', toneSandhi: false }) : '',
     );
   const fromDictionary = new Array<boolean>(chars.length).fill(false);
-  for (let i = 0; i < chars.length;) {
+  // Ghép từ từ PHẢI sang TRÁI, khớp dài nhất: đi từ trái thì "看中国电影" bị
+  // nhận thành 看中 (kàn zhòng) + 国; từ phải ra 看 + 中国 đúng — tách từ ngược
+  // vốn chính xác hơn với tiếng Trung.
+  for (let end = chars.length; end > 0;) {
     let matched = 0;
-    for (let len = Math.min(MAX_WORD, chars.length - i); len >= 1; len--) {
+    for (let len = Math.min(MAX_WORD, end); len >= 1; len--) {
       // 儿 đứng riêng để luật 儿 hoá bên dưới quyết định ("r" hay "ér").
-      if (len === 1 && chars[i] === '儿') break;
-      const syllables = overrides.get(chars.slice(i, i + len).join(''));
+      if (len === 1 && chars[end - 1] === '儿') break;
+      const start = end - len;
+      const syllables = overrides.get(chars.slice(start, end).join(''));
       if (syllables?.length !== len) continue;
       for (let k = 0; k < len; k++) {
-        py[i + k] = syllables[k];
-        fromDictionary[i + k] = true;
+        py[start + k] = syllables[k];
+        fromDictionary[start + k] = true;
       }
       matched = len;
       break;
     }
-    i += matched || 1;
+    end -= matched || 1;
   }
   return {
     zh,
@@ -72,6 +79,19 @@ export function rubyOf(zh: string, overrides: PinyinOverrides): Ruby {
       // 儿子 đã được từ điển ghi đúng "ér" ở bước trên.
       if (c === '儿' && !fromDictionary[i] && i > 0 && HAN.test(chars[i - 1]))
         return 'r';
+      // Chữ đa âm từ điển không gỡ được (nhiều mục) mà pinyin-pro hay đoán sai:
+      // 得 đứng riêng sau động/tính từ là trợ từ kết cấu (考得很好) — "de"
+      // chứ không "dé"; 着 sau 不/得 là bổ ngữ (睡不着) — "zháo" chứ không "zhe".
+      const prev = i > 0 ? chars[i - 1] : '';
+      if (
+        c === '得' &&
+        !fromDictionary[i] &&
+        HAN.test(prev) &&
+        !PRONOUNS.has(prev)
+      )
+        return 'de';
+      if (c === '着' && !fromDictionary[i] && (prev === '不' || prev === '得'))
+        return 'zháo';
       return py[i];
     }),
   };
@@ -135,6 +155,9 @@ export interface NumberedItem {
   no: number;
   section: SectionKind;
   partIndex: number;
+  /** Thứ tự phần đề CHÍNH THỨC trong phần thi (0-based) — 2 nửa `continues`
+   * của cùng "第二部分" có chung số này. */
+  officialPart: number;
   part: PaperPart;
   itemIndex: number;
 }
@@ -143,18 +166,22 @@ export interface NumberedItem {
 export function numberItems(paper: MockPaper): NumberedItem[] {
   const out: NumberedItem[] = [];
   let no = 1;
-  for (const section of paper.sections)
+  for (const section of paper.sections) {
+    let official = -1;
     section.parts.forEach((part, partIndex) => {
+      if (!part.continues) official++;
       itemsOf(part).forEach((_, itemIndex) =>
         out.push({
           no: no++,
           section: section.kind,
           partIndex,
+          officialPart: official,
           part,
           itemIndex,
         }),
       );
     });
+  }
   return out;
 }
 
@@ -279,6 +306,7 @@ export function publicPaper(
           )
             item.blank = blank(raw.text, part.options[raw.answer]);
           else if ('text' in raw && raw.text) item.text = ruby(raw.text);
+          if ('statement' in raw) item.statement = ruby(raw.statement);
           if ('picture' in raw) item.picture = raw.picture.e;
           if ('pictures' in raw) item.pictures = raw.pictures.map((p) => p.e);
           if ('options' in raw) item.options = raw.options.map(ruby);
@@ -287,6 +315,7 @@ export function publicPaper(
         return {
           no: first,
           type: part.type,
+          ...(part.continues ? { continues: true } : {}),
           ...('pictures' in part
             ? { pictures: part.pictures.map((p) => p.e) }
             : {}),
@@ -309,6 +338,7 @@ function textsOf(n: NumberedItem): string[] {
   if (n.part.type === 'fill-blank' && 'text' in raw && raw.text)
     texts.push(raw.text.replace(BLANK, n.part.options[raw.answer as number]));
   else if ('text' in raw && raw.text) texts.push(raw.text);
+  if ('statement' in raw) texts.push(raw.statement);
   if (n.part.type === 'match-text')
     texts.push(n.part.options[raw.answer as number]);
   if ('options' in raw && typeof raw.answer === 'number')
@@ -372,11 +402,11 @@ export function partStats(
     if (!paper || !Array.isArray(attempt.answers)) continue;
     const answers = attempt.answers as unknown[];
     for (const n of numberItems(paper)) {
-      const key = `${paper.level}:${n.section}:${n.partIndex}`;
+      const key = `${paper.level}:${n.section}:${n.officialPart}`;
       const stat = stats.get(key) ?? {
         level: paper.level,
         section: n.section,
-        part: n.partIndex + 1,
+        part: n.officialPart + 1,
         type: n.part.type,
         correct: 0,
         total: 0,

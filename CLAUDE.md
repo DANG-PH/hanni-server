@@ -396,8 +396,17 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   vựng. Bám cấu trúc đề HSK HIỆN HÀNH (kỳ thi HSK 1–6 thường kỳ 2026 vẫn dùng; đề HSK 3.0 mới thi
   ở vài đợt riêng, chưa công bố đủ cấu trúc) — HSK 1: Nghe 4 phần × 5 + Đọc 4 phần × 5, mỗi phần
   thi quy về 100 điểm, đạt 60% (120/200, 180/300).
-  - **Đề viết bằng TypeScript** (`papers/hsk1.ts`, 3 đề Hanni tự soạn, chỉ dùng 300 từ HSK 1) chứ
-    không phải JSON/DB: sai cấu trúc là lỗi lúc build, deploy cùng code, không cần seed.
+  - **Đề viết bằng TypeScript** (`papers/hsk1.ts`, `papers/hsk2.ts` — mỗi cấp 3 đề Hanni tự soạn)
+    chứ không phải JSON/DB: sai cấu trúc là lỗi lúc build, deploy cùng code, không cần seed.
+    **Spec soát từ vựng theo CHỮ**: mọi chữ Hán trong đề cấp N phải có trong từ vựng HSK ≤ N
+    (`data/processed/words.seed.json`) + vài chữ tên riêng — bắt được 走 (HSK 2 theo 3.0) lọt
+    vào 2 câu đề HSK 1 cũ. Soạn đề HSK 2 tránh từ hay gặp trong đề HSK 2 CŨ mà HSK 3.0 cấp 1–2
+    không có (伞, 刚, 才, 更, 难, 礼物, 自行车, 以后…).
+  - **HSK 2 (2026-10-16)**: 60 câu (nghe 10·10·10·5, đọc 5·5·5·10), 50 phút. Dạng mới
+    `judge-text` (đọc đoạn, xét câu ★ đúng/sai — `statement`). "第二部分" nghe và "第四部分" đọc
+    có 2 bộ tranh/đáp án riêng (A–F thừa 1, rồi A–E vừa đủ) → tách 2 phần dữ liệu, nửa sau
+    `continues: true`; `numberItems().officialPart` gộp lại cho số phần + `partStats`. Rải đáp
+    án tránh chuỗi đoán được (C-D-E-A-B, T-F-T-F-T) — bot bấm xen kẽ từng ăn trọn 5/5 câu ★.
     `mock-exam.content.spec.ts` kiểm tra MỌI đề: đúng số câu/dạng câu từng phần, đáp án trong
     phạm vi, phần ghép A–F mỗi phương án dùng đúng 1 lần (thừa 1), câu điền từ có đúng 1 "（ ）".
   - **Tranh là emoji** (không vướng bản quyền ảnh đề thật, hiện được mọi máy); **phần nghe**
@@ -408,6 +417,10 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
     bằng từ điển Hanni cho từ/chữ có ĐÚNG 1 cách đọc (名字 "míng zi" chứ không "míng zì", 谁
     "shéi", 哪儿 "nǎ r"); 儿 hoá ngoài từ điển đọc "r". Câu điền từ tính pinyin trên cả câu ĐÃ LẮP
     đáp án rồi mới cắt — để riêng "了。" thì bị đọc "liǎo". Đề dựng 1 lần rồi cache trong tiến trình.
+    **Ghép từ điển từ PHẢI sang TRÁI** (2026-10-16): từ trái sang thì 看中国 khớp 看中 (kàn
+    zhòng); + 2 luật cho chữ nhiều mục từ điển mà pinyin-pro đoán sai: 得 đứng riêng sau động/tính
+    từ (không phải đại từ) → "de" (考得很好, trước đây "dé"); 着 sau 不/得 → "zháo" (睡不着). So
+    pinyin cả 6 đề trước/sau: đúng 10 chỗ đổi, đều là chỗ sai.
   - `GET /mock-exams` (`@OptionalAuth`, kèm điểm cao nhất nếu đã đăng nhập), `GET /mock-exams/:slug`
     (`@Public`, KHÔNG kèm đáp án/bản dịch/nhãn tranh — spec kiểm tra), `POST /mock-exams/:slug/submit`
     (`@OptionalAuth`, chấm ở server, trả chữa bài: đáp án + lời thoại có pinyin + bản dịch + giải

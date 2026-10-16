@@ -58,6 +58,14 @@ export interface ChooseTextItem extends ItemBase {
   answer: number;
 }
 
+/** Đọc 1 đoạn rồi xét câu có dấu ★ đúng hay sai (HSK 2 phần đọc 3). */
+export interface JudgeTextItem extends ItemBase {
+  text: string;
+  /** Câu ★ cần xét (không ghi dấu ★, client tự thêm). */
+  statement: string;
+  answer: boolean;
+}
+
 /** Ghép câu hỏi với câu trả lời / điền từ vào chỗ trống, dùng bộ A–F chung. */
 export interface TextItem extends ItemBase {
   /** Với `fill-blank`: chỗ trống viết là "（ ）". */
@@ -65,13 +73,19 @@ export interface TextItem extends ItemBase {
   answer: number;
 }
 
-export type PaperPart =
+export type PaperPart = (
   | { type: 'judge'; items: JudgeItem[] }
   | { type: 'choose-picture'; items: ChoosePictureItem[] }
   | { type: 'match-picture'; pictures: Picture[]; items: MatchPictureItem[] }
   | { type: 'choose-text'; items: ChooseTextItem[] }
   | { type: 'match-text'; options: string[]; items: TextItem[] }
-  | { type: 'fill-blank'; options: string[]; items: TextItem[] };
+  | { type: 'fill-blank'; options: string[]; items: TextItem[] }
+  | { type: 'judge-text'; items: JudgeTextItem[] }
+) & {
+  /** Nửa sau của CÙNG 1 phần đề nhưng dùng bộ tranh/đáp án riêng (HSK 2: câu
+   * 11–15 và 16–20 cùng là "第二部分") — đánh số phần, phân tích điểm gộp chung. */
+  continues?: boolean;
+};
 
 export type SectionKind = 'listening' | 'reading' | 'writing';
 

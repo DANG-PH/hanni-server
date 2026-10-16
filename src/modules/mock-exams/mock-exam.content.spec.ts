@@ -13,16 +13,41 @@ import {
   type Vocab,
 } from './mock-exam.content';
 
-/** Cấu trúc đề HSK hiện hành theo cấp: số câu mỗi phần, theo thứ tự. */
+/** Cấu trúc đề HSK hiện hành theo cấp: số câu mỗi phần (theo dữ liệu — HSK 2
+ * tách "第二部分" nghe và "第四部分" đọc thành 2 nửa có bộ tranh/đáp án riêng,
+ * nửa sau đánh dấu `continues`). */
 const STRUCTURE: Record<number, Record<string, number[]>> = {
   1: { listening: [5, 5, 5, 5], reading: [5, 5, 5, 5] },
+  2: { listening: [10, 5, 5, 10, 5], reading: [5, 5, 5, 5, 5] },
 };
 const PART_TYPES: Record<number, Record<string, string[]>> = {
   1: {
     listening: ['judge', 'choose-picture', 'match-picture', 'choose-text'],
     reading: ['judge', 'match-picture', 'match-text', 'fill-blank'],
   },
+  2: {
+    listening: [
+      'judge',
+      'match-picture',
+      'match-picture',
+      'choose-text',
+      'choose-text',
+    ],
+    reading: [
+      'match-picture',
+      'fill-blank',
+      'judge-text',
+      'match-text',
+      'match-text',
+    ],
+  },
 };
+/** Phần nào là nửa sau (`continues`) — vị trí theo dữ liệu. */
+const CONTINUES: Record<number, Record<string, number[]>> = {
+  1: { listening: [], reading: [] },
+  2: { listening: [2], reading: [4] },
+};
+const DURATION: Record<number, number> = { 1: 35, 2: 50 };
 
 const NO_OVERRIDES: PinyinOverrides = new Map();
 
@@ -43,7 +68,11 @@ describe('nội dung đề thi thử', () => {
             shape[section.kind],
           );
           expect(section.parts.map((p) => p.type)).toEqual(types[section.kind]);
+          expect(
+            section.parts.flatMap((p, i) => (p.continues ? [i] : [])),
+          ).toEqual(CONTINUES[paper.level][section.kind]);
         }
+        expect(paper.durationMin).toBe(DURATION[paper.level]);
       });
 
       it('đáp án nằm trong phạm vi phương án', () => {
@@ -73,17 +102,27 @@ describe('nội dung đề thi thử', () => {
                 part.type === 'match-picture'
                   ? part.pictures.length
                   : part.options.length;
-              expect(n).toBe(6);
+              // Bộ A–F: thừa đúng 1 phương án (như đề thật — phương án của câu
+              // ví dụ); riêng nửa sau HSK 2 (A–E) đủ đúng 5 cho 5 câu.
+              expect(
+                n === part.items.length + 1 ||
+                  (part.continues && n === part.items.length),
+              ).toBe(true);
               const used = (part.items as { answer: number }[]).map(
                 (it) => it.answer,
               );
-              // Mỗi phương án A–F chỉ đúng cho 1 câu, dư đúng 1 phương án.
+              // Mỗi phương án chỉ đúng cho 1 câu.
               expect(new Set(used).size).toBe(used.length);
               for (const a of used) expect(a).toBeLessThan(n);
             }
             if (part.type === 'fill-blank')
               for (const it of part.items)
                 expect(it.text.split(BLANK)).toHaveLength(2);
+            if (part.type === 'judge-text')
+              for (const it of part.items) {
+                expect(typeof it.answer).toBe('boolean');
+                expect(it.statement.trim().length).toBeGreaterThan(0);
+              }
           }
       });
 
@@ -180,6 +219,23 @@ describe('rubyOf', () => {
     expect(item.blank.before.zh + item.blank.after.zh).not.toContain('岁');
   });
 
+  it('tách từ từ phải sang: 看中国 là 看 + 中国, không phải 看中 + 国', () => {
+    const overrides: PinyinOverrides = new Map([
+      ['看中', ['kàn', 'zhòng']],
+      ['中国', ['zhōng', 'guó']],
+      ['电影', ['diàn', 'yǐng']],
+    ]);
+    expect(rubyOf('我每天都看中国电影。', overrides).py[5]).toBe('zhōng');
+  });
+
+  it('得 sau động từ đọc "de", 着 trong 睡不着 đọc "zháo"', () => {
+    expect(rubyOf('我考试考得很好。', NO_OVERRIDES).py[4]).toBe('de');
+    expect(rubyOf('她跳舞跳得非常好。', NO_OVERRIDES).py[4]).toBe('de');
+    expect(rubyOf('我得走了。', NO_OVERRIDES).py[1]).not.toBe('de');
+    expect(rubyOf('喝了睡不着。', NO_OVERRIDES).py[4]).toBe('zháo');
+    expect(rubyOf('你穿着很漂亮。', NO_OVERRIDES).py[2]).toBe('zhe');
+  });
+
   it('không biến điệu 一/不 (giữ thanh gốc như từ điển)', () => {
     expect(rubyOf('不是', NO_OVERRIDES).py[0]).toBe('bù');
   });
@@ -248,4 +304,52 @@ describe('partStats', () => {
       type: 'judge',
     });
   });
+});
+
+/**
+ * Đề cấp N chỉ được dùng chữ Hán có trong từ vựng HSK cấp ≤ N (dữ liệu từ
+ * điển của chính Hanni, `data/processed/words.seed.json`) + vài chữ tên riêng.
+ * Xét theo CHỮ (không theo từ) vì lượng từ đứng riêng (一杯) hay tách khỏi từ
+ * ghép (杯子) trong đề thật.
+ */
+describe('đề chỉ dùng chữ trong phạm vi cấp', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const words = require('../../../data/processed/words.seed.json') as {
+    simplified: string;
+    hskLevel: number;
+  }[];
+  // Tên riêng trong đề: 北京, 上海, 越南, 大卫, 李月, 王/张 (họ).
+  const NAMES = new Set(Array.from('李王张卫北京上海越南'));
+  const HAN = /\p{Script=Han}/u;
+  const allowed = (level: number) => {
+    const set = new Set(NAMES);
+    for (const w of words)
+      if (w.hskLevel <= level)
+        for (const c of Array.from(w.simplified)) set.add(c);
+    return set;
+  };
+  const textsOf = (paper: (typeof PAPERS)[number]) =>
+    paper.sections.flatMap((s) =>
+      s.parts.flatMap((part) => [
+        ...('options' in part ? part.options : []),
+        ...(part.items as unknown as Record<string, unknown>[]).flatMap(
+          (it) => [
+            ...((it.audio as { zh: string }[] | undefined) ?? []).map(
+              (l) => l.zh,
+            ),
+            ...['text', 'statement'].map((k) => (it[k] as string) ?? ''),
+            ...((it.options as string[] | undefined) ?? []),
+          ],
+        ),
+      ]),
+    );
+  for (const paper of PAPERS)
+    it(paper.slug, () => {
+      const ok = allowed(paper.level);
+      const outside = new Set<string>();
+      for (const t of textsOf(paper))
+        for (const c of Array.from(t))
+          if (HAN.test(c) && !ok.has(c)) outside.add(c);
+      expect([...outside].join('')).toBe('');
+    });
 });
