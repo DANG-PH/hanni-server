@@ -6,6 +6,8 @@ import {
   PAPERS,
   numberItems,
   partStats,
+  practiceParts,
+  practiceSets,
   publicPaper,
   reviewOf,
   rubyOf,
@@ -286,6 +288,56 @@ describe('chấm câu sắp xếp (HSK 3 phần viết)', () => {
       [1, 'order', 5, 5],
       [2, 'pinyin-char', 5, 5],
     ]);
+  });
+});
+
+describe('luyện từng dạng bài', () => {
+  const sets = practiceSets();
+
+  it('mỗi phần đề chính thức của mỗi cấp là 1 bộ, slug không trùng', () => {
+    expect(new Set(sets.map((x) => x.slug)).size).toBe(sets.length);
+    // HSK 1–2: nghe 4 + đọc 4; HSK 3: nghe 4 + đọc 3 + viết 2.
+    for (const [level, n] of [
+      [1, 8],
+      [2, 8],
+      [3, 9],
+    ])
+      expect(sets.filter((x) => x.level === level)).toHaveLength(n);
+    // Tổng số câu các bộ của 1 cấp = tổng số câu mọi đề cấp đó.
+    for (const level of [1, 2, 3]) {
+      const items = PAPERS.filter((p) => p.level === level).reduce(
+        (sum, p) => sum + numberItems(p).length,
+        0,
+      );
+      expect(
+        sets
+          .filter((x) => x.level === level)
+          .reduce((sum, x) => sum + x.count, 0),
+      ).toBe(items);
+    }
+    expect(sets.find((x) => x.slug === 'hsk3-viet-1')).toMatchObject({
+      type: 'order',
+      count: 15,
+    });
+  });
+
+  it('gom cả 2 nửa `continues` của cùng phần đề, theo từng đề', () => {
+    const found = practiceParts('hsk2-nghe-2')!;
+    expect(found.refs).toHaveLength(6);
+    expect(
+      found.refs.map(
+        (r) =>
+          r.paper.sections[r.sectionIndex].parts[r.partIndex].continues ??
+          false,
+      ),
+    ).toEqual([false, true, false, true, false, true]);
+  });
+
+  it('slug sai hoặc cấp/phần không có → null', () => {
+    expect(practiceParts('linh-tinh')).toBeNull();
+    expect(practiceParts('hsk9-nghe-1')).toBeNull();
+    expect(practiceParts('hsk1-viet-1')).toBeNull();
+    expect(practiceParts('hsk1-nghe-9')).toBeNull();
   });
 });
 

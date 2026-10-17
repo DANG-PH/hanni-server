@@ -3,9 +3,13 @@ import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { StreakService } from '../gamification/streak/streak.service';
 import {
+  isCorrect,
+  numberItems,
   PAPERS,
   paperMeta,
   partStats,
+  practiceParts,
+  practiceSets,
   publicPaper,
   reviewOf,
   scorePaper,
@@ -192,6 +196,40 @@ export class MockExamsService {
         createdAt: true,
       },
     });
+  }
+
+  /** Các bộ "luyện từng dạng bài" (cấp × phần đề), kèm số câu. */
+  practiceList() {
+    return practiceSets();
+  }
+
+  /** 1 bộ luyện: các phần đề cùng dạng của mọi đề cùng cấp, đúng định dạng đề
+   * gửi xuống khi làm bài (KHÔNG kèm đáp án — chấm từng câu ở `practiceCheck`). */
+  async practiceSet(slug: string) {
+    const found = practiceParts(slug);
+    const meta = practiceSets().find((s) => s.slug === slug);
+    if (!found || !meta) throw new NotFoundException('Không có dạng bài này');
+    const { papers } = await this.build();
+    return {
+      ...meta,
+      showPinyin: papers.get(found.refs[0].paper.slug)!.showPinyin,
+      groups: found.refs.map(({ paper, sectionIndex, partIndex }) => ({
+        examSlug: paper.slug,
+        examTitle: paper.title,
+        part: papers.get(paper.slug)!.sections[sectionIndex].parts[partIndex],
+      })),
+    };
+  }
+
+  /** Chấm + chữa ngay 1 câu khi luyện từng dạng (không lưu lượt làm, không
+   * tính vào lịch sử/điểm mạnh yếu — đó là của lượt làm cả đề). */
+  async practiceCheck(examSlug: string, no: number, answer: unknown) {
+    const paper = this.find(examSlug);
+    const n = numberItems(paper).find((x) => x.no === no);
+    if (!n) throw new NotFoundException('Không có câu này');
+    const { overrides, vocab } = await this.build();
+    const review = reviewOf(paper, overrides, vocab).find((r) => r.no === no)!;
+    return { ...review, given: answer ?? null, correct: isCorrect(n, answer) };
   }
 
   /** Điểm mạnh/yếu theo từng phần đề, cộng dồn mọi lượt đã làm. */

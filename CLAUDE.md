@@ -424,6 +424,13 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
     Luật 只: sau số đếm/từ chỉ định là lượng từ "zhī", còn lại "zhǐ" (他只来过一次 từng bị đọc zhī) —
     so pinyin 9 đề trước/sau: đổi đúng 1 chỗ. **Tránh 得 nghĩa "được" (得了一百分) và 还得/都得
     (děi)** khi soạn — luật 得 → "de" sẽ đọc sai; viết 考了一百分, 还要.
+  - **Luyện từng dạng bài (2026-10-17, như Migii HSK)**: `practiceSets()` gom cùng 1 phần đề CHÍNH
+    THỨC của mọi đề cùng cấp thành 1 bộ (slug `hsk{cấp}-{nghe|doc|viet}-{phần}`, 25 bộ cho HSK 1–3, vd
+    `hsk3-viet-1` = 15 câu sắp xếp). `GET /mock-exams/practice` (danh sách), `GET /mock-exams/practice/
+    :slug` (các phần đề theo từng đề, đúng định dạng đề gửi xuống — cả 2 nửa `continues`, KHÔNG kèm đáp
+    án), `POST /mock-exams/practice/check` `{examSlug, no, answer}` chấm + chữa NGAY 1 câu (cùng
+    `reviewOf`/`isCorrect` với nộp cả đề), KHÔNG lưu lượt làm. Cả 3 `@Public()`; route `practice` khai
+    báo TRƯỚC `:slug`.
   - **Tranh là emoji** (không vướng bản quyền ảnh đề thật, hiện được mọi máy); **phần nghe**
     client đọc bằng giọng tiếng Trung của trình duyệt (2 giọng nam/nữ, mỗi câu 2 lần như đề
     thật); câu nghe chỉ có 1 từ trùng mục từ điển có ghi âm thì server gắn `audio.url` (ghi âm

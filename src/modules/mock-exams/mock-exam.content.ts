@@ -443,6 +443,72 @@ export function reviewOf(
   });
 }
 
+/** Đoạn slug của phần thi trong URL bộ luyện (`hsk3-viet-1`). */
+export const SECTION_SLUG: Record<SectionKind, string> = {
+  listening: 'nghe',
+  reading: 'doc',
+  writing: 'viet',
+};
+
+export interface PracticeSetMeta {
+  slug: string;
+  level: number;
+  section: SectionKind;
+  /** Phần đề chính thức (1-based), như "第一部分". */
+  part: number;
+  type: PaperPart['type'];
+  /** Tổng số câu của dạng này qua mọi đề cùng cấp. */
+  count: number;
+}
+
+/** "Luyện từng dạng bài" (như Migii HSK): gom cùng 1 phần đề CHÍNH THỨC của
+ * mọi đề cùng cấp — vd HSK 3 · Viết · Phần 1 của 3 đề = 15 câu sắp xếp câu.
+ * Thứ tự: cấp → phần thi → phần, đúng thứ tự đề. */
+export function practiceSets(papers: MockPaper[] = PAPERS): PracticeSetMeta[] {
+  const sets = new Map<string, PracticeSetMeta>();
+  for (const paper of papers)
+    for (const n of numberItems(paper)) {
+      const slug = `hsk${paper.level}-${SECTION_SLUG[n.section]}-${n.officialPart + 1}`;
+      const set = sets.get(slug) ?? {
+        slug,
+        level: paper.level,
+        section: n.section,
+        part: n.officialPart + 1,
+        type: n.part.type,
+        count: 0,
+      };
+      set.count++;
+      sets.set(slug, set);
+    }
+  return [...sets.values()];
+}
+
+/** Các phần dữ liệu thuộc 1 bộ luyện, theo từng đề (cả 2 nửa `continues` —
+ * mỗi nửa có bộ tranh/phương án dùng chung riêng). `null` nếu slug sai. */
+export function practiceParts(slug: string, papers: MockPaper[] = PAPERS) {
+  const m = /^hsk(\d+)-(nghe|doc|viet)-(\d+)$/.exec(slug);
+  const section = m
+    ? (Object.keys(SECTION_SLUG) as SectionKind[]).find(
+        (k) => SECTION_SLUG[k] === m[2],
+      )
+    : undefined;
+  if (!m || !section) return null;
+  const level = Number(m[1]);
+  const part = Number(m[3]);
+  const refs: { paper: MockPaper; sectionIndex: number; partIndex: number }[] =
+    [];
+  for (const paper of papers.filter((p) => p.level === level)) {
+    const sectionIndex = paper.sections.findIndex((s) => s.kind === section);
+    if (sectionIndex < 0) continue;
+    let official = -1;
+    paper.sections[sectionIndex].parts.forEach((pp, partIndex) => {
+      if (!pp.continues) official++;
+      if (official === part - 1) refs.push({ paper, sectionIndex, partIndex });
+    });
+  }
+  return refs.length ? { level, section, part, refs } : null;
+}
+
 export interface PartStat {
   level: number;
   section: SectionKind;
