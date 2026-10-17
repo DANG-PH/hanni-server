@@ -29,7 +29,7 @@ function saveViCache(cache: Map<string, string>): void {
  * - Video CÓ phụ đề tiếng Trung → lấy bản chép + MỐC THỜI GIAN THẬT (đồng bộ karaoke),
  *   dịch tiếng Việt do Hanni soạn.
  * - Video KHÔNG có phụ đề → dùng bản chép mẫu (thời gian ước lượng theo nhịp đọc).
- * Video `createdById = null` là nội dung hệ thống → seed lại sẽ làm mới.
+ * Mọi video đều là nội dung hệ thống (bỏ tính năng người dùng tự thêm 2026-10-17) → seed lại sẽ làm mới.
  */
 
 const hanOnly = (s: string) => s.replace(/[^\p{Script=Han}]/gu, '');
@@ -752,7 +752,7 @@ const SAMPLES: Sample[] = [
 ];
 
 export async function seedVideos(prisma: PrismaClient): Promise<void> {
-  await prisma.video.deleteMany({ where: { createdById: null } });
+  await prisma.video.deleteMany({});
 
   const viCache = loadViCache();
   let synced = 0;

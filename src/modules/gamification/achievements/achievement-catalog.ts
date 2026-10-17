@@ -129,11 +129,14 @@ export const ACHIEVEMENT_CATALOG: AchievementSeed[] = (() => {
       threshold: 1000,
     },
   ];
-  for (let lv = 1; lv <= 9; lv += 1) {
+  // Cấp 7 chứa cả từ 7–9 (đại cương chỉ tách "7-9") nên chỉ có 1 huy hiệu 7–9;
+  // huy hiệu HSK 8, 9 cũ không bao giờ đạt được — bỏ 2026-10-17.
+  for (let lv = 1; lv <= 7; lv += 1) {
+    const name = lv === 7 ? '7–9' : String(lv);
     items.push({
       code: `HSK${lv}_COMPLETE`,
-      nameVi: `Hoàn thành HSK ${lv}`,
-      descriptionVi: `Thuộc toàn bộ từ vựng cấp HSK ${lv}`,
+      nameVi: `Hoàn thành HSK ${name}`,
+      descriptionVi: `Thuộc toàn bộ từ vựng cấp HSK ${name}`,
       category: AchievementCategory.LEVEL,
       threshold: lv,
     });

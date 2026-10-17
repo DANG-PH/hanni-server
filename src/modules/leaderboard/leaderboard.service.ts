@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { SrsState } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { computeTier } from '../duel/duel-rank.util';
+import { TITLE_CATALOG } from '../shop/title-catalog';
 
 const LEARNED_INTERVAL_DAYS = 21;
 
@@ -29,6 +30,8 @@ export interface LeaderboardRow {
   userId: string;
   displayName: string;
   avatarUrl: string | null;
+  /** Danh hiệu đang dùng (mở theo huy hiệu đã đạt) — null nếu chưa chọn. */
+  title: string | null;
   value: number;
   currentStreak: number;
   isMe: boolean;
@@ -83,7 +86,12 @@ export class LeaderboardService {
     const [users, streaks, myFollows] = await Promise.all([
       this.prisma.user.findMany({
         where: { id: { in: ids } },
-        select: { id: true, displayName: true, avatarUrl: true },
+        select: {
+          id: true,
+          displayName: true,
+          avatarUrl: true,
+          settings: { select: { equippedTitle: true } },
+        },
       }),
       this.prisma.userStreak.findMany({
         where: { userId: { in: ids } },
@@ -106,6 +114,10 @@ export class LeaderboardService {
         userId: r.userId,
         displayName: uMap.get(r.userId)?.displayName ?? 'Người học ẩn danh',
         avatarUrl: uMap.get(r.userId)?.avatarUrl ?? null,
+        title:
+          TITLE_CATALOG.find(
+            (t) => t.key === uMap.get(r.userId)?.settings?.equippedTitle,
+          )?.label ?? null,
         value: r.value,
         currentStreak: sMap.get(r.userId) ?? 0,
         isMe: r.userId === userId,

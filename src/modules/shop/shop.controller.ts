@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '../../common/types';
@@ -21,11 +21,6 @@ export class ShopController {
     return this.shop.getCatalog(user.id);
   }
 
-  @Post('frames/:key/buy')
-  buy(@CurrentUser() user: AuthUser, @Param('key') key: string) {
-    return this.shop.buy(user.id, key);
-  }
-
   @Post('frames/equip')
   equip(@CurrentUser() user: AuthUser, @Body() dto: EquipFrameDto) {
     return this.shop.equip(user.id, dto.frameKey ?? null);
@@ -34,11 +29,6 @@ export class ShopController {
   @Get('titles')
   titleCatalog(@CurrentUser() user: AuthUser) {
     return this.titles.getCatalog(user.id);
-  }
-
-  @Post('titles/:key/buy')
-  buyTitle(@CurrentUser() user: AuthUser, @Param('key') key: string) {
-    return this.titles.buy(user.id, key);
   }
 
   @Post('titles/equip')

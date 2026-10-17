@@ -1,20 +1,43 @@
 export interface Title {
   key: string;
   label: string;
-  price: number;
+  /** Mã huy hiệu (`achievement-catalog.ts`) phải đạt mới dùng được danh hiệu. */
+  achievementCode: string;
 }
 
 /**
- * Danh hiệu — vật phẩm trang trí THỨ HAI (sau khung avatar), hiện dạng CHỮ
- * cạnh tên trên hồ sơ công khai thay vì viền quanh avatar. Cùng lý do mua
- * đứt bằng xu, KHÔNG dùng cơ chế rương/random reward như `frame-catalog.ts`
- * đã giải thích — xu ở đây có thể nạp bằng tiền thật qua payOS.
+ * Danh hiệu hiện cạnh tên trên hồ sơ công khai — MỞ THEO THÀNH TÍCH HỌC THẬT
+ * (huy hiệu đã đạt), không mua được. Trước 2026-10-17 danh hiệu mua đứt bằng
+ * xu nên mua được "Bậc thầy từ vựng" mà chưa thuộc từ nào; user yêu cầu thay
+ * khung/danh hiệu mua bằng xu bằng thứ "có giá trị với việc học (huy hiệu thành
+ * tích, chuỗi ngày học, danh hiệu…)". Gắn vào huy hiệu sẵn có nên không cần
+ * theo dõi thêm gì: đạt huy hiệu là dùng được danh hiệu. Danh hiệu đầu tiên mở
+ * ngay ngày học đầu để người mới thấy cơ chế này sớm.
  */
 export const TITLE_CATALOG: Title[] = [
-  { key: 'diligent', label: 'Chăm chỉ', price: 100 },
-  { key: 'night_owl', label: 'Cú đêm', price: 100 },
-  { key: 'bookworm', label: 'Mọt sách', price: 200 },
-  { key: 'rising_star', label: 'Ngôi sao mới nổi', price: 200 },
-  { key: 'vocab_master', label: 'Bậc thầy từ vựng', price: 400 },
-  { key: 'legend', label: 'Huyền thoại', price: 800 },
+  { key: 'rookie', label: 'Tân binh', achievementCode: 'STREAK_1' },
+  { key: 'diligent', label: 'Chăm chỉ', achievementCode: 'STREAK_7' },
+  { key: 'persistent', label: 'Kiên trì', achievementCode: 'STREAK_30' },
+  { key: 'legend', label: 'Huyền thoại', achievementCode: 'STREAK_100' },
+  { key: 'bookworm', label: 'Mọt sách', achievementCode: 'REVIEWS_200' },
+  {
+    key: 'rising_star',
+    label: 'Ngôi sao mới nổi',
+    achievementCode: 'WORDS_100',
+  },
+  {
+    key: 'vocab_master',
+    label: 'Bậc thầy từ vựng',
+    achievementCode: 'WORDS_1000',
+  },
+  {
+    key: 'hsk1_graduate',
+    label: 'Nhập môn HSK',
+    achievementCode: 'HSK1_COMPLETE',
+  },
+  {
+    key: 'hsk3_graduate',
+    label: 'Vững HSK 3',
+    achievementCode: 'HSK3_COMPLETE',
+  },
 ];

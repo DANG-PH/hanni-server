@@ -381,10 +381,8 @@ export class UsersService {
     await this.prisma.user.update({ where: { id }, data: { passwordHash } });
   }
 
-  /** Xoá tài khoản vĩnh viễn. Video đã thêm giữ lại (createdById → null, xử
-   * lý sẵn ở schema với onDelete: SetNull) — chỉ dữ liệu CÁ NHÂN (tiến độ,
-   * bình luận, tin nhắn, cài đặt...) mới bị xoá theo Cascade có sẵn trong
-   * schema. Yêu cầu đúng mật khẩu nếu tài khoản có đặt mật khẩu (đăng nhập
+  /** Xoá tài khoản vĩnh viễn — dữ liệu CÁ NHÂN (tiến độ, bình luận, tin
+   * nhắn, cài đặt...) bị xoá theo Cascade có sẵn trong schema. Yêu cầu đúng mật khẩu nếu tài khoản có đặt mật khẩu (đăng nhập
    * Google thuần thì bỏ qua vì không có gì để xác minh thêm). */
   async deleteAccount(id: string, password?: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { id } });

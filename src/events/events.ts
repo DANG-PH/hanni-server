@@ -11,7 +11,6 @@ export const AppEvent = {
   StreakUpdated: 'streak.updated',
   QuizCompleted: 'quiz.completed',
   CommentCreated: 'comment.created',
-  VideoLiked: 'video.liked',
   PracticeAttempted: 'practice.attempted',
   UserFollowed: 'user.followed',
   AchievementUnlocked: 'achievement.unlocked',
@@ -58,11 +57,6 @@ export interface CommentCreatedPayload {
   authorId: string;
   /** null = bình luận gốc (không phải trả lời) */
   parentId: string | null;
-}
-
-export interface VideoLikedPayload {
-  videoId: string;
-  likerId: string;
 }
 
 export interface PracticeAttemptedPayload {

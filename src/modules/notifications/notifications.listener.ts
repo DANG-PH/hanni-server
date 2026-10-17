@@ -6,7 +6,6 @@ import {
   type AchievementUnlockedPayload,
   type CommentCreatedPayload,
   type UserFollowedPayload,
-  type VideoLikedPayload,
 } from '../../events/events';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { NotificationsService } from './notifications.service';
@@ -37,44 +36,9 @@ export class NotificationsListener {
             commentId: p.commentId,
           });
         }
-        return;
-      }
-      // Bình luận gốc (không phải trả lời) → báo cho chủ video đã thêm nó.
-      const video = await this.prisma.video.findUnique({
-        where: { id: p.videoId },
-        select: { createdById: true },
-      });
-      if (video?.createdById) {
-        await this.notifications.create({
-          userId: video.createdById,
-          type: NotificationType.VIDEO_COMMENT,
-          actorId: p.authorId,
-          videoId: p.videoId,
-          commentId: p.commentId,
-        });
       }
     } catch (err) {
       this.logger.error(`onCommentCreated: ${(err as Error).message}`);
-    }
-  }
-
-  @OnEvent(AppEvent.VideoLiked, { async: true })
-  async onVideoLiked(p: VideoLikedPayload): Promise<void> {
-    try {
-      const video = await this.prisma.video.findUnique({
-        where: { id: p.videoId },
-        select: { createdById: true },
-      });
-      if (video?.createdById) {
-        await this.notifications.create({
-          userId: video.createdById,
-          type: NotificationType.VIDEO_LIKE,
-          actorId: p.likerId,
-          videoId: p.videoId,
-        });
-      }
-    } catch (err) {
-      this.logger.error(`onVideoLiked: ${(err as Error).message}`);
     }
   }
 

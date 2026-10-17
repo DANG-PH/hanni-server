@@ -154,7 +154,6 @@ model User {
   levelProgress       UserLevelProgress[]
   lessonProgress      UserLessonProgress[]
   quizAttempts        QuizAttempt[]
-  videos              Video[]
   videoProgress       UserVideoProgress[]
   videoComments       VideoComment[]
   videoLikes          VideoLike[]
@@ -184,8 +183,6 @@ model User {
   paymentOrders       PaymentOrder[]
   leagueEntries       LeagueEntry[]
   dailyQuestClaims    DailyQuestClaim[]
-  frames              UserFrame[]
-  titles              UserTitle[]
 
   @@index([lastActiveAt])
 }
@@ -253,8 +250,8 @@ model UserSettings {
   targetRetention     Float    @default(0.9) // chỉ dùng cho FSRS
   reminderHour        Int? // 0-23, giờ địa phương (cho push sau)
   weeklyDigestEnabled Boolean  @default(true) // email tổng kết tuần
-  equippedFrame       String? // key trong AVATAR_FRAMES (frame-catalog.ts), null = không dùng khung
-  equippedTitle       String? // key trong TITLE_CATALOG (title-catalog.ts), null = không dùng danh hiệu
+  equippedFrame       String? // key trong AVATAR_FRAMES (frame-catalog.ts, chỉ còn khung Premium), null = không dùng khung
+  equippedTitle       String? // key trong TITLE_CATALOG (title-catalog.ts, mở theo huy hiệu đã đạt), null = không dùng danh hiệu
   courseLevel         Int? // cấp HSK người học CHỌN theo (1-7, 7 = HSK7-9); null = tự suy từ tiến độ
   updatedAt           DateTime @updatedAt
 }
@@ -536,32 +533,6 @@ model DailyQuestClaim {
   @@index([userId, localDate])
 }
 
-/// Khung avatar ĐÃ MUA — thuần trang trí, xem AVATAR_FRAMES (frame-catalog.ts).
-/// Khung ĐANG DÙNG lưu ở `UserSettings.equippedFrame`, bảng này chỉ ghi
-/// nhận đã sở hữu (mua đứt, không hết hạn) để chặn mua lại 1 khung 2 lần.
-model UserFrame {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  frameKey  String
-  createdAt DateTime @default(now())
-
-  @@unique([userId, frameKey])
-}
-
-/// Danh hiệu (title) — vật phẩm trang trí THỨ HAI mua bằng xu, cùng mô hình
-/// mua-đứt như UserFrame nhưng hiện dạng CHỮ cạnh tên thay vì viền quanh
-/// avatar. Xem TITLE_CATALOG (title-catalog.ts).
-model UserTitle {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  titleKey  String
-  createdAt DateTime @default(now())
-
-  @@unique([userId, titleKey])
-}
-
 /// Denormalize chuỗi streak để đọc nhanh (1-1 User).
 model UserStreak {
   userId              String    @id @db.Uuid
@@ -650,8 +621,6 @@ model Video {
   author        String? // tên kênh YouTube
   isFree        Boolean   @default(true)
   sortOrder     Int       @default(1000) // nhỏ hiện trước; video hệ thống được xếp tay
-  createdById   String?   @db.Uuid
-  createdBy     User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -819,8 +788,6 @@ model PushSubscription {
 
 enum NotificationType {
   COMMENT_REPLY // ai đó trả lời bình luận của mình
-  VIDEO_COMMENT // ai đó bình luận vào video mình đã thêm
-  VIDEO_LIKE // ai đó thích video mình đã thêm
   NEW_FOLLOWER // ai đó theo dõi mình
   ACHIEVEMENT_UNLOCKED // vừa mở khoá 1 huy hiệu
 }

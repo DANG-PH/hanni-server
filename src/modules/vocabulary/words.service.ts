@@ -318,11 +318,13 @@ export class WordsService {
   /** "Từ vựng hôm nay": chọn CỐ ĐỊNH theo ngày (giống nhau cho mọi user, đổi
    * lúc 0h UTC) — xoay vòng theo `frequencyRank` (chỉ từ phổ biến, có nghĩa)
    * để tránh rơi vào từ hiếm ít ai biết. Không lưu DB, tính trực tiếp mỗi lần
-   * gọi nên luôn khớp ngày hiện tại kể cả khi có từ mới được thêm vào. */
-  async ofTheDay() {
+   * gọi nên luôn khớp ngày hiện tại kể cả khi có từ mới được thêm vào.
+   * `level` (1–7, 7 = HSK 7–9) giới hạn đúng cấp người học đang học. */
+  async ofTheDay(level?: number) {
     const where: Prisma.WordWhereInput = {
       meaningVi: { not: null },
       frequencyRank: { not: null },
+      ...(level && level >= 1 && level <= 9 ? { hskLevel: level } : {}),
     };
     const total = await this.prisma.word.count({ where });
     if (total === 0) throw new NotFoundException('Chưa có dữ liệu từ vựng');

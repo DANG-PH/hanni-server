@@ -48,7 +48,7 @@ export class CommentsService {
   async create(userId: string, videoId: string, dto: CreateCommentDto) {
     const video = await this.prisma.video.findUnique({
       where: { id: videoId },
-      select: { id: true, createdById: true },
+      select: { id: true },
     });
     if (!video) throw new NotFoundException('Không tìm thấy video');
 

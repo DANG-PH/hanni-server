@@ -34,16 +34,6 @@ function pushTextFor(
         title: 'Có người trả lời bạn',
         body: `${actor} đã trả lời bình luận của bạn.`,
       };
-    case NotificationType.VIDEO_COMMENT:
-      return {
-        title: 'Bình luận mới',
-        body: `${actor} đã bình luận vào video bạn thêm.`,
-      };
-    case NotificationType.VIDEO_LIKE:
-      return {
-        title: 'Video của bạn được thích',
-        body: `${actor} đã thích video bạn thêm.`,
-      };
     case NotificationType.NEW_FOLLOWER:
       return {
         title: 'Bạn có người theo dõi mới',

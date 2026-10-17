@@ -1,14 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { AppEvent, type VideoLikedPayload } from '../../../events/events';
 import { PrismaService } from '../../../infra/prisma/prisma.service';
 
 @Injectable()
 export class LikesService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly events: EventEmitter2,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async like(userId: string, videoId: string) {
     const video = await this.prisma.video.findUnique({
@@ -23,9 +18,6 @@ export class LikesService {
       create: { userId, videoId },
       update: {},
     });
-
-    const payload: VideoLikedPayload = { videoId, likerId: userId };
-    this.events.emit(AppEvent.VideoLiked, payload);
 
     return this.status(userId, videoId);
   }

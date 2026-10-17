@@ -45,9 +45,12 @@ export class VocabularyController {
     return this.words.list(query);
   }
 
+  /** `?level=` = cấp HSK đang học — trước đó người HSK 1 nhận cả từ HSK 4. */
   @Get('words/of-the-day')
-  getWordOfTheDay() {
-    return this.words.ofTheDay();
+  getWordOfTheDay(
+    @Query('level', new ParseIntPipe({ optional: true })) level?: number,
+  ) {
+    return this.words.ofTheDay(level);
   }
 
   @Public()

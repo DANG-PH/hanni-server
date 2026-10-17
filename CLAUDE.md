@@ -175,7 +175,8 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 - **Từ vựng hôm nay** (`GET /words/of-the-day`, route đăng ký TRƯỚC `words/:id` để tránh
   `ParseUUIDPipe` nuốt mất — xem `vocabulary.controller.ts`): 1 từ CỐ ĐỊNH theo ngày (đổi lúc 0h
   UTC), giống nhau cho mọi user, không lưu DB — xoay vòng theo `frequencyRank` (chỉ từ có nghĩa
-  + có `frequencyRank`, tránh rơi vào từ hiếm) bằng `dayIndex % tổng số từ hợp lệ`.
+  + có `frequencyRank`, tránh rơi vào từ hiếm) bằng `dayIndex % tổng số từ hợp lệ`. `?level=`
+  (từ 2026-10-17) giới hạn đúng cấp đang học — trước đó người HSK 1 nhận cả từ HSK 4.
 - **Ảnh minh hoạ từ vựng** (`word-image.util.ts`, `WordsService.attachImage()`, từ 2026-09-18) —
   research xác nhận KHÔNG có dataset ảnh mở nào sẵn có cho từ vựng HSK (giống tình huống dataset
   hội thoại trước đó). Giải pháp: lấy DẦN qua **Wikimedia Commons** (API tìm kiếm, `action=query
@@ -309,7 +310,9 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `progressCurrent`/`progressTarget` — streak hiện tại (nhóm STREAK), số từ đã thuộc (VOLUME),
   tổng số lượt ôn (MILESTONE), hoặc `learnedWords`/`totalWords` lấy từ `UserLevelProgress`
   (LEVEL — `threshold` ở nhóm này là SỐ CẤP HSK 1-9, không phải số từ, nên không dùng thẳng làm
-  mẫu số).
+  mẫu số). Nhóm LEVEL chỉ còn HSK 1–7, huy hiệu cấp 7 là "Hoàn thành HSK 7–9" (migration
+  `20261017140000_merge_hsk789_achievement`): từ 7–9 nằm chung ở cấp 7 nên huy hiệu HSK 8, 9 cũ
+  không bao giờ đạt được (hiện "0/8", "0/9").
   **Mốc SỚM (sửa 2026-09-21 sau khi ĐO dữ liệu production thật)**: trước đây mốc thấp nhất là
   streak 7 ngày / 50 từ "đã thuộc" — mà "đã thuộc" nghĩa là `nowLearned` trong `review.service.ts`
   (`state=REVIEW && intervalDays >= LEARNED_INTERVAL_DAYS` = 21 ngày), nên người mới KHÔNG THỂ
@@ -598,9 +601,7 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `origin: true` (phản chiếu origin) vẫn an toàn. `main.ts` gắn tường minh
   `app.useWebSocketAdapter(new IoAdapter(app))`, chạy chung cổng HTTP (không cần cổng riêng,
   nhưng Nginx production phải proxy đúng header `Upgrade`/`Connection` cho path
-  `/notifications/socket.io/`). 5 loại thông báo: `COMMENT_REPLY`, `VIDEO_COMMENT` (bình luận
-  vào video mình thêm), `VIDEO_LIKE` (thích video mình thêm) — video hệ thống seed sẵn có
-  `createdById = null` nên không phát 2 loại sau cho video đó —, `NEW_FOLLOWER` (xem dưới), và
+  `/notifications/socket.io/`). 3 loại thông báo: `COMMENT_REPLY`, `NEW_FOLLOWER` (xem dưới), và
   `ACHIEVEMENT_UNLOCKED` (mở khoá huy hiệu mới — KHÔNG có `actorId` vì tự đạt được, không phải
   do người khác tác động; `AchievementsService.unlock()` phát `AppEvent.AchievementUnlocked`
   chỉ khi thật sự unlock lần đầu, nhờ bắt lỗi unique constraint có sẵn).
@@ -856,6 +857,16 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   không có đường thử lại. Khác hẳn rủi ro ở `PaymentsService`/`ShopService` (tiền thật/mua bán)
   — đây chỉ là vài xu nhỏ (5-8 xu) và cần đúng 1 lỗi DB xảy ra đúng khoảnh khắc hiếm, chấp nhận
   đánh đổi thay vì bọc `$transaction` phức tạp cho 1 tính năng phụ giá trị nhỏ.
+- **BỎ khung avatar + danh hiệu mua bằng xu (2026-10-17)** — user: khung mua bằng xu "vô nghĩa
+  với việc học", thay bằng "huy hiệu thành tích, chuỗi ngày học, danh hiệu". Giờ: `frame-catalog.ts`
+  chỉ còn khung Phượng Hoàng (Premium, bật/tắt ở thẻ Premium); `title-catalog.ts` là 9 danh hiệu
+  MỞ THEO HUY HIỆU đã đạt (Tân binh = STREAK_1 … Bậc thầy từ vựng = WORDS_1000, Vững HSK 3 =
+  HSK3_COMPLETE) — không bán, không bảng sở hữu riêng (đọc `UserAchievement`); danh hiệu đang
+  dùng hiện ở hồ sơ công khai VÀ bảng xếp hạng (`LeaderboardRow.title`). Route mua
+  (`POST /shop/*/buy`) đã xoá. Migration `20261017130000_earned_titles` hoàn xu đúng giá cho mọi
+  món đã mua (CoinTransaction `refund_frame:*`/`refund_title:*`), gỡ khung/danh hiệu không còn hợp
+  lệ, xoá bảng `UserFrame`/`UserTitle` — đã chạy thử trên Postgres WASM (PGlite) với dữ liệu mẫu.
+  Hai mục cũ dưới đây giữ làm lịch sử.
 - **Cửa hàng trang trí — khung avatar** (`src/modules/shop`, `ShopService`, `frame-catalog.ts`,
   từ 2026-09-19) — sink xu THỨ HAI sau lá chắn streak (300 xu): ví xu trước đó gần như không có
   gì đáng mua thêm dù đã có nhiều nguồn kiếm (điểm danh, minigame, nhiệm vụ hàng ngày). 4 khung
@@ -1222,9 +1233,14 @@ chạy lâu (HSK7 ~5.5k từ từng bị rớt sau ~50 phút do tunnel) — scri
 đầu, nhưng nếu tiện hơn thì `git pull` + chạy thẳng trên VPS (kết nối `localhost:2222` nội bộ,
 không qua internet) sẽ nhanh hơn nhiều (vài giây thay vì hàng chục phút).
 
-**Học qua video**: `POST /videos` chỉ cần youtubeUrl (transcript tuỳ chọn) → tự lấy phụ đề CC
-tiếng Trung từ YouTube + dịch máy NỀN (`translate.util.ts`: Google free → MyMemory, bảng
-thuật ngữ tu tiên, cache). Không cần API key. `MYMEMORY_EMAIL` nâng hạn mức ngày.
+**Học qua video**: chỉ còn video HỆ THỐNG nạp bằng `prisma/seed/videos.ts` (lấy phụ đề CC tiếng
+Trung từ YouTube + dịch máy: `translate.util.ts` Google free → MyMemory, bảng thuật ngữ tu tiên,
+cache; `MYMEMORY_EMAIL` nâng hạn mức ngày). **Người dùng tự thêm video ĐÃ BỎ HOÀN TOÀN
+(2026-10-17, user yêu cầu bỏ cả giao diện, logic, dữ liệu)**: xoá `POST /videos`, `DELETE
+/videos/:id`, bộ lọc `mine`, `isOwner`, `youtube.util.ts`, sự kiện `VideoLiked` + 2 loại thông báo
+`VIDEO_COMMENT`/`VIDEO_LIKE`, cột `Video.createdById`. Migration `20261017120000_remove_user_videos`
+xoá 1 video người dùng thêm (bản trùng của phim "Trói buộc phế tông") cùng phụ đề/bình luận/lượt
+thích, và 2 bình luận thử nghiệm `[TEST-CC]` — đã sao lưu ở `backups/2026-10-17-remove-user-videos.json`.
 `youtube-transcript.util.ts` có timeout 20s/ngôn ngữ (tránh treo vô thời hạn nếu 1 video lỗi).
 
 **Bấm từ trong bản chép video để xem nghĩa + lưu vào SRS** (`word-match.util.ts`, từ 2026-09-18)
