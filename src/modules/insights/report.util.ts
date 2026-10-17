@@ -259,7 +259,12 @@ export interface CoachSummary {
   plan: string[];
 }
 
-/** Kiểm lại JSON của model (khuôn đã ép nhưng dữ liệu từ ngoài vào). */
+/** Mục ngắn hơn thế này là câu bị cụt — thử thật khi giới hạn "suy nghĩ"
+ * của gemini-2.5-flash, mẹo nhớ ra đúng 1 chữ "Nhớ"/"Chữ". */
+const MIN_ITEM_CHARS = 12;
+
+/** Kiểm lại JSON của model (khuôn đã ép nhưng dữ liệu từ ngoài vào). Có mục
+ * bị cụt thì `null` để thử model khác, thà chậm hơn còn hơn hiện câu cụt. */
 export function parseCoachJson(text: string): CoachSummary | null {
   let raw: unknown;
   try {
@@ -275,7 +280,7 @@ export function parseCoachJson(text: string): CoachSummary | null {
       .map((x) => x.trim())
       .slice(0, max);
   if (typeof o.overview !== 'string' || !o.overview.trim()) return null;
-  return {
+  const summary: CoachSummary = {
     overview: o.overview.trim(),
     wins: strings(o.wins, 3),
     watch: strings(o.watch, 3),
@@ -289,4 +294,14 @@ export function parseCoachJson(text: string): CoachSummary | null {
       .slice(0, 5),
     plan: strings(o.plan, 3),
   };
+  const items = [
+    summary.overview,
+    ...summary.wins,
+    ...summary.watch,
+    ...summary.mnemonics.map((m) => m.tip),
+    ...summary.plan,
+  ];
+  if (!summary.plan.length || items.some((x) => x.length < MIN_ITEM_CHARS))
+    return null;
+  return summary;
 }

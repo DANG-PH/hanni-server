@@ -151,23 +151,48 @@ describe('buildCoachPrompt', () => {
 });
 
 describe('parseCoachJson', () => {
+  const ok = {
+    overview: ' Tuần này bạn học 4/6 ngày, gấp đôi tuần trước. ',
+    wins: [
+      'Học được 32 từ mới.',
+      '',
+      3,
+      'Xong 3 bài theo lộ trình.',
+      'Ôn đều 180 lượt.',
+      'Thêm một ý thứ tư.',
+    ],
+    watch: [],
+    mnemonics: [{ zh: '便宜', tip: 'Đồ tiện nghi mà giá rẻ.' }, { zh: '疼' }],
+    plan: [
+      'Học tiếp 3 bài mới.',
+      'Ôn 30 thẻ mỗi ngày.',
+      'Luyện 10 câu ghép tranh.',
+      'Ý thứ tư.',
+    ],
+  };
+
   it('giữ đúng khuôn, bỏ phần tử sai kiểu, chặn số mục', () => {
-    const r = parseCoachJson(
-      JSON.stringify({
-        overview: ' Tuần này bạn học 4/6 ngày. ',
-        wins: ['a', '', 3, 'b', 'c', 'd'],
-        watch: [],
-        mnemonics: [{ zh: '便宜', tip: 'tiện nghi thì rẻ' }, { zh: '疼' }],
-        plan: ['x', 'y', 'z', 't'],
-      }),
-    );
-    expect(r).toEqual({
-      overview: 'Tuần này bạn học 4/6 ngày.',
-      wins: ['a', 'b', 'c'],
+    expect(parseCoachJson(JSON.stringify(ok))).toEqual({
+      overview: 'Tuần này bạn học 4/6 ngày, gấp đôi tuần trước.',
+      wins: [
+        'Học được 32 từ mới.',
+        'Xong 3 bài theo lộ trình.',
+        'Ôn đều 180 lượt.',
+      ],
       watch: [],
-      mnemonics: [{ zh: '便宜', tip: 'tiện nghi thì rẻ' }],
-      plan: ['x', 'y', 'z'],
+      mnemonics: [{ zh: '便宜', tip: 'Đồ tiện nghi mà giá rẻ.' }],
+      plan: [
+        'Học tiếp 3 bài mới.',
+        'Ôn 30 thẻ mỗi ngày.',
+        'Luyện 10 câu ghép tranh.',
+      ],
     });
+  });
+
+  it('câu bị cụt (mẹo nhớ chỉ còn "Nhớ") thì null để thử model khác', () => {
+    const cut = { ...ok, mnemonics: [{ zh: '疼', tip: 'Nhớ' }] };
+    expect(parseCoachJson(JSON.stringify(cut))).toBeNull();
+    expect(parseCoachJson(JSON.stringify({ ...ok, plan: [] }))).toBeNull();
   });
 
   it('thiếu tổng quan hoặc JSON hỏng thì null', () => {
