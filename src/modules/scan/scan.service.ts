@@ -25,6 +25,7 @@ import {
   SCAN_PROMPT,
   SCAN_SCHEMA,
   type ScanJson,
+  type ScanLine,
 } from './scan.util';
 
 interface ScanWord {
@@ -98,10 +99,9 @@ export class ScanService {
     }
 
     const parsed = await this.read(file);
-    const mode = parsed?.lines.length ? 'text' : 'objects';
-    const source = (mode === 'text' ? parsed?.lines : parsed?.objects) ?? [];
     // Đọc lỗi, hoặc ảnh không có chữ Hán/đồ vật nào: không tính lượt.
-    if (!source.length) used = await this.redis.client.decr(key);
+    if (!parsed?.lines.length && !parsed?.objects.length)
+      used = await this.redis.client.decr(key);
     if (!parsed) {
       throw new ServiceUnavailableException(
         'Chưa đọc được ảnh lúc này, thử lại sau ít phút nhé.',
@@ -110,7 +110,7 @@ export class ScanService {
 
     const index = await this.wordIndex();
     const found = new Map<string, ScanWord>();
-    const lines = source.map((l) => ({
+    const tokenize = (l: ScanLine) => ({
       zh: l.zh,
       vi: l.vi,
       tokens: segmentLine(l.zh, index).map((t) => {
@@ -126,7 +126,9 @@ export class ScanService {
               : null),
         };
       }),
-    }));
+    });
+    const lines = parsed.lines.map(tokenize);
+    const objects = parsed.objects.map(tokenize);
 
     const ids = [...found.keys()];
     const saved = new Set(
@@ -141,8 +143,8 @@ export class ScanService {
     );
     return {
       kind: parsed.kind,
-      mode,
       lines,
+      objects,
       words: [...found.values()].map((w) => ({
         ...w,
         familiar: hanVietMatchesMeaning(w),

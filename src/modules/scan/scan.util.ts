@@ -18,15 +18,17 @@ export const SCAN_MIME_TYPES = [
 const MAX_LINES = 40;
 const MAX_OBJECTS = 8;
 
-/** Một lần gọi Gemini cho cả 2 kiểu ảnh: có chữ Hán thì đọc + dịch từng dòng,
- * không có chữ (món ăn, đồ vật) thì gọi tên tiếng Trung từng thứ — như app
- * đếm calo chụp bữa ăn, nhưng ra từ vựng để học. Thử thật 2026-10-17 trên ảnh
- * thực đơn nghiêng và ảnh mâm cơm: đọc đúng cả 7 dòng; gọi đúng 油条, 米饭,
- * 筷子, 青菜... Câu dịch máy vẫn có lúc sai (饺子 ra "bánh bao") nên nghĩa
- * từng từ lấy từ từ điển Hanni, không lấy từ câu dịch. */
+/** Một lần gọi Gemini trả cả 2 thứ: chữ Hán đọc được (thực đơn, biển hiệu,
+ * sách...) và — khi ảnh CHỦ YẾU chụp món ăn, đồ vật — tên tiếng Trung của
+ * từng thứ, như app đếm calo chụp bữa ăn nhưng ra từ vựng để học. Bản đầu bắt
+ * chọn 1 trong 2 ("có chữ thì bỏ đồ vật"): ảnh mâm cơm có vài chữ trên lon
+ * nước là mất hết món ăn — nên giờ trả cả hai. Thử thật 2026-10-17: thực đơn
+ * nghiêng, mờ (cả phồn thể) đọc đúng mọi dòng; mâm cơm ra 米饭, 油条, 筷子,
+ * 青菜... Câu dịch máy vẫn có lúc sai (饺子 ra "bánh bao") nên nghĩa từng từ
+ * lấy từ từ điển Hanni, không lấy từ câu dịch. */
 export const SCAN_PROMPT = `Bạn là công cụ quét ảnh cho người Việt học tiếng Trung.
-- Ảnh CÓ chữ Hán: đọc MỌI dòng chữ Hán theo thứ tự đọc tự nhiên (trên xuống dưới, trái sang phải; chữ viết dọc thì đọc cột từ phải sang) vào "lines". Mỗi dòng: "zh" = đúng chữ trong ảnh (giữ số, dấu câu; phồn thể giữ phồn thể); "vi" = bản dịch tiếng Việt tự nhiên, ngắn gọn. Khi đó "objects": [].
-- Ảnh KHÔNG có chữ Hán (món ăn, đồ vật, con vật, cảnh vật...): "lines": [] và "objects" = tối đa ${MAX_OBJECTS} thứ nổi bật nhất trong ảnh, thứ quan trọng nhất trước. Mỗi thứ: "zh" = tên gọi tiếng Trung giản thể thông dụng nhất (danh từ ngắn gọn, không kèm số lượng); "vi" = tên tiếng Việt.
+- "lines": MỌI dòng chữ Hán đọc được trong ảnh, theo thứ tự đọc tự nhiên (trên xuống dưới, trái sang phải; chữ viết dọc thì đọc cột từ phải sang). Mỗi dòng: "zh" = đúng chữ trong ảnh (giữ số, dấu câu; phồn thể giữ phồn thể); "vi" = bản dịch tiếng Việt tự nhiên, ngắn gọn. Không có chữ Hán thì [].
+- "objects": nếu ảnh CHỦ YẾU chụp món ăn, đồ vật, con vật, cảnh vật (không có chữ, hoặc chữ chỉ là phụ như nhãn lon, logo): tối đa ${MAX_OBJECTS} thứ nổi bật nhất, thứ quan trọng nhất trước. Mỗi thứ: "zh" = tên gọi tiếng Trung giản thể thông dụng nhất (danh từ ngắn gọn, không kèm số lượng); "vi" = tên tiếng Việt. Nếu ảnh chủ yếu là chữ (thực đơn, biển hiệu, trang sách, màn hình, bao bì nhìn thẳng) thì [].
 "kind" = loại ảnh, một trong: "thực đơn", "biển hiệu", "sách, tài liệu", "bao bì", "màn hình, tin nhắn", "chữ viết tay", "món ăn, đồ vật", "khác".
 Không thêm pinyin, không giải thích.`;
 

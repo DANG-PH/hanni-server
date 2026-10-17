@@ -1142,10 +1142,11 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   checkDailyAskQuota()` có cùng đặc điểm y hệt).
 - **Quét ảnh học từ (`src/modules/scan`, `POST /scan` field `image` + `GET /scan/usage`, từ
   2026-10-17)** — user muốn "AI quét chụp ảnh, OCR" như app đếm calo chụp bữa ăn. MỘT lần gọi
-  Gemini vision (`inlineData` + `responseSchema` JSON, `SCAN_PROMPT` ở `scan.util.ts`) cho cả
-  2 kiểu ảnh: có chữ Hán thì đọc + dịch TỪNG DÒNG (thực đơn, biển hiệu, sách, bao bì, chữ viết
-  tay), không có chữ thì gọi tên tiếng Trung tối đa 8 đồ vật/món ăn (`mode: 'objects'`). Mỗi
-  dòng tách token bằng CHÍNH `segmentLine()` của phụ đề video (đã thành generic) trên bảng từ
+  Gemini vision (`inlineData` + `responseSchema` JSON, `SCAN_PROMPT` ở `scan.util.ts`) trả CẢ
+  `lines` (mọi dòng chữ Hán + câu dịch: thực đơn, biển hiệu, sách, bao bì, chữ viết tay) LẪN
+  `objects` (tên tiếng Trung tối đa 8 món ăn/đồ vật, chỉ khi ảnh CHỦ YẾU là đồ vật). Bản đầu bắt
+  chọn 1 trong 2 ("có chữ thì bỏ đồ vật") — thử thật ảnh mâm cơm có vài chữ trên lon nước là mất
+  hết món ăn. Mỗi dòng tách token bằng CHÍNH `segmentLine()` của phụ đề video (đã thành generic) trên bảng từ
   cache trong tiến trình, khớp CẢ dạng phồn thể (`Word.traditional`, giản thể ưu tiên khi trùng)
   — trả `words[]` kèm Hán Việt, nghĩa từ điển Hanni, audio, `familiar` (`hanVietMatchesMeaning`
   export từ words.service.ts) và `saved` (đã có trong SRS). Lý do lấy nghĩa từ từ điển chứ
@@ -1155,6 +1156,12 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   (`FREE_/PREMIUM_SCAN_DAILY_LIMIT`); đọc lỗi hoặc ảnh không có gì để học thì HOÀN lượt (DECR).
   Đã chạy thử service thật (prisma giả từ seed, Gemini thật) trên thực đơn giản thể, thực đơn
   phồn thể mờ nghiêng, ảnh mâm cơm: ~5–9 giây/ảnh, ra đúng 雞蛋→鸡蛋, 油条, 米饭, 筷子...
+  **Khoá Gemini đang ở gói MIỄN PHÍ: 20 lượt/ngày CHO MỖI model** (đo 2026-10-17 qua lỗi 429
+  `GenerateRequestsPerDayPerProjectPerModel-FreeTier`, hết lượt sau ~20 lần thử lúc phát triển).
+  Trợ lý, luyện nói, quét ảnh, Hanni Coach DÙNG CHUNG hạn mức đó; hết lượt model đầu thì vòng
+  `CHAT_MODELS` tự chuyển model sau (mỗi model 1 hạn mức riêng). Thử nghiệm local cũng tiêu vào
+  đúng hạn mức production — thử ít, tuần tự. Trước khi bán Premium (hứa 100 ảnh/ngày, trợ lý
+  không giới hạn) PHẢI bật billing cho project Gemini.
 - **Báo cáo học tập tuần/tháng/quý + Hanni Coach (`src/modules/insights`, từ 2026-10-17)** —
   `GET /insights/report?period=week|month|quarter&offset=0|1` (ai cũng xem — số liệu của chính
   mình): kỳ này tới hôm nay (`offset` 0) hoặc trọn kỳ trước (1), so với CÙNG SỐ NGÀY đầu kỳ liền
