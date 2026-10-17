@@ -18,6 +18,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { GamificationModule } from './modules/gamification/gamification.module';
 import { GrammarModule } from './modules/grammar/grammar.module';
+import { InsightsModule } from './modules/insights/insights.module';
 import { ExamsModule } from './modules/exams/exams.module';
 import { MockExamsModule } from './modules/mock-exams/mock-exams.module';
 import { PinyinModule } from './modules/pinyin/pinyin.module';
@@ -37,6 +38,7 @@ import { PushModule } from './modules/push/push.module';
 import { QuestsModule } from './modules/quests/quests.module';
 import { ReferralsModule } from './modules/referrals/referrals.module';
 import { RoleplayModule } from './modules/roleplay/roleplay.module';
+import { ScanModule } from './modules/scan/scan.module';
 import { ShopModule } from './modules/shop/shop.module';
 import { SrsModule } from './modules/srs/srs.module';
 import { UsersModule } from './modules/users/users.module';
@@ -106,6 +108,8 @@ import { WalletModule } from './modules/wallet/wallet.module';
     DuelModule,
     PaymentsModule,
     PremiumModule,
+    InsightsModule,
+    ScanModule,
     HealthModule,
   ],
   providers: [

@@ -15,9 +15,9 @@ export interface WordMatch {
   imageUrl: string | null;
 }
 
-export interface LineToken {
+export interface LineToken<W = WordMatch> {
   text: string;
-  word: WordMatch | null;
+  word: W | null;
 }
 
 const MAX_WORD_CHARS = 6;
@@ -43,12 +43,14 @@ export function buildWordIndex<T extends { simplified: string } & WordMatch>(
   return index;
 }
 
-export function segmentLine(
+/** Generic để module quét ảnh dùng chung với dữ liệu từ khác (có âm Hán Việt,
+ * audio); mặc định vẫn là `WordMatch` của phụ đề video. */
+export function segmentLine<W = WordMatch>(
   zh: string,
-  index: Map<string, WordMatch>,
-): LineToken[] {
+  index: Map<string, W>,
+): LineToken<W>[] {
   const chars = Array.from(zh);
-  const tokens: LineToken[] = [];
+  const tokens: LineToken<W>[] = [];
   let i = 0;
   let plain = '';
 
@@ -60,7 +62,7 @@ export function segmentLine(
   };
 
   while (i < chars.length) {
-    let matched: { text: string; word: WordMatch } | null = null;
+    let matched: { text: string; word: W } | null = null;
     const maxLen = Math.min(MAX_WORD_CHARS, chars.length - i);
     for (let len = maxLen; len >= 1; len -= 1) {
       const candidate = chars.slice(i, i + len).join('');

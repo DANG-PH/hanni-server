@@ -697,6 +697,9 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   Premium (`getCatalog()`), mất quyền DÙNG (không mất quyền hiển thị nếu đã trót chọn — user tự
   chọn khung khác) nếu Premium hết hạn (equip() kiểm tra lại `isPremiumActive()`). Hồ sơ công
   khai (`getPublicProfile()`) trả thêm `isPremium` để hiện huy hiệu "PREMIUM" cạnh tên.
+  (3) **Hanni Coach** — nhận xét AI cho báo cáo tuần/tháng/quý; (4) **quét ảnh 100 lượt/ngày**
+  (thường 3) — cả 2 từ 2026-10-17, sau khi user nhận xét "Premium không có đặc quyền gì so với
+  thường", xem mục "Quét ảnh" và "Báo cáo học tập" bên dưới. Vẫn KHÔNG khoá nội dung học.
   **CHƯA thể test luồng thanh toán thật** (giống nạp xu ở trên — chưa có tài khoản merchant
   payOS thật), chỉ verify được qua `GET /premium/status` + `/payments/configured` trả đúng và
   UI tự ẩn nút thanh toán gọn gàng khi chưa cấu hình.
@@ -1137,6 +1140,37 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   cần đúng kiểu tấn công dồn dập bất thường mới khai thác được — chấp nhận đánh đổi thay vì
   khoá tầng ứng dụng phức tạp cho 1 tình huống hiếm ở quy mô hiện tại (`AssistantService.
   checkDailyAskQuota()` có cùng đặc điểm y hệt).
+- **Quét ảnh học từ (`src/modules/scan`, `POST /scan` field `image` + `GET /scan/usage`, từ
+  2026-10-17)** — user muốn "AI quét chụp ảnh, OCR" như app đếm calo chụp bữa ăn. MỘT lần gọi
+  Gemini vision (`inlineData` + `responseSchema` JSON, `SCAN_PROMPT` ở `scan.util.ts`) cho cả
+  2 kiểu ảnh: có chữ Hán thì đọc + dịch TỪNG DÒNG (thực đơn, biển hiệu, sách, bao bì, chữ viết
+  tay), không có chữ thì gọi tên tiếng Trung tối đa 8 đồ vật/món ăn (`mode: 'objects'`). Mỗi
+  dòng tách token bằng CHÍNH `segmentLine()` của phụ đề video (đã thành generic) trên bảng từ
+  cache trong tiến trình, khớp CẢ dạng phồn thể (`Word.traditional`, giản thể ưu tiên khi trùng)
+  — trả `words[]` kèm Hán Việt, nghĩa từ điển Hanni, audio, `familiar` (`hanVietMatchesMeaning`
+  export từ words.service.ts) và `saved` (đã có trong SRS). Lý do lấy nghĩa từ từ điển chứ
+  không từ câu dịch: thử thật thì Gemini dịch 饺子 ra "bánh bao". Đoạn ngoài từ điển vẫn có
+  pinyin (`pinyin-pro`). **Ảnh KHÔNG lưu** (chỉ trong RAM lúc gọi Gemini). Hạn mức theo "ngày
+  học" bằng bộ đếm Redis `scan:{userId}:{ngày}` (INCR, TTL 48h): thường 3, Premium 100
+  (`FREE_/PREMIUM_SCAN_DAILY_LIMIT`); đọc lỗi hoặc ảnh không có gì để học thì HOÀN lượt (DECR).
+  Đã chạy thử service thật (prisma giả từ seed, Gemini thật) trên thực đơn giản thể, thực đơn
+  phồn thể mờ nghiêng, ảnh mâm cơm: ~5–9 giây/ảnh, ra đúng 雞蛋→鸡蛋, 油条, 米饭, 筷子...
+- **Báo cáo học tập tuần/tháng/quý + Hanni Coach (`src/modules/insights`, từ 2026-10-17)** —
+  `GET /insights/report?period=week|month|quarter&offset=0|1` (ai cũng xem — số liệu của chính
+  mình): kỳ này tới hôm nay (`offset` 0) hoặc trọn kỳ trước (1), so với CÙNG SỐ NGÀY đầu kỳ liền
+  trước (`periodRange()` ở `report.util.ts`, tuần bắt đầu Thứ Hai, kẹp không tràn sang kỳ sau —
+  31/3 so với cả tháng 2). Ngày tính theo "ngày học" (timezone + `STREAK_DAY_CUTOFF_HOUR`) như
+  streak. Số liệu: ngày học + phút (`UserDailyActivity`), lượt chấm thẻ/từ mới (`ReviewLog`,
+  LEARN = từ mới), tỉ lệ nhớ = lượt ÔN (REVIEW/RELEARN) không bấm "Quên" (≥10 lượt mới tính),
+  bài xong (`UserLessonProgress.completedAt`), luyện nghe/phát âm, đề thi thử + phần thi yếu
+  (`partStats()` của mock-exams, ≥4 câu và đúng <75%, kèm slug bộ "Luyện từng dạng bài"), 3 từ
+  bấm "Quên" nhiều nhất kỳ, số từ mới học kỳ này "quen nhờ Hán Việt", biểu đồ (`buildSeries`:
+  tuần/tháng mỗi ngày 1 cột, quý gộp 7 ngày/cột). `POST /insights/report/coach` — **chỉ
+  Premium**: Gemini viết nhận xét JSON có khuôn (`COACH_SCHEMA`: tổng quan, làm tốt, cần chú
+  ý, MẸO NHỚ cho từng từ hay quên dựa trên âm Hán Việt đã cho, kế hoạch 3 việc có số mục tiêu
+  bằng tính năng có thật của Hanni). Prompt đưa số liệu đã tính sẵn (khoá tiếng Việt, % làm tròn)
+  để model khỏi tự tính. Chưa học gì thì KHÔNG gọi AI. Cache Redis theo "dấu vân tay" số liệu
+  (bấm lại khi chưa học thêm thì trả bản cũ; kỳ này 1 ngày, kỳ trước 30 ngày).
 
 ## Lệnh
 `npm run start:dev` · `npm run build` · `npm run prisma:migrate` · `npm run db:seed` ·

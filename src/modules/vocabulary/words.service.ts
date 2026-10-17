@@ -341,11 +341,12 @@ export class WordsService {
 }
 
 /** Âm Hán Việt TRÙNG KHỚP một nghĩa tiếng Việt của từ đó — luật dùng chung
- * cho `/words/familiar` (trang "từ bạn đã biết sẵn") và `/words/trial` (bộ
- * thẻ học thử). Chuẩn hoá `meaningVi`: bỏ phần trong ngoặc rồi tách theo
- * `;`/`,`, so CHÍNH XÁC chứ không "chứa" — nhận cả "chứa" thì lọt nhiều từ
- * người đọc không thấy giống, mất tính thuyết phục của cả danh sách. */
-function hanVietMatchesMeaning(w: {
+ * cho `/words/familiar` (trang "từ bạn đã biết sẵn"), `/words/trial` (bộ
+ * thẻ học thử), quét ảnh và báo cáo học tập. Chuẩn hoá `meaningVi`: bỏ phần
+ * trong ngoặc rồi tách theo `;`/`,`, so CHÍNH XÁC chứ không "chứa" — nhận cả
+ * "chứa" thì lọt nhiều từ người đọc không thấy giống, mất tính thuyết phục
+ * của cả danh sách. */
+export function hanVietMatchesMeaning(w: {
   hanViet: string | null;
   meaningVi: string | null;
 }): boolean {
