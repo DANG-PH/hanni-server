@@ -400,7 +400,12 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
     đáp án đúng: phương án nhiễu KHÔNG dùng chung chữ Hán với đáp án (那里/那儿, 没事/没关系 gần
     nghĩa), ghép cặp không 2 nghĩa trùng; câu điền từ lấy nhiễu từ BÀI KHÁC (cùng bài cùng loại từ
     hay điền vừa câu: "我是学生" nhiễu 有). Trả kèm `nextLesson` (khách không gọi được complete)
-    và `toneHints` từng chữ.
+    và `toneHints` từng chữ. **Thêm 2026-10-19** (`clashesWith`, sau khi câu ví dụ HSK 2–3 bật bước điền
+    từ cho 62 bài nữa): hỏi nghe không đưa chữ ĐỒNG ÂM (他/她/它 tā, 在/再, 是/事 — trước đó nghe "tā" có 3 chữ
+    cùng đúng), hỏi theo nghĩa không đưa từ CÙNG NGHĨA NGẮN (很/非常 "rất", 能/可以, 才/刚 "vừa mới"), câu điền
+    từ không đưa từ CÙNG TỪ LOẠI (`Word.pos` — bài anh em cùng chủ đề "… (2/5)" vẫn là "bài khác", 这件事我来办
+    từng có nhiễu 干). Mô phỏng mọi bài HSK 1–3 với dữ liệu thật: câu có nhiễu "cũng đúng" 735 → 0, số câu
+    hỏi không đổi. Bài kiểm tra trình độ (`buildChoiceStep`) theo cùng luật.
   - `POST /learn/lessons/:id/complete` `{results:[{wordId, mistakes}], durationMs}`: từ CHƯA có
     tiến độ đi qua đúng `ReviewService.review()` (0 sai → GOOD, 1 → HARD, ≥2 → AGAIN) nên chuỗi
     ngày/nhiệm vụ/giải đấu/huy hiệu tự chạy theo; từ đã có tiến độ (học lại bài) KHÔNG đụng lịch

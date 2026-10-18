@@ -127,6 +127,90 @@ describe('buildLessonSession', () => {
   });
 });
 
+/** Bài có từ đồng âm (他/她/它 tā), từ cùng nghĩa (很/非常 "rất") và câu điền từ mà
+ * nhiễu cùng từ loại cũng vừa câu (这件事我来办 — 干). */
+const TRICKY = [
+  w('t1', '他', 'anh ấy', { pinyin: 'tā', pos: ['PRONOUN'] }),
+  w('t2', '她', 'cô ấy', { pinyin: 'tā', pos: ['PRONOUN'] }),
+  w('t3', '它', 'nó', { pinyin: 'tā', pos: ['PRONOUN'] }),
+  w('t4', '很', 'rất', { pinyin: 'hěn', pos: ['ADVERB'] }),
+  w('t5', '非常', 'rất; vô cùng', { pinyin: 'fēi cháng', pos: ['ADVERB'] }),
+  w('t6', '办', 'làm; xử lý', {
+    pinyin: 'bàn',
+    pos: ['VERB'],
+    examples: [
+      { zh: '这件事我来办。', pinyin: null, vi: 'Việc này để tôi làm.' },
+    ],
+  }),
+  w('t7', '在', 'ở', { pinyin: 'zài', pos: ['PREPOSITION'] }),
+  w('t8', '再', 'lại', { pinyin: 'zài', pos: ['ADVERB'] }),
+];
+const TRICKY_POOL = [
+  { simplified: '干', meaningVi: 'làm', pinyin: 'gàn', pos: ['VERB'] },
+  { simplified: '做', meaningVi: 'làm', pinyin: 'zuò', pos: ['VERB'] },
+  { simplified: '用', meaningVi: 'dùng', pinyin: 'yòng', pos: ['VERB'] },
+  {
+    simplified: '桌子',
+    meaningVi: 'cái bàn',
+    pinyin: 'zhuō zi',
+    pos: ['NOUN'],
+  },
+  {
+    simplified: '漂亮',
+    meaningVi: 'đẹp',
+    pinyin: 'piào liang',
+    pos: ['ADJECTIVE'],
+  },
+  { simplified: '书', meaningVi: 'sách', pinyin: 'shū', pos: ['NOUN'] },
+  { simplified: '大', meaningVi: 'to; lớn', pinyin: 'dà', pos: ['ADJECTIVE'] },
+];
+const byId = new Map(TRICKY.map((x) => [x.id, x]));
+const byHanzi = new Map(
+  [...TRICKY, ...TRICKY_POOL].map((x) => [x.simplified, x]),
+);
+
+describe('phương án nhiễu không được cũng đúng', () => {
+  const sessions = Array.from({ length: 30 }, (_, i) =>
+    buildLessonSession(TRICKY, TRICKY_POOL, seeded(i + 1)),
+  );
+
+  it('hỏi nghe không đưa chữ đồng âm (他/她/它), hỏi nghĩa không đưa từ cùng nghĩa (很/非常)', () => {
+    for (const c of sessions.flatMap(choices)) {
+      const word = byId.get(c.wordId)!;
+      const others = c.options.filter((_, i) => i !== c.answer);
+      if (c.prompt === 'audio')
+        for (const o of others)
+          expect(byHanzi.get(o)?.pinyin).not.toBe(word.pinyin);
+      if (c.prompt === 'meaning')
+        for (const o of others)
+          expect(shortMeaning(byHanzi.get(o)!.meaningVi!)).not.toBe(
+            shortMeaning(word.meaningVi!),
+          );
+    }
+  });
+
+  it('câu điền từ không đưa từ cùng từ loại (这件事我来办 — không có 干, 做)', () => {
+    const sentences = sessions
+      .flat()
+      .filter((s) => s.kind === 'sentence' && s.wordId === 't6');
+    expect(sentences.length).toBeGreaterThan(0);
+    for (const s of sentences) {
+      if (s.kind !== 'sentence') continue;
+      for (const [i, o] of s.options.entries())
+        if (i !== s.answer) expect(byHanzi.get(o)?.pos).not.toContain('VERB');
+    }
+  });
+
+  it('bài kiểm tra trình độ cũng theo luật đồng âm', () => {
+    const pool = [...TRICKY, ...TRICKY_POOL];
+    for (let seed = 1; seed <= 20; seed++) {
+      const step = buildChoiceStep(TRICKY[0], 'audio', pool, seeded(seed));
+      expect(step!.options).not.toContain('她');
+      expect(step!.options).not.toContain('它');
+    }
+  });
+});
+
 describe('buildChoiceStep', () => {
   it('đáp án đúng vị trí, nhiễu không dùng chung chữ Hán với đáp án', () => {
     const pool = [

@@ -18,12 +18,17 @@ export interface SessionWordInput {
   meaningVi: string | null;
   audioUrl: string | null;
   examples: SessionExample[];
+  /** Để loại phương án nhiễu cũng đúng (xem `clashesWith`). */
+  pinyin?: string;
+  pos?: string[];
 }
 
 /** Từ cùng cấp dùng làm phương án nhiễu khi bài quá ít từ. */
 export interface DistractorInput {
   simplified: string;
   meaningVi: string | null;
+  pinyin?: string;
+  pos?: string[];
 }
 
 export type ChoicePrompt = 'hanzi' | 'meaning' | 'audio';
@@ -90,6 +95,31 @@ function chunks<T>(items: T[]): T[][] {
 interface Candidate {
   simplified: string;
   value: string;
+  meaning?: string;
+  pinyin?: string;
+  pos?: string[];
+}
+
+/** Phương án Hán tự kèm nghĩa ngắn, pinyin, từ loại — để `clashesWith` so. */
+function asHanziCandidate(w: DistractorInput): Candidate {
+  return {
+    simplified: w.simplified,
+    value: w.simplified,
+    meaning: w.meaningVi ? shortMeaning(w.meaningVi) : undefined,
+    pinyin: w.pinyin?.toLowerCase().replace(/\s+/g, ''),
+    pos: w.pos,
+  };
+}
+
+/** Phương án nhiễu cũng ĐÚNG với câu hỏi: cùng nghĩa ngắn khi hỏi theo nghĩa
+ * (很/非常 đều "rất", 能/可以 "có thể"), đồng âm khi hỏi nghe (他/她/它 đều tā,
+ * 在/再 zài), cùng từ loại khi điền câu (这件事我来办 — nhiễu 干 cũng vừa câu). */
+function clashesWith(target: Candidate, ask: 'meaning' | 'audio' | 'sentence') {
+  return (c: Candidate): boolean => {
+    if (ask === 'audio') return !!c.pinyin && c.pinyin === target.pinyin;
+    if (c.meaning && c.meaning === target.meaning) return true;
+    return ask === 'sentence' && !!c.pos?.some((p) => target.pos?.includes(p));
+  };
 }
 
 /** Hai từ dùng chung chữ Hán (那里/那儿, 哪里/哪儿) thường gần nghĩa — làm
@@ -106,6 +136,7 @@ function buildOptions(
   sameLesson: Candidate[],
   fallback: Candidate[],
   rand: () => number,
+  clash: (c: Candidate) => boolean = () => false,
 ): { options: string[]; answer: number } | null {
   const seen = new Set([target.value]);
   const picks: string[] = [];
@@ -114,6 +145,7 @@ function buildOptions(
       if (picks.length === OPTION_COUNT - 1) break;
       if (!c.value || seen.has(c.value)) continue;
       if (sharesChar(c.simplified, target.simplified)) continue;
+      if (clash(c)) continue;
       seen.add(c.value);
       picks.push(c.value);
     }
@@ -148,11 +180,13 @@ export function buildChoiceStep(
   }
   if (prompt === 'audio' && !w.audioUrl) return null;
   if (prompt === 'meaning' && !w.meaningVi) return null;
+  const target = asHanziCandidate(w);
   const built = buildOptions(
-    { simplified: w.simplified, value: w.simplified },
+    target,
     [],
-    pool.map((d) => ({ simplified: d.simplified, value: d.simplified })),
+    pool.map(asHanziCandidate),
     rand,
+    clashesWith(target, prompt),
   );
   return built && { kind: 'choice', wordId: w.id, prompt, ...built };
 }
@@ -183,9 +217,7 @@ export function buildLessonSession(
     w.meaningVi
       ? [{ simplified: w.simplified, value: shortMeaning(w.meaningVi) }]
       : [];
-  const asHanzi = (w: DistractorInput): Candidate[] => [
-    { simplified: w.simplified, value: w.simplified },
-  ];
+  const asHanzi = (w: DistractorInput): Candidate[] => [asHanziCandidate(w)];
   const lessonMeanings = words.flatMap(asMeaning);
   const lessonHanzi = words.flatMap(asHanzi);
   const extraMeanings = distractors.flatMap(asMeaning);
@@ -210,7 +242,13 @@ export function buildLessonSession(
     }
     if (p === 'meaning' && !w.meaningVi) return null;
     const [target] = asHanzi(w);
-    const built = buildOptions(target, lessonHanzi, extraHanzi, rand);
+    const built = buildOptions(
+      target,
+      lessonHanzi,
+      extraHanzi,
+      rand,
+      clashesWith(target, p),
+    );
     return built && { kind: 'choice', wordId: w.id, prompt: p, ...built };
   };
 
@@ -252,7 +290,14 @@ export function buildLessonSession(
     const [target] = asHanzi(w);
     // Nhiễu lấy từ BÀI KHÁC: từ cùng bài cùng loại (động từ với động từ) hay
     // điền vừa câu — "我是学生" mà nhiễu bằng 有 là 2 đáp án đều đọc được.
-    const built = buildOptions(target, [], extraHanzi, rand);
+    // Bài khác cùng chủ đề ("… (2/5)") cũng vậy nên loại luôn từ cùng từ loại.
+    const built = buildOptions(
+      target,
+      [],
+      extraHanzi,
+      rand,
+      clashesWith(target, 'sentence'),
+    );
     if (!built) continue;
     sentences.push({
       kind: 'sentence',

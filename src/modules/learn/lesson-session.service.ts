@@ -48,6 +48,7 @@ export class LessonSessionService {
           audioUrl: true,
           imageUrl: true,
           mnemonicVi: true,
+          pos: true,
           examples: {
             orderBy: { orderIndex: 'asc' },
             take: 2,
@@ -61,7 +62,7 @@ export class LessonSessionService {
           lessonId: { not: lessonId },
           meaningVi: { not: null },
         },
-        select: { simplified: true, meaningVi: true },
+        select: { simplified: true, meaningVi: true, pinyin: true, pos: true },
         orderBy: { frequencyRank: 'asc' },
         take: DISTRACTOR_POOL,
       }),
