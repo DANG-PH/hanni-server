@@ -31,6 +31,7 @@ import {
   parseMnemonic,
   parseSentenceCheck,
   PREMIUM_AI_TOOLS_DAILY_LIMIT,
+  PROMPT_VERSION,
   SENTENCE_SCHEMA,
   sentenceCheckPrompt,
   type Analysis,
@@ -125,7 +126,7 @@ export class AiToolsService {
       throw new BadRequestException('Câu cần viết bằng chữ Hán');
     const word = await this.prisma.word.findUnique({ where: { id: wordId } });
     if (!word) throw new NotFoundException('Không tìm thấy từ');
-    const key = `aitools:check:${wordId}:${hash(sentence)}`;
+    const key = `aitools:check:v${PROMPT_VERSION}:${wordId}:${hash(sentence)}`;
     const cached = await this.redis
       .getJson<SentenceCheck>(key)
       .catch(() => null);
@@ -153,7 +154,7 @@ export class AiToolsService {
     const text = normalizeText(raw);
     if (!text) throw new BadRequestException('Nhập câu cần phân tích');
     const source = hasHan(text) ? 'zh' : 'vi';
-    const key = `aitools:analyze:${source}:${hash(text)}`;
+    const key = `aitools:analyze:v${PROMPT_VERSION}:${source}:${hash(text)}`;
     let analysis = await this.redis.getJson<Analysis>(key).catch(() => null);
     const cached = !!analysis;
     let usage: Awaited<ReturnType<AiToolsService['take']>> | undefined;

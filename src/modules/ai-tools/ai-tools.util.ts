@@ -9,6 +9,8 @@ import { Type } from '@google/genai';
 export const FREE_AI_TOOLS_DAILY_LIMIT = 10;
 export const PREMIUM_AI_TOOLS_DAILY_LIMIT = 200;
 export const SENTENCE_MAX = 120;
+/** Đổi prompt thì tăng số này — khoá bộ nhớ đệm đổi theo, không trả kết quả của prompt cũ. */
+export const PROMPT_VERSION = 2;
 export const ANALYZE_MAX = 200;
 
 const HAN = /\p{Script=Han}/u;
@@ -188,7 +190,7 @@ export function analyzePrompt(text: string, source: 'zh' | 'vi'): string {
     source === 'zh'
       ? '- translationVi: bản dịch tiếng Việt tự nhiên'
       : '- translationVi: dịch NGƯỢC câu tiếng Trung đó sang tiếng Việt (để học viên đối chiếu)',
-    '- grammar: tối đa 3 cấu trúc/ngữ pháp đáng chú ý trong câu tiếng Trung, mỗi mục {pattern: cấu trúc (vd "把 + tân ngữ + động từ"), explanationVi: giải thích ngắn bằng tiếng Việt, gắn với câu này}',
+    '- grammar: tối đa 3 CẤU TRÚC ngữ pháp thật trong câu tiếng Trung (không liệt kê từ đơn lẻ), mỗi mục {pattern: cấu trúc ghi bằng chữ Hán + từ TIẾNG VIỆT, không dùng tiếng Anh (vd "Chủ ngữ + 想 + động từ", "Số từ + lượng từ + danh từ", "把 + tân ngữ + động từ"), explanationVi: giải thích ngắn bằng tiếng Việt, gắn với câu này}',
     '- notesVi: 1 câu lưu ý (từ dễ nhầm, sắc thái, cách nói khác) — chuỗi rỗng nếu không có',
   ];
   return [
