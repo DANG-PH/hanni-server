@@ -5,7 +5,9 @@
  * lên đầu; gõ pinyin liền không dấu ("dianshi") thì không ra gì.
  *
  * Bậc (nhỏ hơn = khớp tốt hơn):
- * 0 trùng mặt chữ · 1 trùng âm Hán Việt / pinyin (bỏ dấu, viết liền) ·
+ * 0 trùng mặt chữ · 1 trùng âm Hán Việt / pinyin (bỏ dấu, viết liền) / nghĩa tiếng
+ * Việt nguyên văn ("xin chao" → 你好 cùng bậc với 新潮 xīncháo, cấp thấp lên trước) ·
+ * 1.5 pinyin gõ "u" cho ü (lu → 绿, sau 路) ·
  * 2 bắt đầu bằng chuỗi gõ · 3 trùng TRỌN 1 từ trong nghĩa tiếng Việt (bỏ dấu) ·
  * 4 chứa trong âm Hán Việt / mặt chữ · 5 chứa trong pinyin / nghĩa tiếng Việt ·
  * 6 trùng trọn từ trong nghĩa tiếng Anh · 7 chứa trong nghĩa tiếng Anh.
@@ -17,7 +19,7 @@ export interface SearchRow {
   traditional: string | null;
   hskLevel: number;
   frequencyRank: number | null;
-  /** pinyin bỏ dấu + số + khoảng trắng: "dian4 shi4" → "dianshi" (ü → u) */
+  /** pinyin bỏ dấu + số + khoảng trắng: "dian4 shi4" → "dianshi" (ü → v như bộ gõ) */
   py: string;
   /** âm Hán Việt bỏ dấu */
   hv: string;
@@ -46,9 +48,10 @@ export function fold(s: string): string {
 }
 
 export function compactPinyin(pinyinNumeric: string): string {
-  return fold(pinyinNumeric.replace(/u:/g, 'u').replace(/ü/g, 'u'))
-    .replace(/v/g, 'u')
-    .replace(/[^a-z]/g, '');
+  return fold(pinyinNumeric.replace(/u:/g, 'v').replace(/ü/g, 'v')).replace(
+    /[^a-z]/g,
+    '',
+  );
 }
 
 export function prepareQuery(q: string): SearchQuery {
@@ -58,7 +61,7 @@ export function prepareQuery(q: string): SearchQuery {
     raw,
     han: /\p{Script=Han}/u.test(raw),
     folded,
-    compact: folded.replace(/v/g, 'u').replace(/[^a-z]/g, ''),
+    compact: folded.replace(/[^a-z]/g, ''),
   };
 }
 
@@ -80,6 +83,8 @@ export function scoreWord(row: SearchRow, q: SearchQuery): number | null {
   }
   if (!q.folded) return null;
   if (row.hv === q.folded || (q.compact && row.py === q.compact)) return 1;
+  if (row.vi === q.folded || row.vi.startsWith(`${q.folded};`)) return 1;
+  if (q.compact && row.py.replace(/v/g, 'u') === q.compact) return 1.5;
   if (row.hv.startsWith(`${q.folded} `)) return 2;
   if (q.compact.length >= 2 && row.py.startsWith(q.compact)) return 2;
   if (hasWord(row.vi, q.folded)) return 3;

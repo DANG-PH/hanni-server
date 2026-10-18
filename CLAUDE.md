@@ -133,9 +133,10 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 - **Tra từ có XẾP HẠNG (`GET /words?q=`, `word-search.util.ts`, 2026-10-18)** — trước đó lọc `contains` nhiều
   cột rồi xếp theo tần suất: gõ "hoc" không dấu không khớp "học" mà khớp "c-hoc-olate" nên 巧克力 lên đầu, gõ
   pinyin liền không dấu ("dianshi") ra rỗng. Giờ bảng ~11k dòng nhẹ cache trong tiến trình (1 giờ), so khớp
-  sau khi BỎ DẤU (tiếng Việt lẫn thanh pinyin, ü = u = v) và xếp theo bậc: trùng mặt chữ → trùng âm Hán Việt /
-  pinyin viết liền → bắt đầu bằng → trùng trọn 1 từ trong nghĩa tiếng Việt → chứa → nghĩa tiếng Anh; cùng bậc
-  thì cấp thấp, từ thông dụng trước. Chỉ áp khi có `q` mà không lọc `lessonId`/`needsReview` (nhánh đó giữ
+  sau khi BỎ DẤU (tiếng Việt lẫn thanh pinyin; ü gõ bằng v như bộ gõ — lv → 绿, gõ u vẫn ra nhưng xếp sau chữ đọc
+  u thật: lu → 路 rồi 绿) và xếp theo bậc: trùng mặt chữ → trùng âm Hán Việt / pinyin viết liền / nghĩa tiếng Việt
+  nguyên văn (xin chao → 你好 trước 新潮 xīncháo) → bắt đầu bằng → trùng trọn 1 từ trong nghĩa tiếng Việt → chứa →
+  nghĩa tiếng Anh; cùng bậc thì cấp thấp, từ thông dụng trước. Chỉ áp khi có `q` mà không lọc `lessonId`/`needsReview` (nhánh đó giữ
   Prisma cũ). Dùng cho ô tra từ điển + gợi ý khi gõ ở client. Test: `word-search.util.spec.ts`.
 - **"Từ bạn đã biết sẵn" (`GET /words/familiar`, `@Public()`, từ 2026-09-22)** — hook thu hút
   nhóm khó tiếp cận nhất: người CHƯA từng học tiếng Trung. 739 từ (số ĐO LẠI 2026-09-22, tính live nên đổi theo dữ liệu) có âm Hán Việt trùng khớp

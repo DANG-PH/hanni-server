@@ -53,6 +53,9 @@ const ROWS = [
   row('时间', 'shi2 jian1', 'thời gian', 'thời gian', 'time', 1, 20),
   row('上', 'shang4', 'thượng', 'trên; (thời gian) trước', 'up, on', 1, 5),
   row('绿', 'lü4', 'lục', 'xanh lá', 'green', 2, 90),
+  row('路', 'lu4', 'lộ', 'đường', 'road', 2, 80),
+  row('你好', 'ni3 hao3', 'nễ hảo', 'xin chào', 'hello', 1, 10),
+  row('新潮', 'xin1 chao2', 'tân triều', 'thời thượng', 'trendy', 7, 900),
 ];
 const top = (q: string, n = 3) =>
   rankWords(ROWS, prepareQuery(q))
@@ -80,9 +83,13 @@ describe('rankWords — tra từ có xếp hạng', () => {
     expect(top('学')).toEqual(['学', '学生', '学校']);
   });
 
-  it('ü gõ bằng v hoặc u', () => {
+  it('ü gõ bằng v (như bộ gõ) ra đúng chữ; gõ u vẫn ra nhưng sau chữ đọc "u" thật', () => {
     expect(top('lv', 1)).toEqual(['绿']);
-    expect(top('lu', 1)).toEqual(['绿']);
+    expect(top('lu', 2)).toEqual(['路', '绿']);
+  });
+
+  it('nghĩa tiếng Việt nguyên văn cùng bậc với pinyin trùng — cấp thấp lên trước', () => {
+    expect(top('xin chao', 2)).toEqual(['你好', '新潮']);
   });
 
   it('lọc theo cấp', () => {
