@@ -3,7 +3,7 @@ import { PrismaService } from '../../infra/prisma/prisma.service';
 import { TITLE_CATALOG, type Title } from './title-catalog';
 
 export interface TitleCatalogItem extends Title {
-  /** Tên huy hiệu cần đạt — hiện cho danh hiệu chưa mở. */
+  /** Điều kiện của huy hiệu cần đạt ("Học liên tục 7 ngày") — hiện cho danh hiệu chưa mở. */
   requirement: string;
   owned: boolean;
   equipped: boolean;
@@ -19,18 +19,21 @@ export class TitleService {
       this.unlockedCodes(userId),
       this.prisma.achievement.findMany({
         where: { code: { in: TITLE_CATALOG.map((t) => t.achievementCode) } },
-        select: { code: true, nameVi: true },
+        select: { code: true, descriptionVi: true },
       }),
       this.prisma.userSettings.findUnique({
         where: { userId },
         select: { equippedTitle: true },
       }),
     ]);
-    const nameOf = new Map(achievements.map((a) => [a.code, a.nameVi]));
+    const conditionOf = new Map(
+      achievements.map((a) => [a.code, a.descriptionVi]),
+    );
     return {
       titles: TITLE_CATALOG.map((title) => ({
         ...title,
-        requirement: nameOf.get(title.achievementCode) ?? title.achievementCode,
+        requirement:
+          conditionOf.get(title.achievementCode) ?? title.achievementCode,
         owned: unlocked.has(title.achievementCode),
         equipped: settings?.equippedTitle === title.key,
       })),
