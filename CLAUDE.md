@@ -1393,20 +1393,30 @@ cho tổng lượt luyện + số từ khác nhau + tỉ lệ đúng (cả LISTE
 2026-09-18 — xem mục "Rank tier/season..." hoặc CLAUDE.md gốc). Xem thêm ở mục "Bình luận +
 thích video + thông báo" phía trên.
 
-**Câu ví dụ cho từ vựng** (`WordExample`, `scripts/seed-word-examples.ts`): HSK1 (300/300 từ)
-đã có câu ví dụ do Hanni tự soạn (không qua dịch máy, tránh phụ thuộc quỹ MyMemory) —
-`prisma/seed/data/word-examples-hsk1.json` (mảng `[simplified, pinyinNumeric, zh, vi]`, pinyin
-sinh tự động bằng `pinyin-pro` lúc chạy script, không lưu tay để tránh sai dấu thanh). Script
-CHUẨN — khớp Word theo `(simplified, pinyinNumeric)`, xoá ví dụ cũ của đúng các từ trong file rồi
+**Câu ví dụ cho từ vựng** (`WordExample`, `scripts/seed-word-examples.ts`): **HSK 1–3 (995/995 từ)**
+có câu ví dụ do Hanni tự soạn (không qua dịch máy, tránh phụ thuộc quỹ MyMemory) —
+`prisma/seed/data/word-examples-hsk{1,2,3}.json` (mảng `[simplified, pinyinNumeric, zh, vi, pinyin?]`).
+Script CHUẨN — khớp Word theo `(simplified, pinyinNumeric)`, xoá ví dụ cũ của đúng các từ trong file rồi
 tạo lại (idempotent, không đụng Word hay từ khác) — chạy tay `npx tsx
 scripts/seed-word-examples.ts`, KHÔNG nằm trong `db:seed` mặc định (giống
 `migrate-lesson-themes.ts`, phải chạy riêng sau khi seed Word lần đầu). Đã include ở
 `GET /words/:id`, `/words/of-the-day`, và `GET /learn/lessons/:id` (learn.service.ts — trước đó
-BỊ THIẾU include, đã sửa 2026-09-18). HSK2-9 (10.612 từ còn lại) CHƯA làm — cùng cách nếu làm
-tiếp, tạo thêm `word-examples-hsk{N}.json` rồi gọi `seedFile()` cho từng file trong
-`seed-word-examples.ts`.
+BỊ THIẾU include, đã sửa 2026-09-18). Phiên học bài tự có bước điền từ vào câu (`sentence`) cho từ nào có câu.
+**HSK 2–3 (2026-10-19)**: soạn theo luật của đề thi thử — mọi chữ Hán trong câu cấp N nằm trong từ vựng HSK ≤ N,
+câu chứa đúng từ, phủ đủ từ của cấp (`word-examples.data.spec.ts`; HSK 1 soạn trước luật này, dùng cả 每 等 咖啡,
+nên chỉ soát khoá). **Pinyin** sinh bằng `examplePinyin()` (`vocabulary/example-pinyin.util.ts` — `rubyOf` của đề
+thi thử: từ điển Hanni + luật 得/着/只/儿 hoá), thanh GỐC không biến điệu 一/不 (cùng quy ước từ điển + đề thi; chấm
+thanh điệu tự giải thích biến điệu). `pinyin-pro` thuần từng đọc sai 说得 "dé", 哪儿 "nǎ ér", 朋友 "péng yǒu", 谁
+"shuí"; câu nào cách mới vẫn sai thì ghi tay ở phần tử thứ 5 (穿着 zhe, 还你 huán, 长得 zhǎng de, 我得 děi, 地方 dì
+fang — soát bằng `--review` + liệt kê cách đọc từng chữ đa âm). Production nạp bằng migration
+`20261019100000_word_examples_hsk2_3` sinh bởi `scripts/build-word-examples-migration.ts`: INSERT chỉ khi từ CHƯA có
+câu nào; `--fix=1` UPDATE pinyin 86 câu HSK 1 chỉ khi giá trị hiện tại đúng bằng giá trị `pinyin-pro` cũ (đối chiếu
+qua API công khai: 86/86 khớp). File HSK 1 từng giữ 11 khoá cách đọc CŨ (个 ge3, 吗 ma2, 要 yao1… trước đợt sửa
+2026-09-22) nên seed lại DB mới là mất 11 câu — đã sửa, spec giờ soát khoá cả HSK 1. Thử trên PGlite với toàn bộ
+từ production: 995 câu lệch 0, chạy lại không đổi gì. HSK 4–9 (9.963 từ) CHƯA làm — cùng cách: thêm
+`word-examples-hsk{N}.json`, thêm cấp vào spec + `seed-word-examples.ts`, sinh migration mới.
 
-Chưa làm (roadmap, chừa chỗ): câu ví dụ HSK2-9, cấu trúc đề thi HSK
+Chưa làm (roadmap, chừa chỗ): câu ví dụ HSK4-9, cấu trúc đề thi HSK
 thật đầy đủ (nhiều phần nghe/đọc/viết đúng số câu + thời gian từng cấp — hiện mới có câu
 nghe/đọc trộn vào quiz từ vựng, chưa đúng cấu trúc thật), ngữ pháp dẫn dắt theo bài học. Hội
 thoại luyện nói với AI theo tình huống ĐÃ LÀM (`src/modules/roleplay`, xem mục riêng ở trên).
