@@ -12,7 +12,13 @@
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { indexCedict, parseCedict } from './lib/cedict';
+import {
+  groupCedict,
+  indexCedict,
+  isVariantEntry,
+  parseCedict,
+  type CedictEntry,
+} from './lib/cedict';
 import {
   hanVietOf,
   loadHanVietByReading,
@@ -27,7 +33,11 @@ import {
   parseSyllabus,
   parseWordTsvs,
 } from './lib/krmanik';
-import { normalizePinyinKey, numericToDiacritic, stripTones } from './lib/pinyin';
+import {
+  normalizePinyinKey,
+  numericToDiacritic,
+  stripTones,
+} from './lib/pinyin';
 import { mapPos } from './lib/pos-map';
 
 const RAW = join(__dirname, '..', '..', 'data', 'raw');
@@ -65,6 +75,37 @@ function comparablePinyin(p: string): string {
   return (p || '').replace(/\s+/g, '').trim().toLowerCase();
 }
 
+/**
+ * Dạng phồn thể CHUẨN cho 1 cách đọc. `all_cedict.json` gộp mọi mục cùng mặt chữ
+ * giản thể vào 1 object nên `traditional` hay rơi vào dạng BIẾN THỂ (你→妳, 是→昰,
+ * 年→秊, 吃→喫, 了→瞭, 下面→下麵 "nấu mì") — mà âm Hán Việt tra theo phồn thể,
+ * nên trước 2026-10-18 nhiều từ HSK 1 mất âm (你, 是, 年, 千, 回...) và trang từ
+ * điển hiện sai dạng phồn thể. Thử lần lượt: dạng của danh sách từ krmanik (chọn
+ * theo nghĩa — đúng 后→後, 只 lượng từ→隻), dạng đang có, rồi mục CVDICT không phải
+ * biến thể (ưu tiên trùng giản thể); 2 bước đầu chỉ nhận nếu là mục CVDICT thật,
+ * không phải mục "biến thể của…".
+ */
+function pickTraditional(
+  entries: CedictEntry[],
+  simp: string,
+  fromList: string | null | undefined,
+  current: string | null,
+): string | null {
+  // CVDICT không có mục nào (致力于) — danh sách krmanik từng ghi sai 緻力於.
+  if (entries.length === 0) return current ?? fromList ?? null;
+  const real = entries.filter((e) => !isVariantEntry(e, entries));
+  const isReal = (t: string) => real.some((e) => e.traditional === t);
+  const isVariant = (t: string) =>
+    !isReal(t) && entries.some((e) => e.traditional === t);
+  if (fromList && isReal(fromList)) return fromList;
+  if (current && isReal(current)) return current;
+  // 2 nguồn cùng 1 dạng mà CVDICT chỉ có dạng khác (公布 — CVDICT chỉ có 公佈): giữ.
+  if (current && (!fromList || fromList === current) && !isVariant(current))
+    return current;
+  const pool = real.length ? real : entries;
+  return (pool.find((e) => e.traditional === simp) ?? pool[0]).traditional;
+}
+
 function cleanDef(def: string): string {
   return (
     def
@@ -84,7 +125,10 @@ function cleanDef(def: string): string {
 /** Gọn nghĩa tiếng Anh Pleco (đôi khi liệt kê 15 từ đồng nghĩa). */
 function trimMeaning(def: string | null): string | null {
   if (!def) return null;
-  const parts = def.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
+  const parts = def
+    .split(/[,;]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
   let out = parts.slice(0, 6).join(', ');
   if (out.length > 140) out = out.slice(0, 137).replace(/[,\s]+\S*$/, '') + '…';
   return out || null;
@@ -106,7 +150,9 @@ function main(): void {
   const tsvByWord = parseWordTsvs(KRM);
   const freq = parseFrequency(KRM);
   const cedict = parseAllCedict(KRM); // simplified -> {traditional, pinyin[], definitions}
-  const cvdict = indexCedict(parseCedict(readFileSync(CVDICT_FILE, 'utf8')));
+  const cvdictEntries = parseCedict(readFileSync(CVDICT_FILE, 'utf8'));
+  const cvdict = indexCedict(cvdictEntries);
+  const cvdictGroups = groupCedict(cvdictEntries);
 
   // Âm Hán Việt: Unihan làm nền, bù thêm ~150 chữ phổ biến Unihan còn thiếu
   // (xem lib/hanviet.ts) — supplement CHỈ điền chỗ Unihan CHƯA CÓ, không ghi
@@ -122,6 +168,15 @@ function main(): void {
   const hanVietOverrides = loadHanVietOverrides(CURATED_DIR);
   for (const [char, reading] of hanVietOverrides) hanVietMap.set(char, reading);
   const hanVietByReading = loadHanVietByReading(CURATED_DIR);
+  // Phồn thể theo CÁCH ĐỌC khi chữ giản thể gộp nhiều chữ phồn thể khác nghĩa mà
+  // không nguồn nào chọn đúng (干 gān "khô" → 乾, không phải 幹 "làm").
+  const traditionalOverrides = new Map(
+    Object.entries(
+      JSON.parse(
+        readFileSync(join(CURATED_DIR, 'traditional-overrides.json'), 'utf8'),
+      ) as Record<string, string>,
+    ),
+  );
   const hanVietWordOverrides = loadHanVietWordOverrides(CURATED_DIR);
   console.log(
     `  Hán Việt: ${hanVietMap.size} ký tự (${hanVietFilled} từ supplement, ${hanVietOverrides.size} ghi đè)`,
@@ -138,7 +193,9 @@ function main(): void {
 
   const curated = new Map<string, CuratedEntry>();
   if (existsSync(CURATED)) {
-    for (const c of JSON.parse(readFileSync(CURATED, 'utf8')) as CuratedEntry[]) {
+    for (const c of JSON.parse(
+      readFileSync(CURATED, 'utf8'),
+    ) as CuratedEntry[]) {
       curated.set(`${c.simplified}|${c.pinyinNumeric}`, c);
     }
   }
@@ -231,7 +288,14 @@ function main(): void {
 
     // --- nghĩa ---
     const tsv = tsvByWord.get(simp);
-    if (!traditional) traditional = tsv?.traditional || null;
+    traditional =
+      traditionalOverrides.get(key) ??
+      pickTraditional(
+        cvdictGroups.get(key) ?? [],
+        simp,
+        tsv?.traditional,
+        traditional,
+      );
     const meaningEn = trimMeaning(
       (tsv?.meaningEn && cleanDef(tsv.meaningEn)) ||
         (ced && cleanDef(Object.values(ced.definitions)[0] ?? '')) ||
@@ -242,7 +306,9 @@ function main(): void {
     let meaningVi = viEntry ? cleanDef(viEntry.defs[0] ?? '') || null : null;
     let translationStatus = meaningVi ? 'MACHINE' : 'MISSING';
 
-    const cur = curated.get(key) ?? curated.get(`${simp}|${normalizePinyinKey(pinyinNumeric)}`);
+    const cur =
+      curated.get(key) ??
+      curated.get(`${simp}|${normalizePinyinKey(pinyinNumeric)}`);
     let examples: unknown[] | undefined;
     if (cur) {
       if (cur.meaningVi) {
@@ -321,7 +387,10 @@ function main(): void {
     }
 
     const themeOf = new Map(
-      themeFile.wordThemes.map((w) => [`${w.simplified}|${w.pinyinNumeric}`, w.theme]),
+      themeFile.wordThemes.map((w) => [
+        `${w.simplified}|${w.pinyinNumeric}`,
+        w.theme,
+      ]),
     );
     // Dự phòng khớp theo MỖI CHỮ: file chủ đề soạn tay khoá theo
     // `simplified|pinyinNumeric`, nên mỗi lần sửa cách chọn pinyin (vd bản

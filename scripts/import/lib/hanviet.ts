@@ -101,10 +101,13 @@ export function hanVietOf(
   const chars = Array.from(traditional || simplified);
   const syllables = pinyinNumeric.toLowerCase().split(/\s+/).filter(Boolean);
   const aligned = syllables.length === chars.length;
-  const readings = chars.map(
-    (c, i) =>
-      (aligned ? byReading.get(c)?.[syllables[i]] : undefined) ?? map.get(c),
+  // Ngoặc của đại cương (没（有）, 有（一）点儿 — chữ trong ngoặc có thể bỏ) giữ nguyên.
+  const readings = chars.map((c, i) =>
+    /[（）]/.test(c)
+      ? c
+      : ((aligned ? byReading.get(c)?.[syllables[i]] : undefined) ??
+        map.get(c)),
   );
   if (readings.some((r) => !r)) return null;
-  return readings.join(' ');
+  return readings.join(' ').replace(/（\s*/g, '(').replace(/\s*）/g, ')');
 }

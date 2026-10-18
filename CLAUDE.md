@@ -92,6 +92,18 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `hanviet-overrides.json` + ~50 chữ thiếu hẳn (這 做 她 坐 懂 爸...) ở `hanviet-supplement.json`.
   1.734 từ đổi âm. Chữ lệch quy luật mà âm ĐÚNG (听 thính → tīng, 期 kì → qī) là ngoại lệ thật,
   giữ nguyên — đừng "sửa" cho khớp quy luật. Chữ hiếm HSK7-9 chỉ rà qua bộ lọc đó, chưa rà hết.
+  **Phồn thể BIẾN THỂ hàng loạt — sửa tận gốc 2026-10-18**: `all_cedict.json` của krmanik GỘP mọi mục CEDICT
+  cùng mặt chữ giản thể vào 1 object nên `traditional` hay là dạng biến thể (你→妳, 是→昰, 年→秊, 千→韆,
+  吃→喫, 了→瞭, 回→逥, 下面→下麵) → tra Hán Việt theo phồn thể ra null: 136 từ HSK 1–4 mất âm, kể cả 你 是
+  很 年. `build-words.ts` `pickTraditional()` chọn lại từ CVDICT (mỗi dạng phồn thể 1 dòng): dạng của danh
+  sách từ krmanik → dạng đang có → mục không phải biến thể (ưu tiên trùng giản thể); "biến thể" =
+  `isVariantEntry()` (lib/cedict.ts: nghĩa đầu "biến thể của/xem", HOẶC có "biến thể của X" mà X là chữ
+  giản thể/dạng của mục khác cùng nhóm — 辭 có "biến thể của 詞" nên KHÔNG tính). Ca không nguồn nào đúng
+  ghi ở `data/curated/traditional-overrides.json` (khoá `giản|pinyinSố`: 干 gān→乾, 台 tái→臺). Bù 85 chữ
+  Unihan chưa có + ghi đè 9 âm Nôm lộ ra (喂 ỏi→uy, 咬 rao→giảo, 函 hòm→hàm, 嫩 non→nộn, 溪 khe→khê…); từ có
+  ngoặc của đại cương ra "một (hữu)". Phủ 87,2% → **89,7% (9.824/10.958)**, HSK 1–4 còn 11 từ trống (卡 啤 咱
+  趟 赚… chưa chắc âm, cố ý để trống). Lên production bằng migration `20261018100000_dictionary_data_fixes`
+  (không truy cập thẳng DB production), đã chạy thử trên PGlite với giá trị production: lệch 0.
   **Bẫy dạng phồn thể biến thể (sửa 2026-10-15)**: tra theo `traditional` nên khi nguồn ghi
   phồn thể là chữ BIẾN THỂ thì lấy nhầm âm của chữ biến thể — 吃→喫 "khịt", 床→牀 "giường",
   篮球→籃球 "xờm cầu", 必须→必須 "tất tua", 借→藉 "chạ". Sửa bằng ghi đè chữ biến thể (喫 ngật,
@@ -391,8 +403,12 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
     dùng ở cấp đó đứng ĐẦU vì trắc nghiệm lấy vế trước dấu ";". **HSK3 rà tay toàn bộ
     (2026-10-06)**: 140/482 từ sai nét nghĩa — 伞 "lụa trơn" (ô, dù), 电 "sét", 刚 "cứng" (vừa
     mới), 被 "chăn" (bị), 带 "dải" (mang theo), 季节 "thời gian" (mùa). Kèm ~60 từ HSK4-7 nằm
-    trong nhóm ra đề kiểm tra trình độ (家伙 "món ăn, dụng cụ…" → gã, thằng cha). HSK4-9 còn lại
-    CHƯA rà hết. `meaning-fixes.json` tổng 499 mục.
+    trong nhóm ra đề kiểm tra trình độ (家伙 "món ăn, dụng cụ…" → gã, thằng cha). **HSK4 rà tay toàn bộ
+    (2026-10-18)**: 337/966 nghĩa dịch máy sai hoặc hẹp tới mức dạy sai — 首 "đầu" (bài: lượng từ cho bài hát),
+    帅 "tổng tư lệnh" (đẹp trai), 千万 "mười triệu" (nhất định), 说法 "thuyết giảng Phật pháp" (cách nói), 鲜 "cá"
+    (tươi — nghĩa chữ biến thể 鱻 lọt vào), 使馆 "lãnh sự quán" (đại sứ quán); 好处/说法 sửa cả pinyin hiển thị.
+    Kèm 4 nghĩa HSK3 còn ký hiệu CEDICT `繁|简[pin1]` + từ loại cho 22 cụm từ cố định (你好, 没关系: `pos` trong
+    file, enum `PHRASE`). HSK5-9 CHƯA rà. `meaning-fixes.json` tổng 856 mục.
   - **Kiểm tra trình độ (`GET /learn/placement`, `@Public()`, `PlacementService`, 2026-10-06)**
     — trước đây chỉ có khảo sát TỰ KHAI cấp; Hanbeego/Hanpeak/XieHanzi đều có bài kiểm tra.
     Trả CẢ đề một lần (client tự chấm — không có thưởng nên không cần giấu đáp án): mỗi cấp

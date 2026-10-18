@@ -20,17 +20,25 @@
  * 扎, 挣, 恶, 嘛, 尽快. Chỉ sửa cột `pinyin` HIỂN THỊ, KHÔNG đụng
  * `pinyinNumeric` vì đó là khoá khớp của `seed-word-examples.ts`.
  *
+ * Mục có `pos`: từ loại cho cụm từ cố định đại cương không ghi từ loại (你好,
+ * 没关系, 怎么办… — trang từ điển hiện ô từ loại trống).
+ *
+ * Production KHÔNG chạy script này nữa từ 2026-10-18 (không truy cập thẳng DB
+ * production): cùng nội dung được đưa vào migration `*_dictionary_data_fixes`.
+ * Script vẫn dùng khi seed lại DB mới: `db:seed` rồi chạy script này.
+ *
  * Idempotent, chạy lại vô hại. Chạy: npx tsx scripts/apply-meaning-fixes.ts
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, type WordPos } from '@prisma/client';
 
 interface Fix {
   simplified: string;
   pinyinNumeric: string;
   meaningVi: string;
   pinyin?: string;
+  pos?: WordPos[];
 }
 
 async function main() {
@@ -48,7 +56,9 @@ async function main() {
         meaningVi: f.meaningVi,
         // Đánh dấu đã rà tay để phân biệt với bản dịch máy.
         translationStatus: 'REVIEWED',
+        needsReview: false,
         ...(f.pinyin ? { pinyin: f.pinyin } : {}),
+        ...(f.pos ? { pos: f.pos } : {}),
       },
     });
     if (res.count === 0) {
