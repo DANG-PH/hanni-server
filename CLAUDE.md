@@ -104,6 +104,12 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   ngoặc của đại cương ra "một (hữu)". Phủ 87,2% → **89,7% (9.824/10.958)**, HSK 1–4 còn 11 từ trống (卡 啤 咱
   趟 赚… chưa chắc âm, cố ý để trống). Lên production bằng migration `20261018100000_dictionary_data_fixes`
   (không truy cập thẳng DB production), đã chạy thử trên PGlite với giá trị production: lệch 0.
+  **Âm Nôm lọt bộ lọc thanh điệu — sửa 2026-10-18 (cùng ngày)**: âm Nôm CÙNG thanh với âm Hán Việt thì quy luật
+  thanh điệu không bắt được — 每 "hỏi" (mỗi), 希望 "hơi vọng" (hy vọng), 帝 "đấy" (đế), 国旗 "quốc cờ", 损失 "tốn
+  thất", 洞 "đọng", 解剖 "giải bo", 胳膊 từng hiện một âm tục. Bộ lọc mới: âm chỉ MỘT chữ dùng (âm Hán Việt luôn
+  chung cho nhiều chữ) + hình dạng âm không có trong Hán Việt (đầu r-/p-/g-, vần "e" trơn), rồi rà tay → 147 chữ
+  ghi đè, 253 từ đổi (180 ở HSK 7–9), migration `20261018190000_hanviet_nom_fixes` (chỉ ghi khi giá trị hiện tại
+  đúng giá trị cũ; PGlite với giá trị production: lệch 0). Chưa chắc thì để nguyên (崭 "chởm", 潦 "lẻo", 茁 "đốt").
   **Bẫy dạng phồn thể biến thể (sửa 2026-10-15)**: tra theo `traditional` nên khi nguồn ghi
   phồn thể là chữ BIẾN THỂ thì lấy nhầm âm của chữ biến thể — 吃→喫 "khịt", 床→牀 "giường",
   篮球→籃球 "xờm cầu", 必须→必須 "tất tua", 借→藉 "chạ". Sửa bằng ghi đè chữ biến thể (喫 ngật,
@@ -136,7 +142,10 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   sau khi BỎ DẤU (tiếng Việt lẫn thanh pinyin; ü gõ bằng v như bộ gõ — lv → 绿, gõ u vẫn ra nhưng xếp sau chữ đọc
   u thật: lu → 路 rồi 绿) và xếp theo bậc: trùng mặt chữ → trùng âm Hán Việt / pinyin viết liền / nghĩa tiếng Việt
   nguyên văn (xin chao → 你好 trước 新潮 xīncháo) → bắt đầu bằng → trùng trọn 1 từ trong nghĩa tiếng Việt → chứa →
-  nghĩa tiếng Anh; cùng bậc thì cấp thấp, từ thông dụng trước. Chỉ áp khi có `q` mà không lọc `lessonId`/`needsReview` (nhánh đó giữ
+  nghĩa tiếng Anh; cùng bậc thì cấp thấp, từ thông dụng trước. Gõ CÓ dấu thì so cả dấu ("học" không ra 空洞
+  "hốc"); 1 âm tiết không dấu thì nghĩa nguyên văn không lên bậc đầu (hoc = học/hốc/hóc). Trùng CẢ Hán Việt lẫn
+  nét nghĩa đầu (bỏ chú thích ngoặc) đứng trước chỉ trùng 1 thứ: "thời gian" → 时间 rồi 时候. Cụm không trùng mục
+  nào ("ăn cơm" — HSK 3.0 không có 吃饭) ra từng phần (吃, 饭) thay vì trang trống. Chỉ áp khi có `q` mà không lọc `lessonId`/`needsReview` (nhánh đó giữ
   Prisma cũ). Dùng cho ô tra từ điển + gợi ý khi gõ ở client. Test: `word-search.util.spec.ts`.
 - **"Từ bạn đã biết sẵn" (`GET /words/familiar`, `@Public()`, từ 2026-09-22)** — hook thu hút
   nhóm khó tiếp cận nhất: người CHƯA từng học tiếng Trung. 739 từ (số ĐO LẠI 2026-09-22, tính live nên đổi theo dữ liệu) có âm Hán Việt trùng khớp

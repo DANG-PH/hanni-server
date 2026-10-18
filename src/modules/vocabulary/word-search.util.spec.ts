@@ -1,8 +1,7 @@
 import {
-  compactPinyin,
-  fold,
   prepareQuery,
   rankWords,
+  toSearchRow,
   type SearchRow,
 } from './word-search.util';
 
@@ -15,17 +14,17 @@ function row(
   hskLevel = 1,
   frequencyRank = 100,
 ): SearchRow {
-  return {
+  return toSearchRow({
     id: simplified,
     simplified,
     traditional: null,
     hskLevel,
     frequencyRank,
-    py: compactPinyin(pinyinNumeric),
-    hv: fold(hanViet ?? ''),
-    vi: fold(meaningVi),
-    en: meaningEn.toLowerCase(),
-  };
+    pinyinNumeric,
+    hanViet,
+    meaningVi,
+    meaningEn,
+  });
 }
 
 const ROWS = [
@@ -50,12 +49,24 @@ const ROWS = [
     1,
     70,
   ),
-  row('时间', 'shi2 jian1', 'thời gian', 'thời gian', 'time', 1, 20),
+  row(
+    '时间',
+    'shi2 jian1',
+    'thời gian',
+    '(khái niệm) thời gian',
+    'time',
+    1,
+    20,
+  ),
+  row('时候', 'shi2 hou5', 'thời hậu', 'thời gian; lúc', 'time; when', 1, 15),
+  row('吃', 'chi1', 'ngật', 'ăn', 'eat', 1, 25),
+  row('饭', 'fan4', 'phạn', 'cơm đã nấu', 'cooked rice', 1, 35),
   row('上', 'shang4', 'thượng', 'trên; (thời gian) trước', 'up, on', 1, 5),
   row('绿', 'lü4', 'lục', 'xanh lá', 'green', 2, 90),
   row('路', 'lu4', 'lộ', 'đường', 'road', 2, 80),
   row('你好', 'ni3 hao3', 'nễ hảo', 'xin chào', 'hello', 1, 10),
   row('新潮', 'xin1 chao2', 'tân triều', 'thời thượng', 'trendy', 7, 900),
+  row('空洞', 'kong1 dong4', 'không động', 'hốc; lỗ hổng', 'cavity', 6, 3000),
 ];
 const top = (q: string, n = 3) =>
   rankWords(ROWS, prepareQuery(q))
@@ -75,8 +86,14 @@ describe('rankWords — tra từ có xếp hạng', () => {
     expect(top('dian shi', 1)).toEqual(['电视']);
   });
 
-  it('cụm Hán Việt "thoi gian" trùng trọn trước nghĩa chỉ chứa chuỗi', () => {
-    expect(top('thoi gian', 2)).toEqual(['时间', '上']);
+  it('trùng cả Hán Việt lẫn nghĩa (bỏ chú thích ngoặc) đứng trước chỉ trùng nghĩa', () => {
+    expect(top('thoi gian', 3)).toEqual(['时间', '时候', '上']);
+    expect(top('thời gian', 2)).toEqual(['时间', '时候']);
+  });
+
+  it('cụm không trùng mục nào: ra từng phần thay vì trống', () => {
+    expect(top('ăn cơm', 2)).toEqual(['吃', '饭']);
+    expect(top('an com', 2)).toEqual(['吃', '饭']);
   });
 
   it('Hán tự: trùng mặt chữ trước, rồi bắt đầu bằng, rồi chứa', () => {
@@ -90,6 +107,17 @@ describe('rankWords — tra từ có xếp hạng', () => {
 
   it('nghĩa tiếng Việt nguyên văn cùng bậc với pinyin trùng — cấp thấp lên trước', () => {
     expect(top('xin chao', 2)).toEqual(['你好', '新潮']);
+  });
+
+  it('gõ có dấu thì so cả dấu: "học" không ra 空洞 (hốc), "hốc" ra 空洞', () => {
+    expect(top('học', 1)).toEqual(['学']);
+    expect(top('học', 20)).not.toContain('空洞');
+    expect(top('hốc', 1)).toEqual(['空洞']);
+  });
+
+  it('1 âm tiết không dấu: nghĩa nguyên văn "hốc" không vượt Hán Việt "học hiệu"', () => {
+    const r = top('hoc', 20);
+    expect(r.indexOf('学校')).toBeLessThan(r.indexOf('空洞'));
   });
 
   it('lọc theo cấp', () => {

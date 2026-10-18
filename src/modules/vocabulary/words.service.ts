@@ -4,10 +4,9 @@ import { paginate, type Paginated } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import type { WordQueryDto } from './dto/word-query.dto';
 import {
-  compactPinyin,
-  fold,
   prepareQuery,
   rankWords,
+  toSearchRow,
   type SearchRow,
 } from './word-search.util';
 import {
@@ -49,17 +48,7 @@ export class WordsService {
         meaningEn: true,
       },
     });
-    this.searchIndex = rows.map((r) => ({
-      id: r.id,
-      simplified: r.simplified,
-      traditional: r.traditional,
-      hskLevel: r.hskLevel,
-      frequencyRank: r.frequencyRank,
-      py: compactPinyin(r.pinyinNumeric),
-      hv: fold(r.hanViet ?? ''),
-      vi: fold(r.meaningVi ?? ''),
-      en: (r.meaningEn ?? '').toLowerCase(),
-    }));
+    this.searchIndex = rows.map(toSearchRow);
     this.searchIndexAt = Date.now();
     return this.searchIndex;
   }
