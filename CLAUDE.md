@@ -1024,6 +1024,15 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   gộp thành 1 câu văn xuôi — tránh đọc nhầm 2 số HSK khác nhau (vd tự đánh giá HSK5 nhưng đề xuất
   ghi "bắt đầu từ HSK1" từng bị hiểu lầm là lỗi vì không phân biệt được số nào là hiện tại/số nào
   là mục tiêu).
+  **Làm lại 2026-10-18 (user: "mục đích, câu hỏi, luồng trả lời rõ ràng, dễ điền")**: mỗi câu trả lời
+  phải có tác dụng thật. `selfAssessedLevel` được BỎ TRỐNG khi đã học ("biết một chút, chưa chắc cấp
+  nào" → client mời làm kiểm tra trình độ; `courseLevel` giữ nguyên, cấp đo thật đặt sau). Thêm
+  `dailyMinutes` (5/10/15/20) → `UserSettings.dailyGoalType = MINUTES` + `dailyGoalValue` (trước đó
+  khảo sát không hỏi mà ước tính lại dựa vào mức mặc định 20 từ/ngày). Cả `GET`, `POST`, `preview`
+  trả thêm `plan` có cấu trúc (`OnboardingPlan`: cấp + bài bắt đầu, phút/ngày, số bài + số từ từ đầu
+  cấp bắt đầu tới hết cấp thi đếm thẳng từ `Lesson.wordCount`, số tuần tới ngày thi) — màn kết quả
+  hiện mỗi câu trả lời thành 1 dòng thay cho đoạn `recommendationVi` (vẫn sinh + lưu). Test:
+  `onboarding.service.spec.ts`.
   **`POST /onboarding/preview` (`@Public()`, từ 2026-09-22)** — tính đúng lộ trình như `submit()`
   nhưng KHÔNG lưu và KHÔNG cần đăng nhập. Khảo sát vốn thiết kế để làm TRƯỚC khi có tài khoản
   (kiểu "gradual engagement" của Duolingo), nhưng trước đó trả lời xong 3 câu là bị đẩy thẳng

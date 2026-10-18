@@ -2,6 +2,7 @@ import { OnboardingGoal } from '@prisma/client';
 import {
   IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
   IsISO8601,
   IsOptional,
@@ -10,12 +11,16 @@ import {
   ValidateIf,
 } from 'class-validator';
 
+/** Lựa chọn "mỗi ngày học bao lâu" ở khảo sát — thành mục tiêu ngày theo phút. */
+export const DAILY_MINUTES_OPTIONS = [5, 10, 15, 20] as const;
+
 export class SubmitOnboardingDto {
   @IsBoolean()
   hasStudiedBefore!: boolean;
 
-  /** Cấp tự đánh giá đã học tới — bắt buộc nếu `hasStudiedBefore = true`. */
-  @ValidateIf((o: SubmitOnboardingDto) => o.hasStudiedBefore)
+  /** Cấp đang học (7 = HSK 7–9). Đã học mà bỏ trống = "biết một chút, chưa chắc
+   * cấp nào" → client mời làm bài kiểm tra trình độ, cấp đo được đặt lộ trình sau. */
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(9)
@@ -38,4 +43,9 @@ export class SubmitOnboardingDto {
   @IsOptional()
   @IsISO8601()
   targetDate?: string;
+
+  /** Phút học mỗi ngày — ghi thành mục tiêu ngày (`dailyGoalType = MINUTES`). */
+  @IsOptional()
+  @IsIn(DAILY_MINUTES_OPTIONS)
+  dailyMinutes?: number;
 }
