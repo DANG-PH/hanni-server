@@ -4,6 +4,13 @@ import { paginate, type Paginated } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import type { WordQueryDto } from './dto/word-query.dto';
 import {
+  compactPinyin,
+  fold,
+  prepareQuery,
+  rankWords,
+  type SearchRow,
+} from './word-search.util';
+import {
   imageQueryFrom,
   searchCommonsImage,
   searchWikipediaImage,
@@ -12,9 +19,71 @@ import {
 /** Cấp HSK cao nhất còn tự lấy ảnh minh hoạ — xem lý do ở `attachImage()`. */
 const IMAGE_MAX_HSK_LEVEL = 5;
 
+/** Bảng tìm kiếm trong bộ nhớ sống bao lâu — từ vựng chỉ đổi khi deploy (pm2 khởi động lại). */
+const SEARCH_INDEX_TTL_MS = 3_600_000;
+
 @Injectable()
 export class WordsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private searchIndex: SearchRow[] | null = null;
+  private searchIndexAt = 0;
+
+  /** ~11k dòng nhẹ (chỉ cột để so khớp) — xếp hạng làm trong bộ nhớ, xem word-search.util.ts. */
+  private async getSearchIndex(): Promise<SearchRow[]> {
+    if (
+      this.searchIndex &&
+      Date.now() - this.searchIndexAt < SEARCH_INDEX_TTL_MS
+    )
+      return this.searchIndex;
+    const rows = await this.prisma.word.findMany({
+      select: {
+        id: true,
+        simplified: true,
+        traditional: true,
+        hskLevel: true,
+        frequencyRank: true,
+        pinyinNumeric: true,
+        hanViet: true,
+        meaningVi: true,
+        meaningEn: true,
+      },
+    });
+    this.searchIndex = rows.map((r) => ({
+      id: r.id,
+      simplified: r.simplified,
+      traditional: r.traditional,
+      hskLevel: r.hskLevel,
+      frequencyRank: r.frequencyRank,
+      py: compactPinyin(r.pinyinNumeric),
+      hv: fold(r.hanViet ?? ''),
+      vi: fold(r.meaningVi ?? ''),
+      en: (r.meaningEn ?? '').toLowerCase(),
+    }));
+    this.searchIndexAt = Date.now();
+    return this.searchIndex;
+  }
+
+  /** Tra từ có xếp hạng (ô tra từ điển + gợi ý khi gõ) — trùng mặt chữ, âm Hán
+   * Việt, pinyin không dấu lên trước; nghĩa tiếng Anh xuống cuối. */
+  private async search(query: WordQueryDto): Promise<Paginated<unknown>> {
+    const ranked = rankWords(
+      await this.getSearchIndex(),
+      prepareQuery(query.q!),
+      query.level,
+    );
+    const pageIds = ranked
+      .slice(query.skip, query.skip + query.take)
+      .map((r) => r.id);
+    const rows = await this.prisma.word.findMany({
+      where: { id: { in: pageIds } },
+    });
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    const items = pageIds
+      .map((id) => byId.get(id))
+      .filter((w): w is Word => Boolean(w));
+    return paginate(items, ranked.length, query);
+  }
 
   /** Lấy ảnh minh hoạ nếu chưa có sẵn — chỉ cho danh từ cụ thể (Wikimedia
    * Commons, miễn phí, không cần key). Không chặn caller lâu nếu lỗi/chậm. */
@@ -45,6 +114,8 @@ export class WordsService {
   }
 
   async list(query: WordQueryDto): Promise<Paginated<unknown>> {
+    if (query.q?.trim() && !query.lessonId && !query.needsReview)
+      return this.search(query);
     const where: Prisma.WordWhereInput = {};
     if (query.level) where.hskLevel = query.level;
     if (query.lessonId) where.lessonId = query.lessonId;
