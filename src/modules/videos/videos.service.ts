@@ -31,7 +31,8 @@ export class VideosService {
     return this.wordIndex;
   }
 
-  async list(userId: string, q: VideoQueryDto) {
+  /** `userId` null = khách: xem được danh sách, không có tiến độ/lượt thích của riêng mình. */
+  async list(userId: string | null, q: VideoQueryDto) {
     const where: Prisma.VideoWhereInput = {};
     if (q.level) where.hskLevel = q.level;
     if (q.kind) where.kind = q.kind;
@@ -54,18 +55,26 @@ export class VideosService {
           isFree: true,
         },
       }),
-      this.prisma.userVideoProgress.findMany({
-        where: { userId },
-        select: { videoId: true, linesRead: true, completedAt: true },
-      }),
+      userId
+        ? this.prisma.userVideoProgress.findMany({
+            where: { userId },
+            select: { videoId: true, linesRead: true, completedAt: true },
+          })
+        : ([] as {
+            videoId: string;
+            linesRead: number;
+            completedAt: Date | null;
+          }[]),
       this.prisma.videoLike.groupBy({
         by: ['videoId'],
         _count: { videoId: true },
       }),
-      this.prisma.videoLike.findMany({
-        where: { userId },
-        select: { videoId: true },
-      }),
+      userId
+        ? this.prisma.videoLike.findMany({
+            where: { userId },
+            select: { videoId: true },
+          })
+        : ([] as { videoId: string }[]),
     ]);
     const pBy = new Map(progress.map((p) => [p.videoId, p]));
     const likeBy = new Map(
@@ -83,7 +92,7 @@ export class VideosService {
     }));
   }
 
-  async get(userId: string, id: string) {
+  async get(userId: string | null, id: string) {
     const video = await this.prisma.video.findUnique({
       where: { id },
       include: { lines: { orderBy: { index: 'asc' } } },
@@ -91,13 +100,17 @@ export class VideosService {
     if (!video) throw new NotFoundException('Không tìm thấy video');
     const [progress, likeCount, myLike, commentCount, wordIndex] =
       await Promise.all([
-        this.prisma.userVideoProgress.findUnique({
-          where: { userId_videoId: { userId, videoId: id } },
-        }),
+        userId
+          ? this.prisma.userVideoProgress.findUnique({
+              where: { userId_videoId: { userId, videoId: id } },
+            })
+          : null,
         this.prisma.videoLike.count({ where: { videoId: id } }),
-        this.prisma.videoLike.findUnique({
-          where: { userId_videoId: { userId, videoId: id } },
-        }),
+        userId
+          ? this.prisma.videoLike.findUnique({
+              where: { userId_videoId: { userId, videoId: id } },
+            })
+          : null,
         this.prisma.videoComment.count({ where: { videoId: id } }),
         this.getWordIndex(),
       ]);

@@ -55,9 +55,10 @@ export class LeaderboardService {
   /** Bảng xếp hạng theo `metric`. Kèm hạng của user hiện tại.
    * `scope: 'friends'` chỉ xếp hạng trong nhóm (chính mình + người đang
    * theo dõi) — dùng cho thẻ "So với bạn bè" ở dashboard, cho lý do cụ thể
-   * để theo dõi ai đó thay vì theo dõi xong không thấy tác dụng gì. */
+   * để theo dõi ai đó thay vì theo dõi xong không thấy tác dụng gì.
+   * `userId` null = khách xem bảng chung (không có hạng của mình/nút theo dõi). */
   async top(
-    userId: string,
+    userId: string | null,
     metric: LeaderboardMetric,
     limit = 50,
     scope: 'global' | 'friends' = 'global',
@@ -66,7 +67,7 @@ export class LeaderboardService {
       throw new BadRequestException('Tiêu chí không hợp lệ');
 
     let ranked = await this.rankedPairs(metric);
-    if (scope === 'friends') {
+    if (scope === 'friends' && userId) {
       const follows = await this.prisma.follow.findMany({
         where: { followerId: userId },
         select: { followingId: true },
@@ -97,10 +98,12 @@ export class LeaderboardService {
         where: { userId: { in: ids } },
         select: { userId: true, currentStreak: true },
       }),
-      this.prisma.follow.findMany({
-        where: { followerId: userId, followingId: { in: ids } },
-        select: { followingId: true },
-      }),
+      userId
+        ? this.prisma.follow.findMany({
+            where: { followerId: userId, followingId: { in: ids } },
+            select: { followingId: true },
+          })
+        : ([] as { followingId: string }[]),
     ]);
     const uMap = new Map(users.map((u) => [u.id, u]));
     const sMap = new Map(streaks.map((s) => [s.userId, s.currentStreak]));

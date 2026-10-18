@@ -62,8 +62,9 @@ export class LearnService {
     return lesson;
   }
 
-  async path(userId: string, level?: number) {
-    const lvl = level ?? (await this.currentLevel(userId));
+  /** `userId` null = khách: xem lộ trình của cấp (mặc định HSK 1), chưa có tiến độ. */
+  async path(userId: string | null, level?: number) {
+    const lvl = level ?? (userId ? await this.currentLevel(userId) : 1);
 
     const [levelInfo, lessons, progressRows, levelSummary] = await Promise.all([
       this.prisma.hskLevel.findUnique({ where: { level: lvl } }),
@@ -71,18 +72,20 @@ export class LearnService {
         where: { hskLevel: lvl },
         orderBy: { orderIndex: 'asc' },
       }),
-      this.prisma.userWordProgress.findMany({
-        where: { userId, hskLevel: lvl },
-        select: {
-          wordId: true,
-          state: true,
-          learnedAt: true,
-          intervalDays: true,
-          dueAt: true,
-          isSuspended: true,
-          word: { select: { lessonId: true } },
-        },
-      }),
+      userId
+        ? this.prisma.userWordProgress.findMany({
+            where: { userId, hskLevel: lvl },
+            select: {
+              wordId: true,
+              state: true,
+              learnedAt: true,
+              intervalDays: true,
+              dueAt: true,
+              isSuspended: true,
+              word: { select: { lessonId: true } },
+            },
+          })
+        : [],
       this.prisma.lesson.groupBy({ by: ['hskLevel'], _count: true }),
     ]);
     if (!levelInfo) throw new NotFoundException('Cấp HSK không hợp lệ');
@@ -226,7 +229,7 @@ export class LearnService {
     };
   }
 
-  async lesson(userId: string, lessonId: string) {
+  async lesson(userId: string | null, lessonId: string) {
     const lesson = await this.prisma.lesson.findUnique({
       where: { id: lessonId },
     });
@@ -237,10 +240,12 @@ export class LearnService {
       orderBy: { lessonOrder: 'asc' },
       include: { examples: { orderBy: { orderIndex: 'asc' } } },
     });
-    const progress = await this.prisma.userWordProgress.findMany({
-      where: { userId, wordId: { in: words.map((w) => w.id) } },
-      select: { wordId: true, state: true, learnedAt: true, dueAt: true },
-    });
+    const progress = userId
+      ? await this.prisma.userWordProgress.findMany({
+          where: { userId, wordId: { in: words.map((w) => w.id) } },
+          select: { wordId: true, state: true, learnedAt: true, dueAt: true },
+        })
+      : [];
     const pBy = new Map(progress.map((p) => [p.wordId, p]));
 
     const grammarPoints = await this.prisma.grammarPoint.findMany({

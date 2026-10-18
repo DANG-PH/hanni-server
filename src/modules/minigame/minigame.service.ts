@@ -3,8 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { GameMode, type Prisma } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
+import { RedisService } from '../../infra/redis/redis.service';
 import { applyPremiumMultiplier } from '../premium/premium-plans';
 import { WalletService } from '../wallet/wallet.service';
 import type { FinishMinigameDto } from './dto/minigame.dto';
@@ -26,6 +28,9 @@ const MATCH_PAIRS = 8;
  * tiết từng lượt lật như MC vì việc so khớp đã lộ hết ở phía client ngay
  * lúc tải dữ liệu, nhưng vẫn chặn được trường hợp lộ liễu nhất). */
 const MATCH_MIN_MS_PER_PAIR = 500;
+/** Lượt chơi của KHÁCH giữ tạm trong Redis — đủ cho 1 ván 60 giây lẫn ván ghép cặp. */
+const GUEST_TTL_SEC = 30 * 60;
+const guestKey = (sessionId: string) => `minigame:guest:${sessionId}`;
 
 interface StoredQuestion {
   wordId: string;
@@ -41,6 +46,32 @@ export interface MatchCard {
   wordId: string;
   kind: 'hanzi' | 'meaning';
   content: string;
+}
+
+interface GuestSession {
+  mode: GameMode;
+  questions: StoredQuestion[] | MatchCard[];
+}
+
+/** Đếm câu đúng bằng đáp án đã lưu lúc bắt đầu (không tin điểm client báo). */
+function gradeAnswers(
+  questions: StoredQuestion[],
+  answers: NonNullable<FinishMinigameDto['answers']>,
+): number {
+  const byWordId = new Map(questions.map((q) => [q.wordId, q]));
+  let score = 0;
+  for (const a of answers) {
+    const q = byWordId.get(a.wordId);
+    if (q && q.correctIndex === a.chosenIndex) score += 1;
+  }
+  return score;
+}
+
+/** Ghép cặp: số cặp trừ số lần lật sai, tối thiểu 1 nếu hoàn thành hợp lệ. */
+function matchScore(dto: FinishMinigameDto): number {
+  const mistakes = Math.max(0, dto.mistakes ?? 0);
+  const plausible = dto.durationMs >= MATCH_PAIRS * MATCH_MIN_MS_PER_PAIR;
+  return plausible ? Math.max(1, MATCH_PAIRS - mistakes) : 0;
 }
 
 /**
@@ -70,7 +101,35 @@ export class MinigameService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly wallet: WalletService,
+    private readonly redis: RedisService,
   ) {}
+
+  /** Khách (`userId` null) chơi được như người đã đăng nhập — lượt chơi giữ tạm
+   * trong Redis vì `MinigameSession` bắt buộc có người chơi; không có xu, không
+   * lên bảng xếp hạng. */
+  private async saveSession(
+    userId: string | null,
+    mode: GameMode,
+    questions: StoredQuestion[] | MatchCard[],
+  ): Promise<string> {
+    if (!userId) {
+      const id = randomUUID();
+      await this.redis.setJson(
+        guestKey(id),
+        { mode, questions } satisfies GuestSession,
+        GUEST_TTL_SEC,
+      );
+      return id;
+    }
+    const session = await this.prisma.minigameSession.create({
+      data: {
+        userId,
+        mode,
+        questions: questions as unknown as Prisma.InputJsonValue,
+      },
+    });
+    return session.id;
+  }
 
   /** Kho từ cho 1 ván — ƯU TIÊN từ chính người chơi ĐANG HỌC, thiếu thì bù
    * bằng từ phổ biến.
@@ -81,19 +140,21 @@ export class MinigameService {
    * đúng 1 bài học như `/listening`/`/writing`: minigame là luyện PHẢN XẠ
    * trên vốn từ rộng, bó vào 10-15 từ một bài thì lặp lại rất nhanh và chán.
    * Cùng cách `QuizService` đã làm. */
-  private async buildPool(userId: string, mode: GameMode) {
+  private async buildPool(userId: string | null, mode: GameMode) {
     const needsAudio = mode === GameMode.LISTENING;
     const wordWhere = {
       meaningVi: { not: null },
       ...(needsAudio ? { audioUrl: { not: null } } : {}),
     };
 
-    const learning = await this.prisma.userWordProgress.findMany({
-      where: { userId, word: wordWhere },
-      include: { word: true },
-      orderBy: { updatedAt: 'desc' },
-      take: POOL_SIZE,
-    });
+    const learning = userId
+      ? await this.prisma.userWordProgress.findMany({
+          where: { userId, word: wordWhere },
+          include: { word: true },
+          orderBy: { updatedAt: 'desc' },
+          take: POOL_SIZE,
+        })
+      : [];
     const pool = learning.map((p) => p.word);
     if (pool.length >= POOL_SIZE) return pool;
 
@@ -106,7 +167,7 @@ export class MinigameService {
     return [...pool, ...extra];
   }
 
-  async start(userId: string, mode: GameMode = GameMode.TRANSLATE) {
+  async start(userId: string | null, mode: GameMode = GameMode.TRANSLATE) {
     if (mode === GameMode.MATCH) return this.startMatchGame(userId);
 
     const pool = await this.buildPool(userId, mode);
@@ -141,16 +202,10 @@ export class MinigameService {
       };
     });
 
-    const session = await this.prisma.minigameSession.create({
-      data: {
-        userId,
-        mode,
-        questions: questions as unknown as Prisma.InputJsonValue,
-      },
-    });
+    const sessionId = await this.saveSession(userId, mode, questions);
 
     return {
-      sessionId: session.id,
+      sessionId,
       mode,
       questions: questions.map((q) => ({
         wordId: q.wordId,
@@ -167,7 +222,7 @@ export class MinigameService {
    * TRANSLATE/LISTENING, ở đây không giấu được "đáp án" vì việc so khớp 2
    * thẻ vốn công khai ngay khi tải dữ liệu (bản chất trò lật thẻ trí nhớ),
    * nên không cần giấu `wordId` như giấu `correctIndex` ở 2 mode kia. */
-  private async startMatchGame(userId: string) {
+  private async startMatchGame(userId: string | null) {
     const pool = await this.prisma.word.findMany({
       where: { meaningVi: { not: null } },
       orderBy: { frequencyRank: 'asc' },
@@ -194,18 +249,17 @@ export class MinigameService {
       ]),
     );
 
-    const session = await this.prisma.minigameSession.create({
-      data: {
-        userId,
-        mode: GameMode.MATCH,
-        questions: cards as unknown as Prisma.InputJsonValue,
-      },
-    });
+    const sessionId = await this.saveSession(userId, GameMode.MATCH, cards);
 
-    return { sessionId: session.id, mode: GameMode.MATCH, cards };
+    return { sessionId, mode: GameMode.MATCH, cards };
   }
 
-  async finish(userId: string, sessionId: string, dto: FinishMinigameDto) {
+  async finish(
+    userId: string | null,
+    sessionId: string,
+    dto: FinishMinigameDto,
+  ) {
+    if (!userId) return this.finishGuest(sessionId, dto);
     const session = await this.prisma.minigameSession.findUnique({
       where: { id: sessionId },
     });
@@ -221,13 +275,10 @@ export class MinigameService {
     }
 
     const answers = dto.answers ?? [];
-    const questions = session.questions as unknown as StoredQuestion[];
-    const byWordId = new Map(questions.map((q) => [q.wordId, q]));
-    let score = 0;
-    for (const a of answers) {
-      const q = byWordId.get(a.wordId);
-      if (q && q.correctIndex === a.chosenIndex) score += 1;
-    }
+    const score = gradeAnswers(
+      session.questions as unknown as StoredQuestion[],
+      answers,
+    );
 
     await this.prisma.minigameSession.update({
       where: { id: sessionId },
@@ -250,6 +301,30 @@ export class MinigameService {
       totalAsked: answers.length,
       coinsEarned,
       balance,
+    };
+  }
+
+  /** Khách: chấm giống hệt người đã đăng nhập (đáp án lấy từ Redis, đọc 1 lần
+   * rồi xoá) nhưng không cộng xu, không lưu điểm. */
+  private async finishGuest(sessionId: string, dto: FinishMinigameDto) {
+    const session = await this.redis.takeJson<GuestSession>(
+      guestKey(sessionId),
+    );
+    if (!session) throw new NotFoundException('Không tìm thấy lượt chơi');
+    if (session.mode === GameMode.MATCH) {
+      return {
+        score: matchScore(dto),
+        totalAsked: MATCH_PAIRS,
+        coinsEarned: 0,
+        balance: null,
+      };
+    }
+    const answers = dto.answers ?? [];
+    return {
+      score: gradeAnswers(session.questions as StoredQuestion[], answers),
+      totalAsked: answers.length,
+      coinsEarned: 0,
+      balance: null,
     };
   }
 
@@ -277,9 +352,7 @@ export class MinigameService {
     sessionId: string,
     dto: FinishMinigameDto,
   ) {
-    const mistakes = Math.max(0, dto.mistakes ?? 0);
-    const plausible = dto.durationMs >= MATCH_PAIRS * MATCH_MIN_MS_PER_PAIR;
-    const score = plausible ? Math.max(1, MATCH_PAIRS - mistakes) : 0;
+    const score = matchScore(dto);
 
     await this.prisma.minigameSession.update({
       where: { id: sessionId },

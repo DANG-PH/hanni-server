@@ -348,6 +348,18 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `COMPLETED | IN_PROGRESS | AVAILABLE` (giá trị `LOCKED` XOÁ khỏi cả type union ở client). Định
   hướng vẫn giữ nguyên qua `currentLessonId` — gợi ý thay vì cấm; client đổi sang nhãn chữ "Bắt
   đầu từ đây"/"Học tiếp" trên đúng bài đó (xem `hanni-client/CLAUDE.md`).
+- **Khách xem + dùng thử không cần đăng nhập (2026-10-18, user: "các web khác có cần đăng nhập đâu vẫn
+  xem được")** — `@OptionalAuth()` cho `GET /learn/path` (khách: cấp `?level=` hoặc HSK 1, không tiến
+  độ), `GET /learn/lessons/:id`, `GET /videos`, `GET /videos/:id`, `GET /leaderboard` (+ `/metrics`;
+  khách không có hạng của mình/`isFollowing`, `scope=friends` bị bỏ qua), `POST /minigame/start` +
+  `/:id/finish`; `@Public()` cho `GET /videos/:id/comments`, `GET /words/of-the-day`, `GET
+  /minigame/leaderboard`. Service nhận `userId: string | null` và BỎ HẲN truy vấn riêng của người dùng
+  khi null — Prisma hiểu `where: { userId: undefined }` là KHỚP MỌI DÒNG. Mảng rỗng dự phòng trong
+  `Promise.all` phải ghi kiểu (`[] as {...}[]`), không thì TS/eslint suy ra `never[]`/`any`. Lượt chơi
+  minigame của khách giữ trong Redis (`minigame:guest:<uuid>`, TTL 30 phút, `takeJson` nên nộp đúng 1
+  lần) vì `MinigameSession.userId` bắt buộc; chấm bằng CHÍNH hàm của người đã đăng nhập
+  (`gradeAnswers`/`matchScore`), không cộng xu, không lên bảng xếp hạng (`balance: null`). Test:
+  `minigame.service.spec.ts`. Ghi (tiến độ video, bình luận, thích, luyện nghe/phát âm…) vẫn cần tài khoản.
 - **Phiên học bài + cấp lộ trình (2026-10-05)** — user báo flashcard "tự nhảy vào HSK4 khi muốn
   học HSK1, không theo chủ đề". **Gốc**: `getQueue()` không có `lessonId`/`level` thì lấy từ MỚI
   trên CẢ 9 cấp theo `frequencyRank` → tài khoản mới mở flashcard gặp ngay 著名 (HSK4), 显著

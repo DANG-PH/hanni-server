@@ -45,7 +45,9 @@ export class VocabularyController {
     return this.words.list(query);
   }
 
-  /** `?level=` = cấp HSK đang học — trước đó người HSK 1 nhận cả từ HSK 4. */
+  /** `?level=` = cấp HSK đang học — trước đó người HSK 1 nhận cả từ HSK 4.
+   * Giống nhau cho mọi người, không có gì riêng tư → khách cũng xem được. */
+  @Public()
   @Get('words/of-the-day')
   getWordOfTheDay(
     @Query('level', new ParseIntPipe({ optional: true })) level?: number,

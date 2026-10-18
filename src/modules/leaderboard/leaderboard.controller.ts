@@ -2,6 +2,7 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { IsIn, IsOptional } from 'class-validator';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { OptionalAuth } from '../../common/decorators/public.decorator';
 import type { AuthUser } from '../../common/types';
 import {
   LeaderboardService,
@@ -28,6 +29,7 @@ export class LeaderboardController {
     private readonly league: LeagueService,
   ) {}
 
+  @OptionalAuth()
   @Get('metrics')
   metrics() {
     return this.leaderboard.metrics();
@@ -39,10 +41,12 @@ export class LeaderboardController {
     return this.league.getMyLeague(user.id);
   }
 
+  /** Khách xem được bảng chung; "So với bạn bè" + hạng của mình cần tài khoản. */
+  @OptionalAuth()
   @Get()
-  top(@CurrentUser() user: AuthUser, @Query() q: LeaderboardQuery) {
+  top(@CurrentUser() user: AuthUser | undefined, @Query() q: LeaderboardQuery) {
     return this.leaderboard.top(
-      user.id,
+      user?.id ?? null,
       q.metric ?? 'learned',
       q.scope === 'friends' ? 10 : 50,
       q.scope ?? 'global',

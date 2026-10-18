@@ -11,6 +11,7 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { Public } from '../../../common/decorators/public.decorator';
 import type { AuthUser } from '../../../common/types';
 import { CommentsService } from './comments.service';
 import { CommentQueryDto, CreateCommentDto } from './comments.dto';
@@ -21,6 +22,8 @@ import { CommentQueryDto, CreateCommentDto } from './comments.dto';
 export class CommentsController {
   constructor(private readonly comments: CommentsService) {}
 
+  /** Khách đọc được bình luận; viết/xoá mới cần tài khoản. */
+  @Public()
   @Get()
   list(
     @Param('videoId', ParseUUIDPipe) videoId: string,

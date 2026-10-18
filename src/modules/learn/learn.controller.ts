@@ -11,7 +11,7 @@ import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { Public } from '../../common/decorators/public.decorator';
+import { OptionalAuth, Public } from '../../common/decorators/public.decorator';
 import type { AuthUser } from '../../common/types';
 import { CompleteLessonDto } from './dto/lesson-session.dto';
 import { LearnService } from './learn.service';
@@ -70,9 +70,12 @@ export class LearnController {
     return this.sessions.complete(user.id, id, dto);
   }
 
+  /** Khách xem được lộ trình + từ của từng bài (như Hanzii/Hanbeego), học
+   * được luôn qua `/bai-hoc`; tiến độ chỉ có khi đã đăng nhập. */
+  @OptionalAuth()
   @Get('path')
-  path(@CurrentUser() user: AuthUser, @Query() q: PathQuery) {
-    return this.learn.path(user.id, q.level);
+  path(@CurrentUser() user: AuthUser | undefined, @Query() q: PathQuery) {
+    return this.learn.path(user?.id ?? null, q.level);
   }
 
   /** Bài đang học dở — để các trang luyện tập mặc định luyện đúng chủ đề
@@ -82,11 +85,12 @@ export class LearnController {
     return this.learn.currentLesson(user.id);
   }
 
+  @OptionalAuth()
   @Get('lessons/:id')
   lesson(
-    @CurrentUser() user: AuthUser,
+    @CurrentUser() user: AuthUser | undefined,
     @Param('id', ParseUUIDPipe) id: string,
   ) {
-    return this.learn.lesson(user.id, id);
+    return this.learn.lesson(user?.id ?? null, id);
   }
 }
