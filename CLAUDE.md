@@ -1227,6 +1227,18 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   `CHAT_MODELS` tự chuyển model sau (mỗi model 1 hạn mức riêng). Thử nghiệm local cũng tiêu vào
   đúng hạn mức production — thử ít, tuần tự. Trước khi bán Premium (hứa 100 ảnh/ngày, trợ lý
   không giới hạn) PHẢI bật billing cho project Gemini.
+- **Tiện ích AI trong luồng học (`src/modules/ai-tools`, 2026-10-18 — user: "cần thêm tính năng AI", "tạo sự khác
+  biệt")** — 3 việc, chung 1 bộ đếm Redis `aitools:{userId}:{ngày học}` (thường 10, Premium 200/ngày; AI lỗi thì
+  hoàn lượt), đều cần đăng nhập: (1) `POST /ai/mnemonic/:wordId` — MẸO NHỚ theo âm Hán Việt, prompt đưa sẵn âm Hán
+  Việt + nghĩa từng chữ (`WordsService.breakDownCharacters`, nay public) để AI không tự bịa âm; tạo 1 LẦN rồi lưu
+  `Word.mnemonicVi` (migration `20261018200000_word_mnemonic`, `updateMany where mnemonicVi null` để 2 người bấm
+  cùng lúc không đè nhau) — `lookup()` và phiên học bài trả sẵn nên ai mở trang từ / thẻ giới thiệu cũng thấy, không
+  tốn thêm lượt. (2) `POST /ai/sentence-check` `{wordId, sentence}` — chấm câu học viên tự đặt: điểm 0–100, câu đã
+  sửa (giữ ý), pinyin, nghĩa, nhận xét tiếng Việt, mẹo dùng từ; (3) `POST /ai/analyze` `{text}` — câu có chữ Hán thì
+  dịch + tối đa 3 cấu trúc ngữ pháp, câu tiếng Việt thì dịch SANG tiếng Trung; câu tiếng Trung tách theo từ điển
+  Hanni (`segmentLine`, kèm Hán Việt + nghĩa + link). (2)(3) đệm Redis 30 ngày theo băm câu — gõ lại đúng câu không
+  tốn lượt. `GET /ai/usage`. Thử thật 2026-10-18 (gemini-2.5-flash): 3,7–7 giây/lượt; "我电脑用学习" → 45 điểm, sửa
+  thành 我用电脑学习 kèm giải thích cấu trúc 用 + công cụ + động từ. Test: `ai-tools.util.spec.ts`.
 - **Báo cáo học tập tuần/tháng/quý + Hanni Coach (`src/modules/insights`, từ 2026-10-17)** —
   `GET /insights/report?period=week|month|quarter&offset=0|1` (ai cũng xem — số liệu của chính
   mình): kỳ này tới hôm nay (`offset` 0) hoặc trọn kỳ trước (1), so với CÙNG SỐ NGÀY đầu kỳ liền

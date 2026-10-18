@@ -47,6 +47,7 @@ export class LessonSessionService {
           meaningEn: true,
           audioUrl: true,
           imageUrl: true,
+          mnemonicVi: true,
           examples: {
             orderBy: { orderIndex: 'asc' },
             take: 2,

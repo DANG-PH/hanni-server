@@ -324,6 +324,9 @@ model Word {
   /// không tự lấy lại; null = chưa lấy HOẶC không hợp để lấy (hư từ, PEXELS
   /// chưa cấu hình...). Xem WordsService.getOrFetchImage().
   imageUrl          String?
+  /// mẹo nhớ theo âm Hán Việt do AI viết — tạo 1 lần khi có người bấm "Tạo mẹo
+  /// nhớ" rồi dùng chung cho mọi người (xem src/modules/ai-tools)
+  mnemonicVi        String?
   /// provenance: nguồn gốc dữ liệu
   source            String?
   /// bài học chứa từ này (lộ trình tuyến tính theo cấp)

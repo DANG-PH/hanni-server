@@ -239,7 +239,7 @@ export class WordsService {
    * theo THỨ TỰ ký tự) nên tách theo khoảng trắng là khớp 1-1 với từng chữ.
    * Nghĩa riêng của chữ lấy từ chính bảng Word nếu chữ đó tồn tại như một
    * mục từ đơn (1.519 từ 1 chữ). */
-  private async breakDownCharacters(word: Word) {
+  async breakDownCharacters(word: Word) {
     const chars = Array.from(word.simplified);
     if (chars.length < 2) return [];
     const readings = word.hanViet ? word.hanViet.split(/\s+/) : [];
