@@ -12,7 +12,7 @@ import { LeagueService } from './league.service';
 
 class LeaderboardQuery {
   @IsOptional()
-  @IsIn(['learned', 'streak', 'longest', 'lessons', 'elo'])
+  @IsIn(['learned', 'streak', 'longest', 'lessons'])
   metric?: LeaderboardMetric;
 
   @IsOptional()

@@ -791,6 +791,15 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   liễu nhất — `durationMs` phải ≥ `MATCH_PAIRS * MATCH_MIN_MS_PER_PAIR` (500ms/cặp) mới tính điểm,
   không xác minh được chi tiết từng lượt lật như MC. Điểm = `MATCH_PAIRS - mistakes` (tối thiểu
   1 nếu hợp lệ), `mistakes` (số lần lật sai) do client tự đếm và báo qua `FinishMinigameDto`.
+- **GỠ 2026-10-19 (user duyệt "triển khai nhé" sau danh sách audit): Đấu 1v1/ELO/mùa giải, khung avatar Phượng
+  Hoàng, API `/exams` cũ** — `DuelModule`/`ExamsModule` không còn nạp ở `app.module.ts`, `DuelService` bỏ khỏi
+  `NotificationsModule`, gateway bỏ 3 sự kiện `duel:*` và hook kết nối/ngắt, bảng xếp hạng bỏ tiêu chí `elo`, shop
+  chỉ còn danh hiệu (`GET/POST /shop/frames*` gỡ), hồ sơ công khai bỏ `equippedFrame`. DB GIỮ NGUYÊN (`UserRating`,
+  `DuelMatch`, `DuelSeason*`, `ExamAttempt`, `UserSettings.equippedFrame`). **Còn dở, chờ user**: (1) file trong
+  `src/modules/duel/`, `src/modules/exams/`, `shop/shop.service.ts`, `shop/frame-catalog.ts`, `shop/dto/equip-frame.dto.ts`
+  là code chết (không module nào nạp) — bộ phân loại auto mode chặn xoá file; (2) **nạp xu bằng tiền thật CHƯA gỡ**
+  (`POST /payments/topup` còn, client tự ẩn vì payOS chưa bật) — bộ phân loại chặn sửa luồng thanh toán. Các mục cũ
+  dưới đây giữ làm lịch sử.
 - **Đấu 1v1 + rank tier + mùa giải (`src/modules/duel`, model `UserRating` + `DuelMatch` +
   `DuelSeason` + `DuelSeasonResult`)**: Giai đoạn 2+3 minigame — ghép trận + đấu realtime qua
   WebSocket, ELO thô (K=32, công thức chuẩn cờ vua), CHỈ có chế độ `TRANSLATE` (chưa ghép LISTENING

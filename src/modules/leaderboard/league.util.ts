@@ -1,8 +1,6 @@
 /**
  * Giải đấu học tập theo tuần — xếp theo mức độ HỌC TẬP (số lượt ôn SRS hoàn
- * thành trong tuần), khác hẳn ELO đấu 1v1. Tên bậc dùng chủ đề đá quý (kiểu
- * Duolingo) — CỐ Ý khác tên bậc "Sắt→Thách Đấu" của đấu 1v1 (`duel-rank.util.ts`)
- * để không gây nhầm lẫn 2 hệ xếp hạng khác nhau.
+ * thành trong tuần). Tên bậc dùng chủ đề đá quý (kiểu Duolingo).
  */
 
 export interface LeagueTier {

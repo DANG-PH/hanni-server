@@ -1,11 +1,10 @@
-import { forwardRef, Inject, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
   MessageBody,
   OnGatewayConnection,
-  OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
@@ -14,7 +13,6 @@ import type { Server, Socket } from 'socket.io';
 import type { AccessTokenPayload } from '../../common/types';
 import type { Env } from '../../config/env.validation';
 import { ACCESS_COOKIE } from '../auth/cookies';
-import { DuelService } from '../duel/duel.service';
 
 function roomFor(userId: string): string {
   return `user:${userId}`;
@@ -46,16 +44,13 @@ function parseCookieHeader(header: string): Record<string, string> {
   namespace: '/notifications',
   cors: { origin: true, credentials: true },
 })
-export class NotificationsGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+export class NotificationsGateway implements OnGatewayConnection {
   @WebSocketServer() private server!: Server;
   private readonly logger = new Logger(NotificationsGateway.name);
 
   constructor(
     private readonly jwt: JwtService,
     private readonly config: ConfigService<Env, true>,
-    @Inject(forwardRef(() => DuelService)) private readonly duel: DuelService,
   ) {}
 
   handleConnection(client: Socket): void {
@@ -66,17 +61,6 @@ export class NotificationsGateway
     }
     (client.data as SocketData).userId = userId;
     void client.join(roomFor(userId));
-    // Huỷ timer forfeit nếu vừa rớt mạng giữa 1 trận đấu rồi kết nối lại kịp.
-    this.duel.handlePlayerReconnect(userId);
-  }
-
-  /** Rời hàng đợi ngay nếu đang chờ ghép trận; trận ĐANG diễn ra thì cho
-   * `DISCONNECT_FORFEIT_MS` để load lại/mạng chập chờn ngắn trước khi xử
-   * thua (xem `DuelService.handlePlayerDisconnect()`). */
-  handleDisconnect(client: Socket): void {
-    const userId = (client.data as SocketData).userId;
-    if (!userId) return;
-    this.duel.handlePlayerDisconnect(userId);
   }
 
   emitToUser(userId: string, event: string, payload: unknown): void {
@@ -97,32 +81,6 @@ export class NotificationsGateway
       conversationId: data.conversationId,
       userId,
     });
-  }
-
-  /** "Đấu 1v1" — 3 sự kiện chuyển thẳng cho DuelService xử lý (ghép trận,
-   * chấm điểm từng vòng, tính ELO); gateway chỉ lo xác thực + đọc payload. */
-  @SubscribeMessage('duel:join-queue')
-  handleDuelJoinQueue(@ConnectedSocket() client: Socket): void {
-    const userId = (client.data as SocketData).userId;
-    if (!userId) return;
-    void this.duel.joinQueue(userId);
-  }
-
-  @SubscribeMessage('duel:leave-queue')
-  handleDuelLeaveQueue(@ConnectedSocket() client: Socket): void {
-    const userId = (client.data as SocketData).userId;
-    if (!userId) return;
-    this.duel.leaveQueue(userId);
-  }
-
-  @SubscribeMessage('duel:answer')
-  handleDuelAnswer(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: { matchId?: string; chosenIndex?: number },
-  ): void {
-    const userId = (client.data as SocketData).userId;
-    if (!userId || !data?.matchId || data.chosenIndex == null) return;
-    void this.duel.submitAnswer(userId, data.matchId, data.chosenIndex);
   }
 
   private authenticate(client: Socket): string | null {

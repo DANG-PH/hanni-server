@@ -14,13 +14,11 @@ import { RedisModule } from './infra/redis/redis.module';
 import { AssistantModule } from './modules/assistant/assistant.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AiToolsModule } from './modules/ai-tools/ai-tools.module';
-import { DuelModule } from './modules/duel/duel.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { GamificationModule } from './modules/gamification/gamification.module';
 import { GrammarModule } from './modules/grammar/grammar.module';
 import { InsightsModule } from './modules/insights/insights.module';
-import { ExamsModule } from './modules/exams/exams.module';
 import { MockExamsModule } from './modules/mock-exams/mock-exams.module';
 import { PinyinModule } from './modules/pinyin/pinyin.module';
 import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
@@ -90,7 +88,6 @@ import { WalletModule } from './modules/wallet/wallet.module';
     VideosModule,
     GamificationModule,
     GrammarModule,
-    ExamsModule,
     MockExamsModule,
     PinyinModule,
     LeaderboardModule,
@@ -106,7 +103,6 @@ import { WalletModule } from './modules/wallet/wallet.module';
     QuestsModule,
     ShopModule,
     MinigameModule,
-    DuelModule,
     PaymentsModule,
     PremiumModule,
     InsightsModule,

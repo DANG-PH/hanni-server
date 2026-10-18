@@ -10,7 +10,6 @@ import { join } from 'node:path';
 import type { Env } from '../../config/env.validation';
 import { PasswordService } from '../auth/password.service';
 import { PrismaService } from '../../infra/prisma/prisma.service';
-import { AVATAR_FRAMES } from '../shop/frame-catalog';
 import { TITLE_CATALOG } from '../shop/title-catalog';
 import { isPremiumActive } from '../premium/premium-plans';
 
@@ -103,7 +102,7 @@ export class UsersService {
           avatarUrl: true,
           createdAt: true,
           premiumUntil: true,
-          settings: { select: { equippedFrame: true, equippedTitle: true } },
+          settings: { select: { equippedTitle: true } },
         },
       }),
       this.prisma.userStreak.findUnique({ where: { userId: targetId } }),
@@ -156,9 +155,6 @@ export class UsersService {
       }),
     ]);
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
-    const equippedFrame = AVATAR_FRAMES.find(
-      (f) => f.key === user.settings?.equippedFrame,
-    );
     const equippedTitle = TITLE_CATALOG.find(
       (t) => t.key === user.settings?.equippedTitle,
     );
@@ -168,9 +164,6 @@ export class UsersService {
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
       isPremium: isPremiumActive(user.premiumUntil),
-      equippedFrame: equippedFrame
-        ? { key: equippedFrame.key, colors: equippedFrame.colors }
-        : null,
       equippedTitle: equippedTitle?.label ?? null,
       joinedAt: user.createdAt,
       currentStreak: streak?.currentStreak ?? 0,
