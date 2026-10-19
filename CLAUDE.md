@@ -576,7 +576,8 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   người: 5–7 người mở app cùng lúc là ăn 429. Đo: VPS gọi 1 lần, bộ đếm `X-RateLimit-Remaining` của máy khác tụt
   11 (đúng 10 lượt máy kia vừa gọi + 1). Sửa: `app.set('trust proxy', 'loopback')` — chỉ tin Nginx trên máy nên
   IP lấy đúng địa chỉ Nginx ghi cuối `X-Forwarded-For`, khách tự thêm IP giả phía trước không có tác dụng.
-  Nhiều người chung 1 Wi-Fi (chung IP) vẫn chung 100/phút — buổi demo đông người thì nâng `THROTTLE_LIMIT` ở `.env` VPS.
+  Nhiều người chung 1 Wi-Fi (chung IP) vẫn chung 1 hạn mức — `.env` VPS đã nâng `THROTTLE_LIMIT` 100 → 300 (2026-10-19, user
+  duyệt, trước buổi thuyết trình); header `X-RateLimit-Limit` cho biết giá trị đang chạy.
 - **Index quan trọng cho queue SRS**: `UserWordProgress (userId, dueAt)` và `(userId, hskLevel, dueAt)`.
 - **"Từ khó nhớ" (leech, thuật ngữ Anki) — `GET /study/leeches` (từ 2026-09-19)**: phát hiện qua
   research chủ động (rà lại code, không phải yêu cầu cụ thể của user) — field `UserWordProgress.
