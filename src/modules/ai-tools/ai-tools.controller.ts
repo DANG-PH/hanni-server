@@ -5,6 +5,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -12,7 +13,11 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import type { AuthUser } from '../../common/types';
 import { AiToolsService } from './ai-tools.service';
-import { AnalyzeDto, SentenceCheckDto } from './dto/ai-tools.dto';
+import {
+  AnalyzeDto,
+  SegmentQueryDto,
+  SentenceCheckDto,
+} from './dto/ai-tools.dto';
 
 @ApiTags('ai')
 @ApiBearerAuth()
@@ -39,6 +44,14 @@ export class AiToolsController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   checkSentence(@CurrentUser() user: AuthUser, @Body() dto: SentenceCheckDto) {
     return this.ai.checkSentence(user.id, dto.wordId, dto.sentence);
+  }
+
+  /** Tách đoạn văn theo từ điển (pinyin + Hán Việt từng từ) — không gọi AI, khách dùng được. */
+  @Public()
+  @Get('segment')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  segment(@Query() dto: SegmentQueryDto) {
+    return this.ai.segment(dto.q);
   }
 
   @Post('analyze')

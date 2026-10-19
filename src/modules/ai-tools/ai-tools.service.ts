@@ -196,8 +196,19 @@ export class AiToolsService {
         .setJson(key, analysis, CACHE_TTL_SEC)
         .catch(() => undefined);
     }
-    const index = await this.wordIndex();
-    const tokens = segmentLine(analysis.zh, index).map((t) => ({
+    const tokens = this.tokensOf(analysis.zh, await this.wordIndex());
+    return { source, input: text, ...analysis, tokens, cached, usage };
+  }
+
+  /** Tách đoạn văn theo từ điển Hanni — pinyin + âm Hán Việt + nghĩa từng từ, KHÔNG gọi AI nên không tốn
+   * lượt và khách dùng được (như "Convert pinyin" của Hanbeego, thêm âm Hán Việt). Ô tra từ điển gọi khi
+   * người học dán cả câu; phân tích ngữ pháp + dịch bằng AI vẫn là bước thêm ở `analyze`. */
+  async segment(text: string) {
+    return { tokens: this.tokensOf(text, await this.wordIndex()) };
+  }
+
+  private tokensOf(zh: string, index: Map<string, IndexWord>) {
+    return segmentLine(zh, index).map((t) => ({
       text: t.text,
       wordId: t.word?.id ?? null,
       simplified: t.word?.simplified ?? null,
@@ -210,7 +221,6 @@ export class AiToolsService {
       meaningVi: t.word?.meaningVi?.split(';')[0].trim() ?? null,
       hskLevel: t.word?.hskLevel ?? null,
     }));
-    return { source, input: text, ...analysis, tokens, cached, usage };
   }
 
   /** Bài đọc của 1 bài học (đã có thì ai cũng đọc được) + từ của bài để tô sáng. */

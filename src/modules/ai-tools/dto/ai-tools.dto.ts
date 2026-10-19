@@ -11,6 +11,14 @@ export class SentenceCheckDto {
   sentence!: string;
 }
 
+/** Đoạn văn dán vào ô tra từ điển — tách theo từ điển, không gọi AI. */
+export class SegmentQueryDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(ANALYZE_MAX)
+  q!: string;
+}
+
 export class AnalyzeDto {
   @IsString()
   @MinLength(1)

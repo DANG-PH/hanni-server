@@ -1261,6 +1261,9 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   Hanni (`segmentLine`, kèm Hán Việt + nghĩa + link). (2)(3) đệm Redis 30 ngày theo băm câu — gõ lại đúng câu không
   tốn lượt. `GET /ai/usage`. Thử thật 2026-10-18 (gemini-2.5-flash): 3,7–7 giây/lượt; "我电脑用学习" → 45 điểm, sửa
   thành 我用电脑学习 kèm giải thích cấu trúc 用 + công cụ + động từ. Test: `ai-tools.util.spec.ts`.
+  **`GET /ai/segment?q=` (`@Public`, 2026-10-19, KHÔNG gọi AI)**: tách đoạn văn (≤200 ký tự) theo từ điển Hanni — pinyin +
+  âm Hán Việt + nghĩa từng từ, dùng chung `tokensOf()` với `analyze`. Ô tra từ điển gọi khi người học dán cả câu nên khách
+  cũng có kết quả ngay (trước đó chỉ có nút "Đăng nhập để dùng AI"); tham khảo "Convert pinyin" của Hanbeego `/tools`.
 - **Từ điển làm lại theo Hanzii (2026-10-19 — user: "phần từ điển đang thấy hơi đần, cần làm lại")** — `GET
   /dictionary/:slug` trả thêm: `glyphs[]` cho khung "Hán tự" (MỌI chữ, kể cả từ 1 chữ: âm Hán Việt, pinyin, nghĩa riêng nếu chữ
   đứng được thành từ, chữ phồn thể, **số nét + bộ thủ kèm tên Hán Việt** — "Bộ TỬ 子 · 8 nét" như Hanzii); `measures[]` (**lượng
