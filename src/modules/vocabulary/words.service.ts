@@ -229,9 +229,7 @@ export class WordsService {
     };
   }
 
-  /** Khung "Hán tự" ở trang từ (như Hanzii): từng chữ kèm âm Hán Việt, pinyin, nghĩa riêng (nếu chữ
-   * đứng được thành từ), bộ thủ + tên Hán Việt của bộ, số nét, chữ phồn thể tương ứng. */
-  private async glyphsOf(word: Word) {
+  private loadCharInfo() {
     if (!this.charInfo)
       this.charInfo = JSON.parse(
         readFileSync(
@@ -239,6 +237,81 @@ export class WordsService {
           'utf8',
         ),
       ) as Record<string, [string, number | null]>;
+    return this.charInfo;
+  }
+
+  /** Tab "Hán tự" của từ điển: 1 chữ — bộ thủ, số nét, âm Hán Việt + pinyin (chữ không đứng riêng
+   * thành từ như 校 thì lấy âm hay gặp nhất của nó trong các từ chứa nó: 学校 học hiệu → hiệu), nghĩa
+   * riêng nếu có, và các từ chứa chữ đó (cấp thấp, thông dụng trước). */
+  async charLookup(raw: string) {
+    const char = Array.from(raw.trim())[0];
+    if (!char || !/\p{Script=Han}/u.test(char))
+      throw new NotFoundException('Không phải chữ Hán');
+    const info = this.loadCharInfo()[char];
+    const words = await this.prisma.word.findMany({
+      where: {
+        OR: [
+          { simplified: { contains: char } },
+          { traditional: { contains: char } },
+        ],
+      },
+      select: {
+        simplified: true,
+        traditional: true,
+        pinyin: true,
+        hanViet: true,
+        meaningVi: true,
+        hskLevel: true,
+      },
+      orderBy: [
+        { hskLevel: 'asc' },
+        { frequencyRank: { sort: 'asc', nulls: 'last' } },
+      ],
+      take: 60,
+    });
+    if (!info && words.length === 0)
+      throw new NotFoundException('Không có chữ này trong từ vựng HSK');
+    // Tra chữ phồn thể (學) thì mục từ là chữ giản thể tương ứng (学).
+    const own = words.find(
+      (w) => w.simplified === char || w.traditional === char,
+    );
+    const at = (w: (typeof words)[number]) => {
+      const i = Array.from(w.simplified).indexOf(char);
+      return i >= 0 ? i : Array.from(w.traditional ?? '').indexOf(char);
+    };
+    const vote = (
+      pick: (w: (typeof words)[number], i: number) => string | null,
+    ) => {
+      const count = new Map<string, number>();
+      for (const w of words) {
+        const i = at(w);
+        const v = i >= 0 ? pick(w, i) : null;
+        if (v) count.set(v, (count.get(v) ?? 0) + 1);
+      }
+      return [...count].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    };
+    const aligned = (s: string | null, w: (typeof words)[number]) => {
+      const parts = s ? s.split(/\s+/) : [];
+      return parts.length === Array.from(w.simplified).length ? parts : null;
+    };
+    return {
+      char,
+      strokes: info?.[1] ?? null,
+      radical: info ? radicalOf(info[0]) : null,
+      hanViet:
+        own?.hanViet ?? vote((w, i) => aligned(w.hanViet, w)?.[i] ?? null),
+      pinyin: own?.pinyin ?? vote((w, i) => aligned(w.pinyin, w)?.[i] ?? null),
+      meaningVi: own?.meaningVi ?? null,
+      hskLevel: own?.hskLevel ?? words[0]?.hskLevel ?? null,
+      wordSlug: own?.simplified ?? null,
+      words: words.filter((w) => w !== own && w.meaningVi).slice(0, 30),
+    };
+  }
+
+  /** Khung "Hán tự" ở trang từ (như Hanzii): từng chữ kèm âm Hán Việt, pinyin, nghĩa riêng (nếu chữ
+   * đứng được thành từ), bộ thủ + tên Hán Việt của bộ, số nét, chữ phồn thể tương ứng. */
+  private async glyphsOf(word: Word) {
+    const charInfo = this.loadCharInfo();
     const chars = Array.from(word.simplified).filter((c) =>
       /\p{Script=Han}/u.test(c),
     );
@@ -260,7 +333,7 @@ export class WordsService {
       if (!byChar.has(r.simplified)) byChar.set(r.simplified, r);
     return chars.map((char, i) => {
       const own = byChar.get(char);
-      const info = this.charInfo?.[char];
+      const info = charInfo[char];
       const t = trad.length === chars.length ? trad[i] : null;
       return {
         char,

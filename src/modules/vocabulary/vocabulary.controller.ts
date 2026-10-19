@@ -85,6 +85,13 @@ export class VocabularyController {
     return this.words.publicSlugs();
   }
 
+  /** Tab "Hán tự" của từ điển — khai báo TRƯỚC `dictionary/:slug`. */
+  @Public()
+  @Get('dictionary/char/:c')
+  lookupChar(@Param('c') c: string) {
+    return this.words.charLookup(c);
+  }
+
   /** Tab "Ví dụ" của từ điển — khai báo TRƯỚC `dictionary/:slug`. */
   @Public()
   @Get('dictionary/examples')

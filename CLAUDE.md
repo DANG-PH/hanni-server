@@ -1261,7 +1261,9 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   (bài/chủ đề chứa từ) và `related` giờ là **từ cùng chủ đề** (cùng bài) thay cho 12 từ thông dụng nhất cùng cấp (的, 我, 你… chẳng
   liên quan). Bộ thủ + số nét: `data/curated/char-info.json` (4.272 chữ giản + phồn thể, trích Unihan `kRSUnicode`/`kTotalStrokes`
   bằng `scripts/import/build-char-info.ts`; dấu ' = dạng giản thể của bộ, vd "149'" → 讠) + bảng 214 bộ thủ tên Hán Việt
-  `src/modules/vocabulary/radicals.ts`. Tab tra cứu mới: `GET /dictionary/examples?q=` (tìm trong câu ví dụ Hanni soạn — có chữ Hán
+  `src/modules/vocabulary/radicals.ts`. Tab tra cứu mới: `GET /dictionary/char/:c` (tab Hán tự: bộ thủ, số nét, âm Hán Việt +
+  pinyin — chữ không đứng riêng thành từ như 校 thì lấy âm hay gặp nhất của nó trong các từ chứa nó: 学校 học hiệu → hiệu —, tối đa 30
+  từ chứa chữ; gõ phồn thể 學 thì `wordSlug` = 学), `GET /dictionary/examples?q=` (tìm trong câu ví dụ Hanni soạn — có chữ Hán
   thì theo câu, không thì theo bản dịch), `GET /grammar/search?q=` (chỉ điểm có giải thích thật). ETL `build-words.ts`
   `measureWordsOf()` sinh `measureWords` cho words.seed.json (chạy lại ETL ra file y hệt, chỉ thêm trường này); seed nạp theo.
 - **Bài đọc AI theo bài học (`ai-tools`, `LessonReading`, 2026-10-19 — user: "cần AI… để điểm cao")** — `GET
