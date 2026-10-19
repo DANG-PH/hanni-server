@@ -10,6 +10,7 @@ import { RedisService } from '../../infra/redis/redis.service';
 import { applyPremiumMultiplier } from '../premium/premium-plans';
 import { WalletService } from '../wallet/wallet.service';
 import type { FinishMinigameDto } from './dto/minigame.dto';
+import { NOT_TEST_ACCOUNT } from '../../common/test-accounts';
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -392,7 +393,7 @@ export class MinigameService {
     // Xếp hạng riêng theo TỪNG mode — ghép cả 2 vào 1 bảng sẽ không công
     // bằng vì độ khó (số từ có audio ít hơn số từ có nghĩa) khác nhau.
     const rows = await this.prisma.minigameSession.findMany({
-      where: { finishedAt: { gte: since }, mode },
+      where: { finishedAt: { gte: since }, mode, user: NOT_TEST_ACCOUNT },
       orderBy: [{ score: 'desc' }, { durationMs: 'asc' }],
       take: 20,
       include: {

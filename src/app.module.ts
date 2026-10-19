@@ -14,6 +14,8 @@ import { RedisModule } from './infra/redis/redis.module';
 import { AssistantModule } from './modules/assistant/assistant.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AiToolsModule } from './modules/ai-tools/ai-tools.module';
+import { ClassroomsModule } from './modules/classrooms/classrooms.module';
+import { PartnersModule } from './modules/partners/partners.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { GamificationModule } from './modules/gamification/gamification.module';
@@ -108,6 +110,8 @@ import { WalletModule } from './modules/wallet/wallet.module';
     InsightsModule,
     ScanModule,
     AiToolsModule,
+    ClassroomsModule,
+    PartnersModule,
     HealthModule,
   ],
   providers: [

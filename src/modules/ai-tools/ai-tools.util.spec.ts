@@ -1,10 +1,14 @@
 import {
   analyzePrompt,
+  lessonWordsUsed,
   mnemonicPrompt,
   normalizeText,
+  outOfLevelChars,
   parseAnalysis,
   parseMnemonic,
+  parseReading,
   parseSentenceCheck,
+  readingPrompt,
   type WordFacts,
 } from './ai-tools.util';
 
@@ -101,5 +105,57 @@ describe('ai-tools.util', () => {
       'Phân tích câu tiếng Trung',
     );
     expect(normalizeText('  我想喝咖啡。 ')).toBe('我想喝咖啡');
+  });
+});
+
+describe('bài đọc theo bài học', () => {
+  const words = [
+    { simplified: '你好', pinyin: 'nǐ hǎo', meaningVi: 'xin chào' },
+    { simplified: '谢谢', pinyin: 'xiè xie', meaningVi: 'cảm ơn' },
+    { simplified: '有（一）点儿', pinyin: 'yǒu diǎnr', meaningVi: 'hơi' },
+  ];
+
+  it('prompt có từ của bài, danh sách từ cho phép và chữ cấm ở lần viết lại', () => {
+    const p = readingPrompt({
+      hskLevel: 1,
+      lessonTitle: 'Chào hỏi',
+      lessonWords: words,
+      allowedWords: ['你好', '谢谢', '我'],
+      forbiddenChars: ['咖', '啡'],
+    });
+    expect(p).toContain('你好 (xin chào)');
+    expect(p).toContain('你好、谢谢、我');
+    expect(p).toContain('咖 啡');
+  });
+
+  it('đọc JSON: bỏ câu không có chữ Hán, speaker lạ thành null, cần ≥ 4 câu', () => {
+    const raw = JSON.stringify({
+      title: 'Gặp bạn mới',
+      sentences: [
+        { speaker: 'A', zh: '你 好！', vi: 'Chào bạn!' },
+        { speaker: 'B', zh: '你好！', vi: 'Chào!' },
+        { speaker: 'C', zh: '谢谢你。', vi: 'Cảm ơn bạn.' },
+        { speaker: 'A', zh: 'hello', vi: 'xin chào' },
+        { speaker: '', zh: '不客气。', vi: 'Không có gì.' },
+      ],
+    });
+    const r = parseReading(raw)!;
+    expect(r.sentences).toHaveLength(4);
+    expect(r.sentences[0].zh).toBe('你好！');
+    expect(r.sentences[2].speaker).toBeNull();
+    expect(
+      parseReading(JSON.stringify({ title: 'x', sentences: [] })),
+    ).toBeNull();
+  });
+
+  it('bắt chữ vượt cấp, đếm từ của bài đã dùng (cả dạng có ngoặc)', () => {
+    const sentences = [{ zh: '你好！我有点儿累。' }, { zh: '谢谢你的咖啡。' }];
+    const allowed = new Set([...'你好我有点儿谢的累']);
+    expect(outOfLevelChars(sentences, allowed)).toEqual(['咖', '啡']);
+    expect(lessonWordsUsed(sentences, words)).toEqual([
+      '你好',
+      '谢谢',
+      '有（一）点儿',
+    ]);
   });
 });

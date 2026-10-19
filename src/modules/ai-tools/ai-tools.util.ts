@@ -243,3 +243,123 @@ export function parseAnalysis(text: string): Analysis | null {
     .slice(0, 3);
   return { zh, pinyin, translationVi, grammar, notesVi: str(o.notesVi, 600) };
 }
+
+// ───────────────────────── Bài đọc theo bài học ─────────────────────────
+
+export interface ReadingWord {
+  simplified: string;
+  pinyin: string;
+  meaningVi: string | null;
+}
+
+export interface ReadingSentence {
+  speaker: 'A' | 'B' | null;
+  zh: string;
+  vi: string;
+}
+
+export interface ReadingDraft {
+  title: string;
+  sentences: ReadingSentence[];
+}
+
+/** Từ cấp 1–3 ít (300/500/1000 từ) nên đưa cả danh sách cho AI chỉ dùng trong đó —
+ * cấp cao thì quá dài, chỉ soát lại theo chữ (`outOfLevelChars`). */
+export const READING_FULL_LIST_MAX_LEVEL = 3;
+
+export function readingPrompt(input: {
+  hskLevel: number;
+  lessonTitle: string;
+  lessonWords: ReadingWord[];
+  allowedWords: string[] | null;
+  forbiddenChars: string[];
+}): string {
+  const lines = [
+    `Bạn là giáo viên tiếng Trung cho người Việt. Viết MỘT bài đọc ngắn cho học viên HSK ${input.hskLevel} vừa học xong bài "${input.lessonTitle}".`,
+    '- Dạng hội thoại 2 người (speaker "A"/"B") hoặc đoạn văn kể chuyện (speaker rỗng), 6–9 câu, mỗi câu tối đa 22 chữ Hán.',
+    '- Dùng NHIỀU NHẤT có thể các từ của bài (ít nhất một nửa), đặt trong tình huống đời thường tự nhiên, câu có nghĩa liền mạch.',
+    '- Chỉ chữ Hán giản thể + dấu câu tiếng Trung. KHÔNG dùng tên riêng, số Ả Rập, chữ Latin.',
+    `- Từ của bài: ${input.lessonWords.map((w) => `${w.simplified} (${w.meaningVi?.split(';')[0] ?? w.pinyin})`).join(', ')}.`,
+  ];
+  if (input.allowedWords)
+    lines.push(
+      `- CHỈ được dùng các từ sau (từ vựng HSK 1–${input.hskLevel}), không dùng từ nào khác: ${input.allowedWords.join('、')}.`,
+    );
+  else
+    lines.push(
+      `- Chỉ dùng từ vựng thông dụng không vượt quá HSK ${input.hskLevel}.`,
+    );
+  if (input.forbiddenChars.length)
+    lines.push(
+      `- Lần trước bài đọc có chữ vượt cấp — TUYỆT ĐỐI không dùng các chữ: ${input.forbiddenChars.join(' ')}.`,
+    );
+  lines.push(
+    '',
+    'Trả JSON: title (tên bài đọc bằng tiếng Việt, ≤ 8 từ), sentences: [{speaker: "A" | "B" | "", zh: câu tiếng Trung, vi: bản dịch tiếng Việt tự nhiên}].',
+  );
+  return lines.join('\n');
+}
+
+export const READING_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    title: { type: Type.STRING },
+    sentences: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          speaker: { type: Type.STRING },
+          zh: { type: Type.STRING },
+          vi: { type: Type.STRING },
+        },
+        required: ['zh', 'vi'],
+      },
+    },
+  },
+  required: ['title', 'sentences'],
+};
+
+export function parseReading(text: string): ReadingDraft | null {
+  const o = parseObject(text);
+  if (!o) return null;
+  const title = str(o.title, 80);
+  const sentences = (Array.isArray(o.sentences) ? o.sentences : [])
+    .map((s: unknown): ReadingSentence | null => {
+      const r =
+        s && typeof s === 'object' ? (s as Record<string, unknown>) : {};
+      const zh = str(r.zh, 60)?.replace(/\s+/g, '');
+      const vi = str(r.vi, 240);
+      if (!zh || !hasHan(zh) || !vi) return null;
+      const speaker = r.speaker === 'A' || r.speaker === 'B' ? r.speaker : null;
+      return { speaker, zh, vi };
+    })
+    .filter((s): s is ReadingSentence => !!s)
+    .slice(0, 10);
+  return title && sentences.length >= 4 ? { title, sentences } : null;
+}
+
+/** Chữ Hán trong bài đọc mà KHÔNG thuộc từ vựng HSK ≤ cấp bài (khác thứ tự xuất hiện). */
+export function outOfLevelChars(
+  sentences: { zh: string }[],
+  allowed: Set<string>,
+): string[] {
+  const out = new Set<string>();
+  for (const s of sentences)
+    for (const c of s.zh) if (HAN.test(c) && !allowed.has(c)) out.add(c);
+  return [...out];
+}
+
+/** Từ của bài xuất hiện trong bài đọc — hiện "dùng 7/10 từ của bài". */
+export function lessonWordsUsed(
+  sentences: { zh: string }[],
+  words: { simplified: string }[],
+): string[] {
+  const text = sentences.map((s) => s.zh).join('');
+  return words
+    .filter((w) => {
+      const form = w.simplified.replace(/[（(][^）)]*[）)]/g, '');
+      return form && text.includes(form);
+    })
+    .map((w) => w.simplified);
+}

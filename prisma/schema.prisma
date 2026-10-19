@@ -183,6 +183,8 @@ model User {
   paymentOrders       PaymentOrder[]
   leagueEntries       LeagueEntry[]
   dailyQuestClaims    DailyQuestClaim[]
+  classroomsOwned     Classroom[]          @relation("ClassroomOwner")
+  classroomMembers    ClassroomMember[]
 
   @@index([lastActiveAt])
 }
@@ -291,9 +293,22 @@ model Lesson {
 
   words          Word[]
   lessonProgress UserLessonProgress[]
+  reading        LessonReading?
+  assignments    ClassAssignment[]
 
   @@unique([hskLevel, orderIndex])
   @@index([hskLevel])
+}
+
+/// Bài đọc AI viết cho 1 bài học (2026-10-19) — chỉ dùng từ của bài + chữ thuộc HSK ≤ cấp
+/// bài; tạo 1 lần khi người học đầu tiên bấm rồi ai cũng đọc được (như `Word.mnemonicVi`).
+model LessonReading {
+  lessonId  String   @id @db.Uuid
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  title     String
+  /// [{speaker: "A"|"B"|null, zh, pinyin, vi}]
+  sentences Json
+  createdAt DateTime @default(now())
 }
 
 model Word {
@@ -1218,4 +1233,68 @@ model RoleplayMessage {
   createdAt DateTime        @default(now())
 
   @@index([sessionId, createdAt])
+}
+
+/// Lớp học (2026-10-19): giáo viên/trung tâm tạo lớp, học viên vào bằng mã, giáo viên xem
+/// tiến độ từng người + giao bài (bài học hoặc đề thi thử). Học viên vào lớp là đồng ý cho
+/// giáo viên xem tiến độ học của mình; rời lớp là hết.
+model Classroom {
+  id          String            @id @default(uuid()) @db.Uuid
+  ownerId     String            @db.Uuid
+  owner       User              @relation("ClassroomOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  name        String
+  /// Mã vào lớp 6 ký tự, không có chữ dễ nhầm (0/O, 1/I/L)
+  code        String            @unique
+  hskLevel    Int?
+  createdAt   DateTime          @default(now())
+  members     ClassroomMember[]
+  assignments ClassAssignment[]
+
+  @@index([ownerId])
+}
+
+model ClassroomMember {
+  classroomId String    @db.Uuid
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  userId      String    @db.Uuid
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt    DateTime  @default(now())
+
+  @@id([classroomId, userId])
+  @@index([userId])
+}
+
+enum ClassAssignmentKind {
+  LESSON
+  MOCK_EXAM
+}
+
+/// Bài giáo viên giao: 1 bài học (xong khi `UserLessonProgress.completedAt` có) hoặc 1 đề
+/// thi thử (xong khi có `MockExamAttempt` của đề đó sau lúc giao) — không lưu trạng thái riêng.
+model ClassAssignment {
+  id          String              @id @default(uuid()) @db.Uuid
+  classroomId String              @db.Uuid
+  classroom   Classroom           @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  kind        ClassAssignmentKind
+  lessonId    String?             @db.Uuid
+  lesson      Lesson?             @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  examSlug    String?
+  dueAt       DateTime?
+  createdAt   DateTime            @default(now())
+
+  @@index([classroomId, createdAt])
+}
+
+/// Liên hệ hợp tác từ trang /hop-tac (trung tâm, giáo viên, gia sư…) — admin đọc qua API.
+model PartnerLead {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  /// center | teacher | tutor | other
+  kind      String
+  contact   String
+  message   String
+  userId    String?  @db.Uuid
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

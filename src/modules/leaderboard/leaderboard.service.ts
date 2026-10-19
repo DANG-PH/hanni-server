@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { SrsState } from '@prisma/client';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import { TITLE_CATALOG } from '../shop/title-catalog';
+import { NOT_TEST_ACCOUNT } from '../../common/test-accounts';
 
 const LEARNED_INTERVAL_DAYS = 21;
 
@@ -130,7 +131,7 @@ export class LeaderboardService {
     if (metric === 'learned') {
       const grouped = await this.prisma.userWordProgress.groupBy({
         by: ['userId'],
-        where: LEARNED_WHERE,
+        where: { ...LEARNED_WHERE, user: NOT_TEST_ACCOUNT },
         _count: true,
         orderBy: { _count: { userId: 'desc' } },
       });
@@ -140,7 +141,7 @@ export class LeaderboardService {
     if (metric === 'lessons') {
       const grouped = await this.prisma.userLessonProgress.groupBy({
         by: ['userId'],
-        where: { completedAt: { not: null } },
+        where: { completedAt: { not: null }, user: NOT_TEST_ACCOUNT },
         _count: true,
         orderBy: { _count: { userId: 'desc' } },
       });
@@ -150,7 +151,7 @@ export class LeaderboardService {
     // streak / longest
     const field = metric === 'streak' ? 'currentStreak' : 'longestStreak';
     const streaks = await this.prisma.userStreak.findMany({
-      where: { [field]: { gt: 0 } },
+      where: { [field]: { gt: 0 }, user: NOT_TEST_ACCOUNT },
       select: { userId: true, currentStreak: true, longestStreak: true },
       orderBy: { [field]: 'desc' },
     });

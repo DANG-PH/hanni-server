@@ -9,6 +9,7 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import type { AuthUser } from '../../common/types';
 import { AiToolsService } from './ai-tools.service';
 import { AnalyzeDto, SentenceCheckDto } from './dto/ai-tools.dto';
@@ -44,5 +45,21 @@ export class AiToolsController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   analyze(@CurrentUser() user: AuthUser, @Body() dto: AnalyzeDto) {
     return this.ai.analyze(user.id, dto.text);
+  }
+
+  /** Bài đọc AI của 1 bài học — đã có thì khách cũng đọc được. */
+  @Public()
+  @Get('reading/:lessonId')
+  reading(@Param('lessonId', ParseUUIDPipe) lessonId: string) {
+    return this.ai.reading(lessonId);
+  }
+
+  @Post('reading/:lessonId')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  createReading(
+    @CurrentUser() user: AuthUser,
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
+  ) {
+    return this.ai.createReading(user.id, lessonId);
   }
 }

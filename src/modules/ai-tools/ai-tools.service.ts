@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from '@google/genai';
-import type { Word } from '@prisma/client';
+import { Prisma, type Word } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import { pinyin as toPinyin } from 'pinyin-pro';
 import { localStudyDate } from '../../common/time.util';
@@ -17,13 +17,19 @@ import { PrismaService } from '../../infra/prisma/prisma.service';
 import { RedisService } from '../../infra/redis/redis.service';
 import { CHAT_MODELS } from '../assistant/gemini-models';
 import { isPremiumActive } from '../premium/premium-plans';
+import type { PinyinOverrides } from '../mock-exams/mock-exam.content';
 import { segmentLine } from '../videos/word-match.util';
+import {
+  examplePinyin,
+  pinyinOverrides,
+} from '../vocabulary/example-pinyin.util';
 import { WordsService } from '../vocabulary/words.service';
 import {
   ANALYZE_SCHEMA,
   analyzePrompt,
   FREE_AI_TOOLS_DAILY_LIMIT,
   hasHan,
+  lessonWordsUsed,
   MNEMONIC_SCHEMA,
   mnemonicPrompt,
   normalizeText,
@@ -31,10 +37,17 @@ import {
   parseMnemonic,
   parseSentenceCheck,
   PREMIUM_AI_TOOLS_DAILY_LIMIT,
+  outOfLevelChars,
+  parseReading,
   PROMPT_VERSION,
+  READING_FULL_LIST_MAX_LEVEL,
+  READING_SCHEMA,
+  readingPrompt,
   SENTENCE_SCHEMA,
   sentenceCheckPrompt,
   type Analysis,
+  type ReadingDraft,
+  type ReadingSentence,
   type SentenceCheck,
   type WordFacts,
 } from './ai-tools.util';
@@ -65,6 +78,13 @@ export class AiToolsService {
   private readonly cutoffHour: number;
   private index: Map<string, IndexWord> | null = null;
   private indexAt = 0;
+  /** Bảng chữ/từ theo cấp + bảng đọc pinyin cho bài đọc — dữ liệu từ điển gần như không đổi. */
+  private vocabCache: {
+    at: number;
+    chars: Map<number, Set<string>>;
+    words: Map<number, string[]>;
+    overrides: PinyinOverrides;
+  } | null = null;
 
   constructor(
     config: ConfigService<Env, true>,
@@ -190,6 +210,157 @@ export class AiToolsService {
       hskLevel: t.word?.hskLevel ?? null,
     }));
     return { source, input: text, ...analysis, tokens, cached, usage };
+  }
+
+  /** Bài đọc của 1 bài học (đã có thì ai cũng đọc được) + từ của bài để tô sáng. */
+  async reading(lessonId: string) {
+    const lesson = await this.prisma.lesson.findUnique({
+      where: { id: lessonId },
+      select: {
+        id: true,
+        title: true,
+        hskLevel: true,
+        orderIndex: true,
+        reading: { select: { title: true, sentences: true, createdAt: true } },
+        words: {
+          orderBy: { lessonOrder: 'asc' },
+          select: {
+            id: true,
+            simplified: true,
+            pinyin: true,
+            hanViet: true,
+            meaningVi: true,
+            audioUrl: true,
+          },
+        },
+      },
+    });
+    if (!lesson) throw new NotFoundException('Không tìm thấy bài học');
+    const { reading, words, ...info } = lesson;
+    const sentences = reading
+      ? (reading.sentences as unknown as (ReadingSentence & {
+          pinyin: string;
+        })[])
+      : null;
+    return {
+      lesson: info,
+      words,
+      reading:
+        reading && sentences
+          ? {
+              title: reading.title,
+              sentences,
+              createdAt: reading.createdAt,
+              wordsUsed: lessonWordsUsed(sentences, words),
+            }
+          : null,
+      enabled: !!this.genAI,
+    };
+  }
+
+  /** AI viết bài đọc chỉ dùng từ của bài + chữ thuộc HSK ≤ cấp bài; vượt cấp thì bắt viết
+   * lại 1 lần (kèm danh sách chữ cấm), vẫn vượt thì thôi và hoàn lượt. Tạo 1 lần dùng chung. */
+  async createReading(userId: string, lessonId: string) {
+    const current = await this.reading(lessonId);
+    if (current.reading) return { ...current, cached: true };
+    const usage = await this.take(userId);
+    const draft = await this.writeReading(current.lesson, current.words);
+    if (!draft) {
+      await this.refund(userId);
+      throw new ServiceUnavailableException(
+        'AI chưa viết được bài đọc đúng cấp — thử lại sau ít phút nhé.',
+      );
+    }
+    const { overrides } = await this.vocab();
+    const sentences = draft.sentences.map((s) => ({
+      ...s,
+      pinyin: examplePinyin(s.zh, overrides),
+    }));
+    try {
+      await this.prisma.lessonReading.create({
+        data: {
+          lessonId,
+          title: draft.title,
+          sentences: sentences,
+        },
+      });
+    } catch (err) {
+      // Người khác vừa tạo xong cùng lúc thì giữ bản đã lưu.
+      if (!(
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ))
+        throw err;
+    }
+    return { ...(await this.reading(lessonId)), cached: false, usage };
+  }
+
+  private async writeReading(
+    lesson: { id: string; title: string; hskLevel: number },
+    words: { simplified: string; pinyin: string; meaningVi: string | null }[],
+  ): Promise<ReadingDraft | null> {
+    const { chars, words: levelWords } = await this.vocab();
+    const allowed = chars.get(lesson.hskLevel) ?? new Set<string>();
+    const allowedWords =
+      lesson.hskLevel <= READING_FULL_LIST_MAX_LEVEL
+        ? (levelWords.get(lesson.hskLevel) ?? null)
+        : null;
+    let forbiddenChars: string[] = [];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const draft = await this.generate(
+        readingPrompt({
+          hskLevel: lesson.hskLevel,
+          lessonTitle: lesson.title,
+          lessonWords: words,
+          allowedWords,
+          forbiddenChars,
+        }),
+        READING_SCHEMA,
+        parseReading,
+      );
+      if (!draft) return null;
+      const bad = outOfLevelChars(draft.sentences, allowed);
+      if (bad.length === 0) return draft;
+      this.logger.warn(
+        `[AiTools] bài đọc ${lesson.id} có chữ vượt cấp: ${bad.join('')}`,
+      );
+      forbiddenChars = [...new Set([...forbiddenChars, ...bad])];
+    }
+    return null;
+  }
+
+  private async vocab() {
+    if (this.vocabCache && Date.now() - this.vocabCache.at < 3_600_000)
+      return this.vocabCache;
+    const rows = await this.prisma.word.findMany({
+      select: { simplified: true, pinyin: true, hskLevel: true },
+      orderBy: [
+        { hskLevel: 'asc' },
+        { frequencyRank: { sort: 'asc', nulls: 'last' } },
+      ],
+    });
+    const chars = new Map<number, Set<string>>();
+    const words = new Map<number, string[]>();
+    const maxLevel = Math.max(...rows.map((r) => r.hskLevel));
+    for (let level = 1; level <= maxLevel; level++) {
+      const upTo = rows.filter((r) => r.hskLevel <= level);
+      chars.set(
+        level,
+        new Set(upTo.flatMap((r) => [...r.simplified].filter(hasHan))),
+      );
+      words.set(level, [
+        ...new Set(
+          upTo.map((r) => r.simplified.replace(/[（(][^）)]*[）)]/g, '')),
+        ),
+      ]);
+    }
+    this.vocabCache = {
+      at: Date.now(),
+      chars,
+      words,
+      overrides: pinyinOverrides(rows),
+    };
+    return this.vocabCache;
   }
 
   private async factsOf(word: Word): Promise<WordFacts> {

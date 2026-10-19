@@ -1253,6 +1253,34 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   Hanni (`segmentLine`, kèm Hán Việt + nghĩa + link). (2)(3) đệm Redis 30 ngày theo băm câu — gõ lại đúng câu không
   tốn lượt. `GET /ai/usage`. Thử thật 2026-10-18 (gemini-2.5-flash): 3,7–7 giây/lượt; "我电脑用学习" → 45 điểm, sửa
   thành 我用电脑学习 kèm giải thích cấu trúc 用 + công cụ + động từ. Test: `ai-tools.util.spec.ts`.
+- **Bài đọc AI theo bài học (`ai-tools`, `LessonReading`, 2026-10-19 — user: "cần AI… để điểm cao")** — `GET
+  /ai/reading/:lessonId` (`@Public`: bài đọc nếu đã có + từ của bài để tô sáng) và `POST /ai/reading/:lessonId` (cần
+  đăng nhập, 1 lượt AI): Gemini viết 6–9 câu hội thoại/đoạn văn dùng nhiều từ của bài nhất có thể; HSK 1–3 đưa CẢ danh
+  sách từ HSK ≤ cấp (300/500/1000 từ) để AI chỉ dùng trong đó, cấp cao chỉ dặn "không vượt HSK N". Server soát TỪNG CHỮ
+  (`outOfLevelChars`, chữ của mọi từ HSK ≤ cấp): vượt cấp thì viết lại 1 lần kèm danh sách chữ cấm, vẫn vượt thì hoàn
+  lượt + báo thử lại — người học cấp N phải đọc được cả bài (cùng luật câu ví dụ/đề thi thử). Pinyin do server sinh
+  bằng `examplePinyin()` (không tin pinyin AI). Lưu 1 dòng/bài (`lessonId` là khoá chính, 2 người bấm cùng lúc thì
+  bản sau bắt P2002 rồi dùng bản đã lưu) — tạo 1 lần, ai cũng đọc, không tốn thêm lượt.
+- **Lớp học cho giáo viên / trung tâm (`src/modules/classrooms`, 2026-10-19)** — user: "chiến lược thu hút người
+  dùng", "dễ chào mời đối tác". Tham khảo: Hanbeego `/partners` chỉ bán sỉ Premium + đưa tên lên trang, KHÔNG có
+  công cụ lớp; Duolingo for Schools (miễn phí: lớp, giao bài, xem tiến độ) sẽ đóng cửa 31/07/2027. Một giáo viên kéo
+  theo cả lớp = kênh có người dùng thật rẻ nhất (B2B2C, khớp hướng đã chọn). `Classroom` (mã vào lớp 6 ký tự, bỏ
+  0/O/1/I/L), `ClassroomMember`, `ClassAssignment` (LESSON | MOCK_EXAM, hạn nộp tuỳ chọn). Routes: `POST /classrooms`,
+  `GET /classrooms/mine`, `GET /classrooms/assignments/me` (bài CHƯA làm ở mọi lớp — thẻ trang chủ), `GET
+  /classrooms/code/:code` (`@OptionalAuth`, xem trước khi vào: tên lớp + giáo viên, không lộ học viên), `POST
+  .../code/:code/join`, `GET/PATCH/DELETE /classrooms/:id`, `POST :id/leave`, `DELETE :id/members/:userId`, `POST/DELETE
+  :id/assignments`. Giáo viên xem từng học viên: chuỗi ngày, phút + số ngày học 7 ngày (`UserDailyActivity`), học lần
+  cuối, bài đã xong, số từ đang học, điểm thi thử cao nhất — ĐỌC THẲNG bảng có sẵn, không lưu số liệu riêng. Bài giao
+  "xong" tính lúc đọc (`isAssignmentDone`): bài học = đã hoàn thành (kể cả trước lúc giao), đề = có lượt làm SAU lúc
+  giao. Giao bài là push cho cả lớp (`PushService`, chạy nền). Học viên thấy bài giao + bảng phút học tuần của lớp.
+  Vào lớp = đồng ý cho giáo viên xem tiến độ (client ghi rõ); rời lớp là hết. Giới hạn 20 lớp/người, 200 học
+  viên/lớp, 60 bài giao/lớp. Test: `classroom.util.spec.ts`.
+- **Liên hệ hợp tác (`src/modules/partners`, `PartnerLead`, 2026-10-19)** — form ở `/hop-tac`: `POST /partners/leads`
+  (`@OptionalAuth`, 3 lần/10 phút, ô ẩn `website` bẫy bot — điền là trả ok nhưng không lưu), `GET /partners/leads`
+  (`@Roles('admin')`). Lưu DB vì máy chủ email chưa cấu hình; `userId` không có khoá ngoại để liên hệ còn khi xoá tài khoản.
+- **Ẩn tài khoản thử khỏi bảng xếp hạng công khai (2026-10-19)** — bục vinh danh từng là "Test B", "Referred Test"…
+  `NOT_TEST_ACCOUNT` (`src/common/test-accounts.ts`, email `@mailinator.com`/`@example.com`) lọc trong
+  `LeaderboardService.rankedPairs()` và bảng minigame. Chỉ ẩn, không xoá dữ liệu.
 - **Báo cáo học tập tuần/tháng/quý + Hanni Coach (`src/modules/insights`, từ 2026-10-17)** —
   `GET /insights/report?period=week|month|quarter&offset=0|1` (ai cũng xem — số liệu của chính
   mình): kỳ này tới hôm nay (`offset` 0) hoặc trọn kỳ trước (1), so với CÙNG SỐ NGÀY đầu kỳ liền
