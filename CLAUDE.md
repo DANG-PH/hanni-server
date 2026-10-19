@@ -570,6 +570,13 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   xác minh nên không ai bị kẹt, nhưng **quên mật khẩu là mất tài khoản**. Code đã đúng từ lâu,
   chỉ thiếu biến môi trường. `GET /mail/configured` (mới) để client báo thật thay vì bày ra giao
   diện như đang chạy — cùng cách `/payments/configured` ẩn phần nạp xu khi chưa có payOS.
+- **Giới hạn request THEO IP — trước 2026-10-19 thực ra là CHUNG cả hệ thống**: API đứng sau Nginx cùng máy
+  (`proxy_pass 127.0.0.1:8000`, Nginx gửi `X-Forwarded-For`), nhưng `main.ts` chưa bật `trust proxy` nên `req.ip`
+  (khoá đếm của `ThrottlerGuard`) luôn là 127.0.0.1 — `THROTTLE_LIMIT` (100/phút) là hạn mức dùng chung cho MỌI
+  người: 5–7 người mở app cùng lúc là ăn 429. Đo: VPS gọi 1 lần, bộ đếm `X-RateLimit-Remaining` của máy khác tụt
+  11 (đúng 10 lượt máy kia vừa gọi + 1). Sửa: `app.set('trust proxy', 'loopback')` — chỉ tin Nginx trên máy nên
+  IP lấy đúng địa chỉ Nginx ghi cuối `X-Forwarded-For`, khách tự thêm IP giả phía trước không có tác dụng.
+  Nhiều người chung 1 Wi-Fi (chung IP) vẫn chung 100/phút — buổi demo đông người thì nâng `THROTTLE_LIMIT` ở `.env` VPS.
 - **Index quan trọng cho queue SRS**: `UserWordProgress (userId, dueAt)` và `(userId, hskLevel, dueAt)`.
 - **"Từ khó nhớ" (leech, thuật ngữ Anki) — `GET /study/leeches` (từ 2026-09-19)**: phát hiện qua
   research chủ động (rà lại code, không phải yêu cầu cụ thể của user) — field `UserWordProgress.

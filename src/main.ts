@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -9,7 +10,11 @@ import type { Env } from './config/env.validation';
 import { RedisIoAdapter } from './infra/redis/redis-io.adapter';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // API chạy sau Nginx cùng máy: không tin proxy thì `req.ip` của MỌI request là 127.0.0.1 — giới hạn
+  // THROTTLE_LIMIT/phút thành hạn mức CHUNG cho cả hệ thống (đo 2026-10-19: VPS gọi 1 lần, bộ đếm của
+  // máy khác tụt 11). Chỉ tin địa chỉ loopback (Nginx) nên IP lấy đúng IP Nginx ghi, không giả được.
+  app.set('trust proxy', 'loopback');
   const config = app.get<ConfigService<Env, true>>(ConfigService);
   // WebSocket (NotificationsGateway, tin nhắn realtime) chạy chung cổng HTTP
   // — gắn Redis adapter để pub/sub được xuyên suốt khi chạy nhiều instance.
