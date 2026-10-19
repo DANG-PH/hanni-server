@@ -320,6 +320,10 @@ export const READING_SCHEMA = {
   required: ['title', 'sentences'],
 };
 
+/** AI hay chèn "A:"/"B:" vào đầu câu dịch (đo 2026-10-19) — người nói đã có ô riêng. */
+export const stripSpeaker = (s: string) =>
+  s.replace(/^\s*(?:người\s*)?[AB]\s*[:：]\s*/i, '');
+
 export function parseReading(text: string): ReadingDraft | null {
   const o = parseObject(text);
   if (!o) return null;
@@ -329,7 +333,7 @@ export function parseReading(text: string): ReadingDraft | null {
       const r =
         s && typeof s === 'object' ? (s as Record<string, unknown>) : {};
       const zh = str(r.zh, 60)?.replace(/\s+/g, '');
-      const vi = str(r.vi, 240);
+      const vi = str(r.vi, 240) && stripSpeaker(str(r.vi, 240)!);
       if (!zh || !hasHan(zh) || !vi) return null;
       const speaker = r.speaker === 'A' || r.speaker === 'B' ? r.speaker : null;
       return { speaker, zh, vi };

@@ -44,6 +44,7 @@ import {
   READING_SCHEMA,
   readingPrompt,
   SENTENCE_SCHEMA,
+  stripSpeaker,
   sentenceCheckPrompt,
   type Analysis,
   type ReadingDraft,
@@ -237,10 +238,13 @@ export class AiToolsService {
     });
     if (!lesson) throw new NotFoundException('Không tìm thấy bài học');
     const { reading, words, ...info } = lesson;
+    // Bài lưu trước khi bỏ tiền tố "A:" trong câu dịch cũng hiện sạch.
     const sentences = reading
-      ? (reading.sentences as unknown as (ReadingSentence & {
-          pinyin: string;
-        })[])
+      ? (
+          reading.sentences as unknown as (ReadingSentence & {
+            pinyin: string;
+          })[]
+        ).map((s) => ({ ...s, vi: stripSpeaker(s.vi) }))
       : null;
     return {
       lesson: info,

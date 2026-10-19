@@ -132,7 +132,7 @@ describe('bài đọc theo bài học', () => {
     const raw = JSON.stringify({
       title: 'Gặp bạn mới',
       sentences: [
-        { speaker: 'A', zh: '你 好！', vi: 'Chào bạn!' },
+        { speaker: 'A', zh: '你 好！', vi: 'A: Chào bạn!' },
         { speaker: 'B', zh: '你好！', vi: 'Chào!' },
         { speaker: 'C', zh: '谢谢你。', vi: 'Cảm ơn bạn.' },
         { speaker: 'A', zh: 'hello', vi: 'xin chào' },
@@ -142,6 +142,7 @@ describe('bài đọc theo bài học', () => {
     const r = parseReading(raw)!;
     expect(r.sentences).toHaveLength(4);
     expect(r.sentences[0].zh).toBe('你好！');
+    expect(r.sentences[0].vi).toBe('Chào bạn!');
     expect(r.sentences[2].speaker).toBeNull();
     expect(
       parseReading(JSON.stringify({ title: 'x', sentences: [] })),
