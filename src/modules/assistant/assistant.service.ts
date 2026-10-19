@@ -55,7 +55,6 @@ const PAGE_PATHS: Record<string, string> = {
   grammar: '/ngu-phap',
   roleplay: '/roleplay',
   minigame: '/minigame',
-  messages: '/messages',
   listening: '/listening',
   pronunciation: '/pronunciation',
   writing: '/writing',
@@ -80,7 +79,6 @@ const PAGE_LABELS_VI: Record<string, string> = {
   grammar: 'Ngữ pháp',
   roleplay: 'Luyện nói với AI',
   minigame: 'Trò chơi luyện từ',
-  messages: 'Tin nhắn',
   listening: 'Luyện nghe',
   pronunciation: 'Luyện phát âm',
   writing: 'Luyện viết Hán tự',
@@ -107,7 +105,7 @@ const TOOLS: Tool[] = [
       {
         name: 'navigate_to_page',
         description:
-          'Lấy đường dẫn tới 1 trang trong app Hanni. GỌI TOOL NÀY (không trả lời bằng text) cho MỌI câu hỏi có dạng "...ở đâu", "...ở chỗ nào", "vào đâu để...", "làm sao/thế nào để...", "sao lâu rồi chưa...", hay bất kỳ câu nào ngụ ý người dùng muốn ĐẾN một trang/tính năng cụ thể — kể cả khi câu hỏi không dùng động từ "mở". Ví dụ: "ôn từ vựng/flashcard ở đâu", "sao lâu rồi chưa ôn bài", "ôn tập kiểu gì vậy" -> page=flashcard; "đổi mật khẩu ở đâu", "sao đổi email/tài khoản", "cập nhật hồ sơ ở chỗ nào" -> page=account; "chỉnh mục tiêu ngày ở đâu" -> page=settings. Các trang khác: lộ trình (learn), từ vựng (vocabulary), ngữ pháp (grammar), luyện nghe (listening), luyện phát âm (pronunciation), luyện viết (writing), luyện NÓI/hội thoại đóng vai với AI (roleplay), trò chơi luyện từ (minigame), nhắn tin với người học khác (messages), luyện thi / đề thi thử HSK (exams), kiểm tra trình độ đầu vào / không biết nên học cấp HSK nào (placement), bảng phiên âm / cách đọc pinyin, thanh điệu cho người mới (pinyin), chụp/quét ảnh để dịch chữ Hán trên thực đơn, biển hiệu, sách hoặc gọi tên đồ vật, món ăn bằng tiếng Trung (scan), bảng xếp hạng (leaderboard), tiến độ + báo cáo tuần/tháng/quý (progress), huy hiệu (achievements). KHÔNG dùng cho video — video dùng open_video. TUYỆT ĐỐI không trả lời kiểu "bạn vào mục X nhé" bằng text suông — phải gọi tool thật để hệ thống hiện nút bấm. `level` là tuỳ chọn, cứ để trống nếu không rõ, ĐỪNG hỏi lại người dùng trước khi gọi tool.',
+          'Lấy đường dẫn tới 1 trang trong app Hanni. GỌI TOOL NÀY (không trả lời bằng text) cho MỌI câu hỏi có dạng "...ở đâu", "...ở chỗ nào", "vào đâu để...", "làm sao/thế nào để...", "sao lâu rồi chưa...", hay bất kỳ câu nào ngụ ý người dùng muốn ĐẾN một trang/tính năng cụ thể — kể cả khi câu hỏi không dùng động từ "mở". Ví dụ: "ôn từ vựng/flashcard ở đâu", "sao lâu rồi chưa ôn bài", "ôn tập kiểu gì vậy" -> page=flashcard; "đổi mật khẩu ở đâu", "sao đổi email/tài khoản", "cập nhật hồ sơ ở chỗ nào" -> page=account; "chỉnh mục tiêu ngày ở đâu" -> page=settings. Các trang khác: lộ trình (learn), từ vựng (vocabulary), ngữ pháp (grammar), luyện nghe (listening), luyện phát âm (pronunciation), luyện viết (writing), luyện NÓI/hội thoại đóng vai với AI (roleplay), trò chơi luyện từ (minigame), luyện thi / đề thi thử HSK (exams), kiểm tra trình độ đầu vào / không biết nên học cấp HSK nào (placement), bảng phiên âm / cách đọc pinyin, thanh điệu cho người mới (pinyin), chụp/quét ảnh để dịch chữ Hán trên thực đơn, biển hiệu, sách hoặc gọi tên đồ vật, món ăn bằng tiếng Trung (scan), bảng xếp hạng (leaderboard), tiến độ + báo cáo tuần/tháng/quý (progress), huy hiệu (achievements). KHÔNG dùng cho video — video dùng open_video. TUYỆT ĐỐI không trả lời kiểu "bạn vào mục X nhé" bằng text suông — phải gọi tool thật để hệ thống hiện nút bấm. `level` là tuỳ chọn, cứ để trống nếu không rõ, ĐỪNG hỏi lại người dùng trước khi gọi tool.',
         parameters: {
           type: Type.OBJECT,
           properties: {

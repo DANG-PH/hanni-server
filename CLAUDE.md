@@ -1273,6 +1273,9 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   từ chứa chữ; gõ phồn thể 學 thì `wordSlug` = 学), `GET /dictionary/examples?q=` (tìm trong câu ví dụ Hanni soạn — có chữ Hán
   thì theo câu, không thì theo bản dịch), `GET /grammar/search?q=` (chỉ điểm có giải thích thật). ETL `build-words.ts`
   `measureWordsOf()` sinh `measureWords` cho words.seed.json (chạy lại ETL ra file y hệt, chỉ thêm trường này); seed nạp theo.
+- **Ẩn nhắn tin/theo dõi/bình luận video ở giao diện (2026-10-19, user duyệt — gọn trước buổi thuyết trình)**: API
+  `messages`, `follows`, `videos/comments`, `videos/likes` GIỮ NGUYÊN (client chỉ bỏ lối vào, xem `hanni-client/CLAUDE.md`);
+  trợ lý AI bỏ `messages` khỏi `PAGE_PATHS` để không mời người dùng tới trang đã ẩn.
 - **Bài đọc AI theo bài học (`ai-tools`, `LessonReading`, 2026-10-19 — user: "cần AI… để điểm cao")** — `GET
   /ai/reading/:lessonId` (`@Public`: bài đọc nếu đã có + từ của bài để tô sáng) và `POST /ai/reading/:lessonId` (cần
   đăng nhập, 1 lượt AI): Gemini viết 6–9 câu hội thoại/đoạn văn dùng nhiều từ của bài nhất có thể; HSK 1–3 đưa CẢ danh
