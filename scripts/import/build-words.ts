@@ -122,6 +122,23 @@ function cleanDef(def: string): string {
   );
 }
 
+/** Lượng từ từ chú thích "LT:" của CVDICT đúng cách đọc ("LT:本[ben3],冊|册[ce4]" hay "(LT:個|个[ge4])")
+ * → ["本|ben3", "册|ce4"] — cleanDef bỏ chú thích này khỏi nghĩa, giờ giữ lại thành mục "Lượng từ" của
+ * trang từ điển như Hanzii (2026-10-19). */
+function measureWordsOf(entries: CedictEntry[]): string[] {
+  const out: string[] = [];
+  for (const e of entries)
+    for (const def of e.defs)
+      for (const m of def.matchAll(/LT:([^)/;]+)/g))
+        for (const part of m[1].split(',')) {
+          const mm = /^(?:[^|[]+\|)?([^[]+)\[([^\]]+)\]$/.exec(part.trim());
+          if (!mm) continue;
+          const v = `${mm[1]}|${normalizePinyinKey(mm[2])}`;
+          if (!out.includes(v)) out.push(v);
+        }
+  return out;
+}
+
 /** Gọn nghĩa tiếng Anh Pleco (đôi khi liệt kê 15 từ đồng nghĩa). */
 function trimMeaning(def: string | null): string | null {
   if (!def) return null;
@@ -303,6 +320,8 @@ function main(): void {
     );
 
     const viEntry = cvdict.get(key) ?? cvdict.get(simp);
+    // Chỉ nhóm mục ĐÚNG cách đọc — lượng từ của cách đọc khác (vd 书 Shu1 = Kinh Thư) là sai.
+    const measureWords = measureWordsOf(cvdictGroups.get(key) ?? []);
     let meaningVi = viEntry ? cleanDef(viEntry.defs[0] ?? '') || null : null;
     let translationStatus = meaningVi ? 'MACHINE' : 'MISSING';
 
@@ -347,6 +366,7 @@ function main(): void {
       audioUrl: hasAudio ? `/media/audio/cmn-${simp}.mp3` : null,
       source: `krmanik/HSK-3.0@2025-11; vi:${cur?.meaningVi ? 'curated' : viEntry ? 'cvdict' : 'none'}`,
       ...(examples ? { examples } : {}),
+      ...(measureWords.length ? { measureWords } : {}),
     };
     record.origIndex = row.index;
     records.push(record);

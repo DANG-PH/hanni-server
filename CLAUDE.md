@@ -1253,6 +1253,17 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   Hanni (`segmentLine`, kèm Hán Việt + nghĩa + link). (2)(3) đệm Redis 30 ngày theo băm câu — gõ lại đúng câu không
   tốn lượt. `GET /ai/usage`. Thử thật 2026-10-18 (gemini-2.5-flash): 3,7–7 giây/lượt; "我电脑用学习" → 45 điểm, sửa
   thành 我用电脑学习 kèm giải thích cấu trúc 用 + công cụ + động từ. Test: `ai-tools.util.spec.ts`.
+- **Từ điển làm lại theo Hanzii (2026-10-19 — user: "phần từ điển đang thấy hơi đần, cần làm lại")** — `GET
+  /dictionary/:slug` trả thêm: `glyphs[]` cho khung "Hán tự" (MỌI chữ, kể cả từ 1 chữ: âm Hán Việt, pinyin, nghĩa riêng nếu chữ
+  đứng được thành từ, chữ phồn thể, **số nét + bộ thủ kèm tên Hán Việt** — "Bộ TỬ 子 · 8 nét" như Hanzii); `measures[]` (**lượng
+  từ**: 1.072 từ, lấy từ chú thích `LT:` của CVDICT ĐÚNG cách đọc — trước đây `cleanDef` vứt đi —, cột mới `Word.measureWords`
+  dạng "本|ben3", migration `20261019140000_word_measure_words` chỉ ghi khi cột rỗng, PGlite với từ production: lệch 0); `topic`
+  (bài/chủ đề chứa từ) và `related` giờ là **từ cùng chủ đề** (cùng bài) thay cho 12 từ thông dụng nhất cùng cấp (的, 我, 你… chẳng
+  liên quan). Bộ thủ + số nét: `data/curated/char-info.json` (4.272 chữ giản + phồn thể, trích Unihan `kRSUnicode`/`kTotalStrokes`
+  bằng `scripts/import/build-char-info.ts`; dấu ' = dạng giản thể của bộ, vd "149'" → 讠) + bảng 214 bộ thủ tên Hán Việt
+  `src/modules/vocabulary/radicals.ts`. Tab tra cứu mới: `GET /dictionary/examples?q=` (tìm trong câu ví dụ Hanni soạn — có chữ Hán
+  thì theo câu, không thì theo bản dịch), `GET /grammar/search?q=` (chỉ điểm có giải thích thật). ETL `build-words.ts`
+  `measureWordsOf()` sinh `measureWords` cho words.seed.json (chạy lại ETL ra file y hệt, chỉ thêm trường này); seed nạp theo.
 - **Bài đọc AI theo bài học (`ai-tools`, `LessonReading`, 2026-10-19 — user: "cần AI… để điểm cao")** — `GET
   /ai/reading/:lessonId` (`@Public`: bài đọc nếu đã có + từ của bài để tô sáng) và `POST /ai/reading/:lessonId` (cần
   đăng nhập, 1 lượt AI): Gemini viết 6–9 câu hội thoại/đoạn văn dùng nhiều từ của bài nhất có thể; HSK 1–3 đưa CẢ danh

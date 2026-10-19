@@ -342,6 +342,8 @@ model Word {
   /// mẹo nhớ theo âm Hán Việt do AI viết — tạo 1 lần khi có người bấm "Tạo mẹo
   /// nhớ" rồi dùng chung cho mọi người (xem src/modules/ai-tools)
   mnemonicVi        String?
+  /// Lượng từ đúng cách đọc, dạng "本|ben3" (từ chú thích LT: của CVDICT) — mục "Lượng từ" ở trang từ điển.
+  measureWords      String[]          @default([])
   /// provenance: nguồn gốc dữ liệu
   source            String?
   /// bài học chứa từ này (lộ trình tuyến tính theo cấp)

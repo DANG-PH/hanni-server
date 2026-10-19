@@ -21,6 +21,8 @@ và một liên kết ở footer.
 ## Âm Hán Việt
 
 - **[Unihan Database](https://www.unicode.org/charts/unihan.html)** — Unicode Consortium.
+  Ngoài âm Hán Việt (`kVietnamese`), Hanni còn dùng bộ thủ + số nét (`kRSUnicode`, `kTotalStrokes`) cho khung "Hán tự"
+  ở trang từ điển (`data/curated/char-info.json`).
   Giấy phép **Unicode License V3** (miễn phí kể cả dùng thương mại, chỉ cần giữ thông báo
   bản quyền: *"© 1991-2026 Unicode, Inc. All rights reserved."*). Cung cấp field
   `kVietnamese` — âm Hán Việt tra theo từng ký tự (ưu tiên tra theo chữ phồn thể). Hanni bù

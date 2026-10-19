@@ -85,6 +85,13 @@ export class VocabularyController {
     return this.words.publicSlugs();
   }
 
+  /** Tab "Ví dụ" của từ điển — khai báo TRƯỚC `dictionary/:slug`. */
+  @Public()
+  @Get('dictionary/examples')
+  searchExamples(@Query('q') q = '', @Query('page') page = '1') {
+    return this.words.searchExamples(q, Number(page) || 1);
+  }
+
   @Public()
   @Get('dictionary/:slug')
   lookupWord(@Param('slug') slug: string) {

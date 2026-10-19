@@ -36,6 +36,33 @@ export class GrammarService {
     return rows.map((r) => ({ level: r.hskLevel, count: r._count._all }));
   }
 
+  /** Tab "Ngữ pháp" của ô tra từ điển: điểm CÓ giải thích thật mà tên, chữ Hán hay mẫu câu chứa từ
+   * khoá (gõ 把, "so sánh", "vừa…vừa"). Mục đại cương rút gọn mở ra là ngõ cụt nên bỏ. */
+  async search(raw: string) {
+    const q = raw.trim().slice(0, 40);
+    if (!q) return [];
+    return this.prisma.grammarPoint.findMany({
+      where: {
+        explanationVi: { not: '' },
+        OR: [
+          { titleZh: { contains: q } },
+          { titleVi: { contains: q, mode: 'insensitive' } },
+          { summaryVi: { contains: q, mode: 'insensitive' } },
+          { patterns: { has: q } },
+        ],
+      },
+      orderBy: [{ hskLevel: 'asc' }, { orderIndex: 'asc' }],
+      select: {
+        slug: true,
+        hskLevel: true,
+        titleVi: true,
+        titleZh: true,
+        summaryVi: true,
+      },
+      take: 20,
+    });
+  }
+
   async get(slug: string) {
     const point = await this.prisma.grammarPoint.findUnique({
       where: { slug },

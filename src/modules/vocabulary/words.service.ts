@@ -1,8 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, WordPos, type Word } from '@prisma/client';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { paginate, type Paginated } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../infra/prisma/prisma.service';
 import type { WordQueryDto } from './dto/word-query.dto';
+import { radicalOf } from './radicals';
 import {
   prepareQuery,
   rankWords,
@@ -27,6 +30,8 @@ export class WordsService {
 
   private searchIndex: SearchRow[] | null = null;
   private searchIndexAt = 0;
+  /** Bộ thủ + số nét từng chữ (Unihan, `data/curated/char-info.json`) — đọc 1 lần. */
+  private charInfo: Record<string, [string, number | null]> | null = null;
 
   /** ~11k dòng nhẹ (chỉ cột để so khớp) — xếp hạng làm trong bộ nhớ, xem word-search.util.ts. */
   private async getSearchIndex(): Promise<SearchRow[]> {
@@ -176,24 +181,168 @@ export class WordsService {
     });
     if (words.length === 0) throw new NotFoundException('Không tìm thấy từ');
 
-    // Vài từ cùng cấp để người đọc (và bot) có đường đi tiếp sang trang khác.
-    const related = await this.prisma.word.findMany({
-      where: {
-        hskLevel: words[0].hskLevel,
-        simplified: { not: slug },
-        meaningVi: { not: null },
-      },
-      select: { simplified: true, pinyin: true, meaningVi: true },
-      orderBy: { frequencyRank: 'asc' },
-      take: 12,
-    });
-
-    const [characters, compounds, videos] = await Promise.all([
-      this.breakDownCharacters(words[0]),
-      this.compoundsContaining(slug),
-      this.videosUsingWord(slug),
+    // Từ CÙNG CHỦ ĐỀ (cùng bài học) — trước 2026-10-19 là 12 từ thông dụng nhất cùng cấp (的, 我, 你…),
+    // chẳng liên quan gì tới từ đang tra. Từ không thuộc bài nào thì mới rơi về cùng cấp.
+    const lessonId = words[0].lessonId;
+    const [topic, related] = await Promise.all([
+      lessonId
+        ? this.prisma.lesson.findUnique({
+            where: { id: lessonId },
+            select: { id: true, title: true, hskLevel: true, orderIndex: true },
+          })
+        : null,
+      this.prisma.word.findMany({
+        where: {
+          ...(lessonId ? { lessonId } : { hskLevel: words[0].hskLevel }),
+          simplified: { not: slug },
+          meaningVi: { not: null },
+        },
+        select: {
+          simplified: true,
+          pinyin: true,
+          meaningVi: true,
+          hanViet: true,
+        },
+        orderBy: lessonId ? { lessonOrder: 'asc' } : { frequencyRank: 'asc' },
+        take: 16,
+      }),
     ]);
-    return { words, related, characters, compounds, videos };
+
+    const [characters, compounds, videos, glyphs, measures] = await Promise.all(
+      [
+        this.breakDownCharacters(words[0]),
+        this.compoundsContaining(slug),
+        this.videosUsingWord(slug),
+        this.glyphsOf(words[0]),
+        this.measureWordsOf(words),
+      ],
+    );
+    return {
+      words,
+      related,
+      topic,
+      characters,
+      compounds,
+      videos,
+      glyphs,
+      measures,
+    };
+  }
+
+  /** Khung "Hán tự" ở trang từ (như Hanzii): từng chữ kèm âm Hán Việt, pinyin, nghĩa riêng (nếu chữ
+   * đứng được thành từ), bộ thủ + tên Hán Việt của bộ, số nét, chữ phồn thể tương ứng. */
+  private async glyphsOf(word: Word) {
+    if (!this.charInfo)
+      this.charInfo = JSON.parse(
+        readFileSync(
+          join(process.cwd(), 'data', 'curated', 'char-info.json'),
+          'utf8',
+        ),
+      ) as Record<string, [string, number | null]>;
+    const chars = Array.from(word.simplified).filter((c) =>
+      /\p{Script=Han}/u.test(c),
+    );
+    const trad = word.traditional ? Array.from(word.traditional) : [];
+    const readings = word.hanViet ? word.hanViet.split(/\s+/) : [];
+    const syllables = word.pinyin.split(/\s+/);
+    const singles = await this.prisma.word.findMany({
+      where: { simplified: { in: chars } },
+      select: {
+        simplified: true,
+        pinyin: true,
+        meaningVi: true,
+        hanViet: true,
+      },
+      orderBy: { frequencyRank: 'asc' },
+    });
+    const byChar = new Map<string, (typeof singles)[number]>();
+    for (const r of singles)
+      if (!byChar.has(r.simplified)) byChar.set(r.simplified, r);
+    return chars.map((char, i) => {
+      const own = byChar.get(char);
+      const info = this.charInfo?.[char];
+      const t = trad.length === chars.length ? trad[i] : null;
+      return {
+        char,
+        traditional: t && t !== char ? t : null,
+        hanViet:
+          (readings.length === chars.length ? readings[i] : null) ??
+          own?.hanViet ??
+          null,
+        pinyin:
+          own?.pinyin ??
+          (syllables.length === chars.length ? syllables[i] : null),
+        meaningVi: own?.meaningVi ?? null,
+        strokes: info?.[1] ?? null,
+        radical: info ? radicalOf(info[0]) : null,
+      };
+    });
+  }
+
+  /** Lượng từ ("本|ben3") kèm pinyin có dấu, âm Hán Việt — lấy từ chính mục từ của lượng từ đó. */
+  private async measureWordsOf(words: Word[]) {
+    const codes = [...new Set(words.flatMap((w) => w.measureWords ?? []))];
+    if (codes.length === 0) return [];
+    const parsed = codes.map((c) => {
+      const [char, pn] = c.split('|');
+      return { char, pn };
+    });
+    const rows = await this.prisma.word.findMany({
+      where: { simplified: { in: parsed.map((p) => p.char) } },
+      select: {
+        simplified: true,
+        pinyin: true,
+        pinyinNumeric: true,
+        hanViet: true,
+        meaningVi: true,
+      },
+    });
+    return parsed.map(({ char, pn }) => {
+      const hit =
+        rows.find((r) => r.simplified === char && r.pinyinNumeric === pn) ??
+        rows.find((r) => r.simplified === char);
+      return {
+        char,
+        pinyin: hit?.pinyin ?? pn,
+        hanViet: hit?.hanViet ?? null,
+        inDictionary: !!hit,
+      };
+    });
+  }
+
+  /** Tìm trong câu ví dụ (tab "Ví dụ" ở từ điển): có chữ Hán thì tìm theo câu tiếng Trung, không
+   * thì theo bản dịch tiếng Việt. Chỉ câu Hanni soạn (HSK 1–3 hiện có). */
+  async searchExamples(raw: string, page = 1) {
+    const q = raw.trim().slice(0, 40);
+    if (!q) return { items: [], total: 0, page: 1, pageSize: 20 };
+    const where: Prisma.WordExampleWhereInput = /\p{Script=Han}/u.test(q)
+      ? { zh: { contains: q } }
+      : { vi: { contains: q, mode: 'insensitive' } };
+    const pageSize = 20;
+    const [items, total] = await Promise.all([
+      this.prisma.wordExample.findMany({
+        where,
+        select: {
+          id: true,
+          zh: true,
+          pinyin: true,
+          vi: true,
+          word: {
+            select: {
+              simplified: true,
+              pinyin: true,
+              hanViet: true,
+              hskLevel: true,
+            },
+          },
+        },
+        orderBy: [{ word: { hskLevel: 'asc' } }, { zh: 'asc' }],
+        skip: (Math.max(1, page) - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.wordExample.count({ where }),
+    ]);
+    return { items, total, page: Math.max(1, page), pageSize };
   }
 
   /** Video có lời thoại chứa từ này — để người học nghe nó trong ngữ cảnh

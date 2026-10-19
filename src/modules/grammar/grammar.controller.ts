@@ -36,6 +36,13 @@ export class GrammarController {
     return this.grammar.list(q.level);
   }
 
+  /** Khai báo TRƯỚC `:slug`. */
+  @Public()
+  @Get('search')
+  search(@Query('q') q = '') {
+    return this.grammar.search(q);
+  }
+
   @Public()
   @Get(':slug')
   get(@Param('slug') slug: string) {

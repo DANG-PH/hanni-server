@@ -21,6 +21,7 @@ export interface WordSeedRecord {
   meaningVi?: string | null;
   meaningEn?: string | null;
   hanViet?: string | null;
+  measureWords?: string[];
   translationStatus?: string;
   needsReview?: boolean;
   audioUrl?: string | null;
@@ -89,6 +90,7 @@ function toRow(
     meaningVi: rec.meaningVi ?? null,
     meaningEn: rec.meaningEn ?? null,
     hanViet: rec.hanViet ?? null,
+    measureWords: rec.measureWords ?? [],
     translationStatus: normStatus(rec.translationStatus),
     needsReview: rec.needsReview ?? !rec.meaningVi,
     audioUrl: rec.audioUrl ?? null,
@@ -108,7 +110,9 @@ export async function seedWords(
     await prisma.word.deleteMany({});
     console.log('  (SEED_RESET) đã xoá toàn bộ Word cũ');
   } else if ((await prisma.word.count()) >= raw.length) {
-    console.log(`  ✓ Word đã có ${raw.length}+ dòng — bỏ qua (đặt SEED_RESET=true để nạp lại)`);
+    console.log(
+      `  ✓ Word đã có ${raw.length}+ dòng — bỏ qua (đặt SEED_RESET=true để nạp lại)`,
+    );
     return;
   }
 
