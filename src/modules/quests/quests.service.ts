@@ -16,38 +16,37 @@ import {
   startOfLocalDayInstant,
 } from '../../common/time.util';
 import { insertIfAbsent } from '../../database/repository.util';
-import { applyPremiumMultiplier } from '../premium/premium-plans';
-import { WalletService } from '../wallet/wallet.service';
 import {
-  ALL_DONE_BONUS_XU,
-  ALL_DONE_KEY,
-  selectDailyQuests,
-  type QuestKey,
-} from './quest.util';
+  MAX_STREAK_FREEZE,
+  StreakService,
+} from '../gamification/streak/streak.service';
+import { ALL_DONE_KEY, selectDailyQuests, type QuestKey } from './quest.util';
 
 export interface QuestRow {
   key: QuestKey;
   title: string;
   progress: number;
   target: number;
-  xu: number;
-  claimed: boolean;
+  done: boolean;
 }
 
 export interface TodayQuests {
   quests: QuestRow[];
   allDone: boolean;
-  allDoneBonusXu: number;
-  allDoneClaimed: boolean;
-  justClaimedXu: number;
+  /** Đã nhận lá chắn của hôm nay chưa (xong cả 3 lần đầu trong ngày thì server tự cấp). */
+  rewardClaimed: boolean;
+  /** Lần gọi này vừa cấp lá chắn — client hiện lời chúc mừng. */
+  justEarnedFreeze: boolean;
+  freezeCount: number;
+  maxFreeze: number;
 }
 
 /**
  * Nhiệm vụ hàng ngày — tiến độ tính TRỰC TIẾP (live) từ dữ liệu đã có sẵn
  * (ReviewLog/QuizAttempt/PracticeAttempt), KHÔNG lưu counter riêng, giống
  * đúng cách tính điểm ở `LeagueService` — tránh lệch dữ liệu và không cần
- * nghe sự kiện từ nhiều nơi. Bảng `DailyQuestClaim` chỉ giữ 1 việc: chống
- * thưởng xu 2 lần cho cùng 1 nhiệm vụ trong ngày.
+ * nghe sự kiện từ nhiều nơi. Xong cả 3 nhiệm vụ → 1 lá chắn giữ chuỗi; bảng
+ * `DailyQuestClaim` (dòng `all_done`) chặn cấp 2 lần trong cùng 1 ngày.
  */
 @Injectable()
 export class QuestsService {
@@ -61,14 +60,20 @@ export class QuestsService {
     private readonly quizAttempts: Repository<QuizAttempt>,
     @InjectRepository(PracticeAttempt)
     private readonly practiceAttempts: Repository<PracticeAttempt>,
-    private readonly wallet: WalletService,
+    private readonly streak: StreakService,
     private readonly config: ConfigService<Env, true>,
   ) {}
 
   async getToday(userId: string): Promise<TodayQuests> {
     const user = await this.users.findOneOrFail({
       where: { id: userId },
-      select: { id: true, timezone: true, premiumUntil: true },
+      // Có `select` thì cột của quan hệ cũng phải liệt kê (kèm khoá chính) — xem mục TypeORM ở CLAUDE.md.
+      select: {
+        id: true,
+        timezone: true,
+        streak: { userId: true, streakFreezeCount: true },
+      },
+      relations: { streak: true },
     });
     const cutoffHour = this.config.get('STREAK_DAY_CUTOFF_HOUR', {
       infer: true,
@@ -84,91 +89,45 @@ export class QuestsService {
       templates.map((t) => t.key),
       dayStart,
     );
-    const claims = await this.claims.find({
-      where: { userId, localDate },
-      select: { id: true, questKey: true },
-    });
-    const claimedKeys = new Set(claims.map((c) => c.questKey));
-
-    // Premium x2 xu — hiện luôn số xu THẬT sẽ nhận (đã nhân) thay vì số gốc
-    // rồi âm thầm cộng nhiều hơn, tránh UI/thực nhận lệch nhau.
-    const xuOf = (base: number) =>
-      applyPremiumMultiplier(base, user.premiumUntil);
-
-    let justClaimedXu = 0;
-    const quests: QuestRow[] = [];
-    for (const template of templates) {
-      const progress = Math.min(
-        progressByKey.get(template.key) ?? 0,
-        template.target,
-      );
-      const xu = xuOf(template.xu);
-      let claimed = claimedKeys.has(template.key);
-      if (!claimed && progress >= template.target) {
-        const rewarded = await this.tryClaim(
-          userId,
-          localDate,
-          template.key,
-          xu,
-        );
-        if (rewarded) {
-          claimed = true;
-          justClaimedXu += xu;
-        }
-      }
-      quests.push({
-        key: template.key,
-        title: template.title,
+    const quests: QuestRow[] = templates.map((t) => {
+      const progress = Math.min(progressByKey.get(t.key) ?? 0, t.target);
+      return {
+        key: t.key,
+        title: t.title,
         progress,
-        target: template.target,
-        xu,
-        claimed,
-      });
-    }
+        target: t.target,
+        done: progress >= t.target,
+      };
+    });
+    const allDone = quests.every((q) => q.done);
 
-    const allDoneBonusXu = xuOf(ALL_DONE_BONUS_XU);
-    const allDone = quests.every((q) => q.claimed);
-    let allDoneClaimed = claimedKeys.has(ALL_DONE_KEY);
-    if (allDone && !allDoneClaimed) {
-      const rewarded = await this.tryClaim(
+    let rewardClaimed = await this.claims.existsBy({
+      userId,
+      localDate,
+      questKey: ALL_DONE_KEY,
+    });
+    let justEarnedFreeze = false;
+    // Ghi nhận TRƯỚC rồi mới cấp: 2 request cùng lúc thì ràng buộc unique (userId, localDate, questKey) chặn request sau.
+    if (allDone && !rewardClaimed) {
+      rewardClaimed = await insertIfAbsent(this.claims, {
         userId,
         localDate,
-        ALL_DONE_KEY,
-        allDoneBonusXu,
-      );
-      if (rewarded) {
-        allDoneClaimed = true;
-        justClaimedXu += allDoneBonusXu;
-      }
+        questKey: ALL_DONE_KEY,
+        xu: 0,
+      });
+      if (rewardClaimed)
+        justEarnedFreeze = await this.streak.grantFreeze(userId);
     }
 
     return {
       quests,
       allDone,
-      allDoneBonusXu,
-      allDoneClaimed,
-      justClaimedXu,
+      rewardClaimed,
+      justEarnedFreeze,
+      freezeCount:
+        (user.streak?.streakFreezeCount ?? 0) + (justEarnedFreeze ? 1 : 0),
+      maxFreeze: MAX_STREAK_FREEZE,
     };
-  }
-
-  /** Ghi nhận đã nhận thưởng TRƯỚC khi cộng xu — nếu 2 request cùng lúc thì
-   * ràng buộc unique (userId, localDate, questKey) sẽ chặn request thứ 2
-   * (lỗi trùng khoá), tránh cộng xu 2 lần. */
-  private async tryClaim(
-    userId: string,
-    localDate: Date,
-    questKey: string,
-    xu: number,
-  ): Promise<boolean> {
-    const claimed = await insertIfAbsent(this.claims, {
-      userId,
-      localDate,
-      questKey,
-      xu,
-    });
-    if (!claimed) return false; // đã nhận rồi (2 request cùng lúc) -> không cộng xu nữa
-    await this.wallet.credit(userId, xu, `daily_quest:${questKey}`);
-    return true;
   }
 
   private async computeProgress(

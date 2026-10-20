@@ -14,10 +14,6 @@ class LeaderboardQuery {
   @IsOptional()
   @IsIn(['learned', 'streak', 'longest', 'lessons'])
   metric?: LeaderboardMetric;
-
-  @IsOptional()
-  @IsIn(['global', 'friends'])
-  scope?: 'global' | 'friends';
 }
 
 @ApiTags('leaderboard')
@@ -35,21 +31,16 @@ export class LeaderboardController {
     return this.leaderboard.metrics();
   }
 
-  /** Giải đấu học tập theo tuần — khác ELO đấu 1v1, xem league.service.ts. */
+  /** Giải đấu học tập theo tuần — xem league.service.ts. */
   @Get('league')
   myLeague(@CurrentUser() user: AuthUser) {
     return this.league.getMyLeague(user.id);
   }
 
-  /** Khách xem được bảng chung; "So với bạn bè" + hạng của mình cần tài khoản. */
+  /** Khách xem được bảng chung; hạng của mình cần tài khoản. */
   @OptionalAuth()
   @Get()
   top(@CurrentUser() user: AuthUser | undefined, @Query() q: LeaderboardQuery) {
-    return this.leaderboard.top(
-      user?.id ?? null,
-      q.metric ?? 'learned',
-      q.scope === 'friends' ? 10 : 50,
-      q.scope ?? 'global',
-    );
+    return this.leaderboard.top(user?.id ?? null, q.metric ?? 'streak');
   }
 }

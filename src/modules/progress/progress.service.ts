@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Not, Repository } from 'typeorm';
 import {
@@ -139,14 +139,6 @@ export class ProgressService {
         : 0;
 
     return { levels: buckets, totals };
-  }
-
-  async levelDetail(userId: string, level: number) {
-    const info = await this.levels.findOneBy({ level });
-    if (!info) throw new NotFoundException('Cấp HSK không hợp lệ');
-    const { levels } = await this.overview(userId);
-    const bucket = levels.find((l) => l.level === level);
-    return { ...info, progress: bucket };
   }
 
   /** Cập nhật cache UserLevelProgress cho 1 cấp sau khi user review. */

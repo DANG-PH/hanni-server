@@ -10,10 +10,14 @@ export const AppEvent = {
   LevelCompleted: 'level.completed',
   StreakUpdated: 'streak.updated',
   QuizCompleted: 'quiz.completed',
-  CommentCreated: 'comment.created',
   PracticeAttempted: 'practice.attempted',
-  UserFollowed: 'user.followed',
   AchievementUnlocked: 'achievement.unlocked',
+  /** Lá chắn vừa giữ chuỗi ngày khi người học lỡ đúng 1 ngày. */
+  StreakFreezeUsed: 'streak.freeze-used',
+  /** Chốt 1 tuần giải đấu — 1 sự kiện cho mỗi người tham gia. */
+  LeagueResult: 'league.result',
+  /** Giáo viên giao bài mới cho cả lớp. */
+  ClassAssignmentCreated: 'classroom.assignment-created',
 } as const;
 
 export interface WordReviewedPayload {
@@ -51,14 +55,6 @@ export interface QuizCompletedPayload {
   scorePct: number;
 }
 
-export interface CommentCreatedPayload {
-  commentId: string;
-  videoId: string;
-  authorId: string;
-  /** null = bình luận gốc (không phải trả lời) */
-  parentId: string | null;
-}
-
 export interface PracticeAttemptedPayload {
   userId: string;
   wordId: string;
@@ -67,12 +63,33 @@ export interface PracticeAttemptedPayload {
   at: string; // ISO
 }
 
-export interface UserFollowedPayload {
-  followerId: string;
-  followingId: string;
-}
-
 export interface AchievementUnlockedPayload {
   userId: string;
   achievementId: string;
+}
+
+export interface StreakFreezeUsedPayload {
+  userId: string;
+  currentStreak: number;
+  freezeLeft: number;
+}
+
+export interface LeagueResultPayload {
+  userId: string;
+  tierName: string;
+  nextTierName: string;
+  movement: 'up' | 'down' | 'stay';
+  rank: number;
+  groupSize: number;
+  points: number;
+}
+
+export interface ClassAssignmentCreatedPayload {
+  memberIds: string[];
+  teacherName: string;
+  className: string;
+  /** vd "HSK 1 · Bài 2: Đại từ nhân xưng" hoặc "Thi thử HSK 1 — Đề 1" */
+  title: string;
+  href: string;
+  dueAt: Date | null;
 }

@@ -1,4 +1,11 @@
-/** Toàn bộ bảng của Hanni — mỗi file 1 bảng, tên class = tên bảng trong Postgres. */
+/**
+ * Toàn bộ bảng của Hanni — mỗi file 1 bảng, tên class = tên bảng trong Postgres.
+ *
+ * Bảng CŨ còn giữ dữ liệu nhưng KHÔNG còn module nào dùng (tính năng đã gỡ, xoá bảng là mất dữ liệu không lấy lại
+ * được nên chưa xoá): Follow, Conversation, DirectMessage (theo dõi + nhắn tin), VideoComment, VideoLike (bình luận,
+ * thích video), UserWallet, CoinTransaction (ví xu), DuelMatch, DuelSeason, DuelSeasonResult, UserRating (đấu 1v1),
+ * ExamAttempt (/exams cũ).
+ */
 import { User } from './user.entity';
 import { Account } from './account.entity';
 import { RefreshToken } from './refresh-token.entity';

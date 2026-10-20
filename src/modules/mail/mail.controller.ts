@@ -10,7 +10,7 @@ export class MailController {
 
   /** Client dùng để KHÔNG hứa suông: chưa cấu hình SMTP thì email tổng kết
    * tuần / đặt lại mật khẩu không bao giờ tới nơi, mà giao diện vẫn bày ra
-   * như đang chạy. Cùng cách `/payments/configured` ẩn phần nạp xu khi chưa
+   * như đang chạy. Cùng cách `/payments/configured` ẩn phần mua Premium khi chưa
    * có payOS. */
   @Get('configured')
   configured() {

@@ -14,33 +14,18 @@ import type { Env } from '../../config/env.validation';
 import { PaymentOrder, User } from '../../database/entities';
 import { PaymentOrderStatus } from '../../database/enums';
 import { insertAndReturn } from '../../database/repository.util';
-import { WalletService } from '../wallet/wallet.service';
 import { extendPremiumUntil, PREMIUM_PLANS } from '../premium/premium-plans';
 
-/** Tỷ giá nạp xu — 1 VNĐ = 1 xu, đúng như đề xuất ban đầu (xem FEATURES.md
- * mục đánh giá rủi ro tài chính: an toàn hơn vì payOS dùng mô hình A2A,
- * tiền về THẲNG tài khoản ngân hàng của Hanni chứ không qua ví trung gian
- * giữ hộ — khác lo ngại ban đầu về hoạt động "trung gian thanh toán"). */
-const VND_PER_XU = 1;
-
 /**
- * Nạp tiền thật lấy xu qua payOS — Giai đoạn 5 minigame (FEATURES.md).
- * payOS dùng mô hình A2A (Account-to-Account): tạo payment link, người
- * dùng chuyển khoản/quét VietQR, tiền về thẳng tài khoản ngân hàng đã đăng
- * ký ở my.payos.vn — Hanni KHÔNG giữ tiền hộ ai, khác các cổng trung gian
- * truyền thống. Có gói miễn phí không giới hạn giao dịch cho cá nhân/hộ
- * kinh doanh (từ 01/2026), eKYC ngân hàng Kiên Long ~5 phút là dùng được,
- * không cần đăng ký doanh nghiệp đầy đủ.
+ * Bán gói Premium qua payOS. payOS dùng mô hình A2A (Account-to-Account): tạo payment link, người dùng chuyển
+ * khoản/quét VietQR, tiền về thẳng tài khoản ngân hàng đã đăng ký ở my.payos.vn — Hanni KHÔNG giữ tiền hộ ai. Có gói
+ * miễn phí cho cá nhân/hộ kinh doanh, eKYC ngân hàng Kiên Long ~5 phút là dùng được.
  *
- * Để trống `PAYOS_CLIENT_ID`/`PAYOS_API_KEY`/`PAYOS_CHECKSUM_KEY` thì mọi
- * method ở đây ném `ServiceUnavailableException` rõ ràng — KHÔNG chặn app
- * khởi động, giống hệt cách `GEMINI_API_KEY`/VAPID đang làm.
+ * Để trống `PAYOS_CLIENT_ID`/`PAYOS_API_KEY`/`PAYOS_CHECKSUM_KEY` thì mọi method ở đây ném
+ * `ServiceUnavailableException` rõ ràng — KHÔNG chặn app khởi động, giống `GEMINI_API_KEY`/VAPID.
  *
- * Xu vẫn là soft currency THUẦN: không hoàn tiền, không chuyển nhượng giữa
- * người dùng, không quy đổi ngược lại tiền mặt — chỉ tiêu được trong các
- * tính năng của chính Hanni. Đây là điểm mấu chốt giữ hoạt động này ở diện
- * "bán hàng hoá/dịch vụ số của chính mình" thay vì "trung gian thanh toán"
- * (không phát hành công cụ lưu trữ giá trị có thể rút ra/chuyển đi).
+ * Trước 2026-10-20 còn bán xu (nạp tiền lấy xu, 1 VNĐ = 1 xu) — đã bỏ cùng hệ thống xu; bảng `PaymentOrder` vẫn giữ
+ * cột `kind`/`xuAmount` của các đơn cũ.
  */
 @Injectable()
 export class PaymentsService {
@@ -51,7 +36,6 @@ export class PaymentsService {
     @InjectRepository(PaymentOrder)
     private readonly orders: Repository<PaymentOrder>,
     @InjectRepository(User) private readonly users: Repository<User>,
-    private readonly wallet: WalletService,
     private readonly config: ConfigService<Env, true>,
   ) {}
 
@@ -79,55 +63,7 @@ export class PaymentsService {
     );
   }
 
-  async createTopUp(
-    userId: string,
-    amountVnd: number,
-  ): Promise<{ checkoutUrl: string; qrCode: string; orderCode: number }> {
-    const client = this.getClient();
-    const xuAmount = amountVnd * VND_PER_XU;
-
-    const order = await insertAndReturn(this.orders, {
-      userId,
-      amountVnd,
-      xuAmount,
-    });
-
-    const frontendUrl = this.config.get('FRONTEND_URL', { infer: true });
-    try {
-      const link = await client.paymentRequests.create({
-        orderCode: order.orderCode,
-        amount: amountVnd,
-        description: `Nap xu Hanni #${order.orderCode}`,
-        returnUrl: `${frontendUrl}/account?topup=${order.orderCode}`,
-        cancelUrl: `${frontendUrl}/account?topup=${order.orderCode}&cancelled=1`,
-      });
-
-      await this.orders.update(order.id, {
-        payosPaymentLinkId: link.paymentLinkId,
-      });
-
-      return {
-        checkoutUrl: link.checkoutUrl,
-        qrCode: link.qrCode,
-        orderCode: order.orderCode,
-      };
-    } catch (err) {
-      // Tạo link thất bại — không để lại đơn PENDING mồ côi không bao giờ
-      // được xử lý (người dùng không có cách nào thanh toán cho đơn này).
-      await this.orders.update(order.id, {
-        status: PaymentOrderStatus.CANCELLED,
-      });
-      this.logger.error(`Tạo payment link payOS thất bại: ${err}`);
-      throw new BadRequestException(
-        'Chưa tạo được link thanh toán, thử lại nhé',
-      );
-    }
-  }
-
-  /** Y hệt `createTopUp()` nhưng cho gói Premium — dùng CHUNG bảng
-   * `PaymentOrder`/webhook (phân biệt qua cột `kind`) để tái dùng nguyên
-   * vẹn logic xác thực chữ ký + idempotent của payOS, không dựng luồng
-   * thanh toán thứ 2 song song. */
+  /** Tạo đơn Premium + payment link payOS; người dùng thanh toán xong được đưa về `/account?premium=<mã đơn>`. */
   async createPremiumCheckout(
     userId: string,
     planKey: string,
@@ -174,40 +110,21 @@ export class PaymentsService {
     }
   }
 
-  /** Đọc trạng thái đơn nạp — dùng cho trang /account sau khi payOS
+  /** Đọc trạng thái đơn — dùng cho trang /account sau khi payOS
    * redirect về qua `returnUrl`. Đọc thẳng DB (đã được webhook cập nhật)
    * thay vì gọi lại API payOS — nhanh hơn, và tránh phụ thuộc thêm 1 lượt
    * gọi mạng ra ngoài chỉ để hiện trạng thái cho FE. */
   async getOrderStatus(userId: string, orderCode: number) {
     const order = await this.orders.findOneBy({ orderCode });
     if (!order || order.userId !== userId) {
-      throw new NotFoundException('Không tìm thấy đơn nạp');
+      throw new NotFoundException('Không tìm thấy đơn thanh toán');
     }
     return {
       orderCode: order.orderCode,
       amountVnd: order.amountVnd,
-      xuAmount: order.xuAmount,
-      kind: order.kind,
       premiumPlanKey: order.premiumPlanKey,
       status: order.status,
     };
-  }
-
-  async getHistory(userId: string) {
-    const orders = await this.orders.find({
-      where: { userId },
-      order: { createdAt: 'DESC' },
-      take: 20,
-    });
-    return orders.map((o) => ({
-      orderCode: o.orderCode,
-      amountVnd: o.amountVnd,
-      xuAmount: o.xuAmount,
-      kind: o.kind,
-      premiumPlanKey: o.premiumPlanKey,
-      status: o.status,
-      createdAt: o.createdAt,
-    }));
   }
 
   /** payOS gọi thẳng endpoint này (không qua JWT) khi trạng thái thanh
@@ -237,7 +154,7 @@ export class PaymentsService {
     if (order.status !== PaymentOrderStatus.PENDING) return; // đã xử lý rồi (đọc nhanh, tránh việc thừa — xem chặn thật ở dưới)
 
     // So khớp số tiền — phòng payload bị chỉnh sửa dù đã qua verify() (vd
-    // lỗi tích hợp phía payOS), không tin thẳng verified.amount để cộng xu.
+    // lỗi tích hợp phía payOS), không tin thẳng verified.amount.
     if (verified.amount !== order.amountVnd) {
       this.logger.error(
         `Webhook payOS lệch số tiền: order=${order.amountVnd} nhận=${verified.amount}`,
@@ -259,28 +176,30 @@ export class PaymentsService {
     );
     if (!claimed.affected) return;
 
-    try {
-      if (order.kind === 'PREMIUM') {
-        const user = await this.users.findOneOrFail({
-          where: { id: order.userId },
-          select: { id: true, premiumUntil: true },
-        });
-        const newUntil = extendPremiumUntil(
-          user.premiumUntil,
-          order.premiumPlanKey!,
-        );
-        await this.users.update(order.userId, { premiumUntil: newUntil });
-      } else {
-        await this.wallet.credit(order.userId, order.xuAmount, 'topup');
-      }
-    } catch (err) {
-      // Đơn đã chắc chắn PAID (đã thanh toán thật) nhưng cộng xu/gia hạn
-      // Premium thất bại — KHÔNG lùi lại PENDING (payOS gọi lại webhook sẽ
-      // bị chặn bởi guard ở trên, không tự sửa được) — log ERROR rõ ràng để
-      // đối soát/cộng bù thủ công, còn hơn nuốt lỗi im lặng khiến user mất
-      // tiền thật mà không ai biết.
+    if (order.kind !== 'PREMIUM') {
+      // Đơn nạp xu tạo trước khi bỏ hệ thống xu (2026-10-20) — không còn gì để cộng, cần hoàn tiền thủ công.
       this.logger.error(
-        `Webhook payOS: đơn #${order.orderCode} đã PAID nhưng cộng thưởng thất bại — cần đối soát thủ công: ${err}`,
+        `Webhook payOS: đơn nạp xu cũ #${order.orderCode} vừa được thanh toán — cần hoàn tiền thủ công`,
+      );
+      return;
+    }
+    try {
+      const user = await this.users.findOneOrFail({
+        where: { id: order.userId },
+        select: { id: true, premiumUntil: true },
+      });
+      const newUntil = extendPremiumUntil(
+        user.premiumUntil,
+        order.premiumPlanKey!,
+      );
+      await this.users.update(order.userId, { premiumUntil: newUntil });
+    } catch (err) {
+      // Đơn đã chắc chắn PAID (đã thanh toán thật) nhưng gia hạn Premium thất
+      // bại — KHÔNG lùi lại PENDING (payOS gọi lại webhook sẽ bị chặn bởi guard
+      // ở trên, không tự sửa được) — log ERROR rõ ràng để đối soát thủ công,
+      // còn hơn nuốt lỗi im lặng khiến user mất tiền thật mà không ai biết.
+      this.logger.error(
+        `Webhook payOS: đơn #${order.orderCode} đã PAID nhưng gia hạn Premium thất bại — cần đối soát thủ công: ${err}`,
       );
     }
   }

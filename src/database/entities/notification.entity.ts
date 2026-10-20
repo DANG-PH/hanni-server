@@ -46,6 +46,14 @@ export class Notification {
   })
   type!: NotificationType;
 
+  /** Câu chữ soạn sẵn ở server cho loại mới (bài lớp giao, kết quả giải đấu, lá chắn giữ chuỗi). */
+  @Column({ type: 'text', nullable: true })
+  message!: string | null;
+
+  /** Bấm thông báo thì mở trang này. */
+  @Column({ type: 'text', nullable: true })
+  href!: string | null;
+
   @Column({ type: 'uuid', nullable: true })
   actorId!: string | null;
 

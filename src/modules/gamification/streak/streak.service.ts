@@ -19,7 +19,11 @@ import {
   findOrCreate,
   insertIfAbsent,
 } from '../../../database/repository.util';
-import { AppEvent, type StreakUpdatedPayload } from '../../../events/events';
+import {
+  AppEvent,
+  type StreakFreezeUsedPayload,
+  type StreakUpdatedPayload,
+} from '../../../events/events';
 
 function toIso(d: Date | null | undefined): string | null {
   return d ? d.toISOString().slice(0, 10) : null;
@@ -125,6 +129,7 @@ export class StreakService {
 
     let current = streak.currentStreak;
     let freeze = streak.streakFreezeCount;
+    let usedFreeze = false;
 
     if (!lastIso) {
       current = 1;
@@ -135,6 +140,7 @@ export class StreakService {
       } else if (gap > 1) {
         if (freeze > 0 && gap === 2) {
           freeze -= 1; // dùng 1 "streak freeze", giữ nguyên chuỗi
+          usedFreeze = true;
         } else {
           current = 1; // đứt chuỗi, hôm nay là ngày 1
         }
@@ -172,6 +178,14 @@ export class StreakService {
       longestStreak: longest,
     };
     this.events.emit(AppEvent.StreakUpdated, payload);
+    if (usedFreeze) {
+      const used: StreakFreezeUsedPayload = {
+        userId,
+        currentStreak: current,
+        freezeLeft: freeze,
+      };
+      this.events.emit(AppEvent.StreakFreezeUsed, used);
+    }
   }
 
   /** Đọc streak để hiển thị — có kiểm tra "đứt chuỗi" theo ngày local hiện tại. */
@@ -223,13 +237,13 @@ export class StreakService {
     };
   }
 
-  /** Cấp 1 "lá chắn" streak (tối đa MAX_STREAK_FREEZE) cho sự kiện đáng
-   * thưởng RIÊNG (vd giới thiệu bạn mới, xem ReferralsListener) — tách khỏi
-   * mốc 7-ngày tự động ở advanceStreak(). */
-  async grantFreeze(userId: string): Promise<void> {
+  /** Cấp 1 "lá chắn" streak (tối đa MAX_STREAK_FREEZE) cho sự kiện đáng thưởng RIÊNG (mời bạn — ReferralsListener,
+   * xong cả 3 nhiệm vụ ngày — QuestsService), tách khỏi mốc 7 ngày tự động ở advanceStreak(). Trả false nếu đã đủ. */
+  async grantFreeze(userId: string): Promise<boolean> {
     const streak = await findOrCreate(this.streaks, { userId });
-    if (streak.streakFreezeCount >= MAX_STREAK_FREEZE) return;
+    if (streak.streakFreezeCount >= MAX_STREAK_FREEZE) return false;
     await this.streaks.increment({ userId }, 'streakFreezeCount', 1);
+    return true;
   }
 
   /** Lịch sử hoạt động N ngày gần nhất (cho biểu đồ/lịch). */

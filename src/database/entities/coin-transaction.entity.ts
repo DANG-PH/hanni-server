@@ -10,9 +10,7 @@ import {
 import { User } from './user.entity';
 
 /**
- * Sổ giao dịch xu — mỗi lần cộng/trừ đều ghi 1 dòng để đối soát, chống
- * gian lận/nhân bản xu do race condition (xem WalletService.debit() dùng
- * updateMany có điều kiện balance thay vì đọc-rồi-ghi).
+ * KHÔNG CÒN DÙNG (bỏ hệ thống xu 2026-10-20) — sổ giao dịch xu cũ, giữ bảng làm lịch sử để đối soát.
  */
 @Entity('CoinTransaction')
 @Index('CoinTransaction_userId_createdAt_idx', ['userId', 'createdAt'])

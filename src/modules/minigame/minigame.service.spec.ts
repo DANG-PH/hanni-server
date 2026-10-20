@@ -1,13 +1,11 @@
 import type { Repository } from 'typeorm';
 import type {
   MinigameSession,
-  User,
   UserWordProgress,
   Word,
 } from '../../database/entities';
 import { GameMode } from '../../database/enums';
 import type { RedisService } from '../../infra/redis/redis.service';
-import type { WalletService } from '../wallet/wallet.service';
 import { MinigameService } from './minigame.service';
 
 const WORDS = Array.from({ length: 12 }, (_, i) => ({
@@ -36,21 +34,18 @@ function setup() {
       return Promise.resolve(v);
     }),
   };
-  const wallet = { credit: jest.fn() };
   const service = new MinigameService(
     repos.sessions as unknown as Repository<MinigameSession>,
     repos.words as unknown as Repository<Word>,
     repos.progress as unknown as Repository<UserWordProgress>,
-    {} as Repository<User>,
-    wallet as unknown as WalletService,
     redis as unknown as RedisService,
   );
-  return { service, repos, redis, wallet, store };
+  return { service, repos, redis, store };
 }
 
 describe('MinigameService — khách chơi không cần tài khoản', () => {
-  it('bắt đầu + nộp bài: chấm theo đáp án đã lưu, không xu, không ghi DB', async () => {
-    const { service, repos, wallet, store } = setup();
+  it('bắt đầu + nộp bài: chấm theo đáp án đã lưu, không ghi DB', async () => {
+    const { service, repos, store } = setup();
     const started = await service.start(null, GameMode.TRANSLATE);
     expect(repos.progress.find).not.toHaveBeenCalled();
     expect(repos.sessions.insert).not.toHaveBeenCalled();
@@ -70,13 +65,7 @@ describe('MinigameService — khách chơi không cần tài khoản', () => {
         { wordId: q1.wordId, chosenIndex: (q1.correctIndex + 1) % 4 },
       ],
     });
-    expect(result).toEqual({
-      score: 1,
-      totalAsked: 2,
-      coinsEarned: 0,
-      balance: null,
-    });
-    expect(wallet.credit).not.toHaveBeenCalled();
+    expect(result).toEqual({ score: 1, totalAsked: 2 });
 
     // Lượt chơi chỉ nộp được 1 lần.
     await expect(
@@ -91,6 +80,6 @@ describe('MinigameService — khách chơi không cần tài khoản', () => {
       durationMs: 20_000,
       mistakes: 3,
     });
-    expect(result).toMatchObject({ score: 5, coinsEarned: 0, balance: null });
+    expect(result).toEqual({ score: 5, totalAsked: 8 });
   });
 });

@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { notTestAccount } from '../../common/test-accounts';
 import {
-  Follow,
   User,
   UserLessonProgress,
   UserStreak,
@@ -33,14 +32,12 @@ export interface LeaderboardRow {
   value: number;
   currentStreak: number;
   isMe: boolean;
-  isFollowing: boolean;
 }
 
 @Injectable()
 export class LeaderboardService {
   constructor(
     @InjectRepository(User) private readonly users: Repository<User>,
-    @InjectRepository(Follow) private readonly follows: Repository<Follow>,
     @InjectRepository(UserStreak)
     private readonly streaks: Repository<UserStreak>,
     @InjectRepository(UserWordProgress)
@@ -56,29 +53,13 @@ export class LeaderboardService {
     }));
   }
 
-  /** Bảng xếp hạng theo `metric`. Kèm hạng của user hiện tại.
-   * `scope: 'friends'` chỉ xếp hạng trong nhóm (chính mình + người đang
-   * theo dõi) — dùng cho thẻ "So với bạn bè" ở dashboard, cho lý do cụ thể
-   * để theo dõi ai đó thay vì theo dõi xong không thấy tác dụng gì.
-   * `userId` null = khách xem bảng chung (không có hạng của mình/nút theo dõi). */
-  async top(
-    userId: string | null,
-    metric: LeaderboardMetric,
-    limit = 50,
-    scope: 'global' | 'friends' = 'global',
-  ) {
+  /** Bảng xếp hạng theo `metric`, kèm hạng của user hiện tại.
+   * `userId` null = khách xem bảng chung (không có hạng của mình). */
+  async top(userId: string | null, metric: LeaderboardMetric, limit = 50) {
     if (!METRICS[metric])
       throw new BadRequestException('Tiêu chí không hợp lệ');
 
-    let ranked = await this.rankedPairs(metric);
-    if (scope === 'friends' && userId) {
-      const follows = await this.follows.find({
-        where: { followerId: userId },
-        select: { id: true, followingId: true },
-      });
-      const friendIds = new Set([userId, ...follows.map((f) => f.followingId)]);
-      ranked = ranked.filter((r) => friendIds.has(r.userId));
-    }
+    const ranked = await this.rankedPairs(metric);
     const myIndex = ranked.findIndex((r) => r.userId === userId);
     const me = {
       rank: myIndex >= 0 ? myIndex + 1 : null,
@@ -88,7 +69,7 @@ export class LeaderboardService {
 
     const top = ranked.slice(0, limit);
     const ids = top.map((r) => r.userId);
-    const [users, streaks, myFollows] = await Promise.all([
+    const [users, streaks] = await Promise.all([
       this.users.find({
         where: { id: In(ids) },
         relations: { settings: true },
@@ -103,16 +84,9 @@ export class LeaderboardService {
         where: { userId: In(ids) },
         select: { userId: true, currentStreak: true },
       }),
-      userId
-        ? this.follows.find({
-            where: { followerId: userId, followingId: In(ids) },
-            select: { id: true, followingId: true },
-          })
-        : Promise.resolve([] as Follow[]),
     ]);
     const uMap = new Map(users.map((u) => [u.id, u]));
     const sMap = new Map(streaks.map((s) => [s.userId, s.currentStreak]));
-    const followingSet = new Set(myFollows.map((f) => f.followingId));
 
     const rows: LeaderboardRow[] = top.map((r, i) => {
       return {
@@ -127,7 +101,6 @@ export class LeaderboardService {
         value: r.value,
         currentStreak: sMap.get(r.userId) ?? 0,
         isMe: r.userId === userId,
-        isFollowing: followingSet.has(r.userId),
       };
     });
 

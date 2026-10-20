@@ -196,22 +196,6 @@ async function translateOne(zh: string): Promise<string | null> {
 }
 
 /**
- * Dịch 1 đoạn text bất kỳ giữa 2 ngôn ngữ (`sl`/`tl` dạng mã Google, vd
- * `vi`/`zh-CN`) — dùng cho tính năng "dịch trước khi gửi" ở nhắn tin
- * (`MessagesService.translateForCompose()`). KHÁC `translateLinesToVi()`:
- * không có glossary/cache/gộp lô (chỉ dành cho bản chép video tu tiên,
- * không hợp với tin nhắn thường), chỉ gọi thẳng Google → MyMemory 1 lần.
- */
-export async function translateSimple(
-  text: string,
-  sl: string,
-  tl: string,
-): Promise<string | null> {
-  const raw = await callTranslate(text, sl, tl);
-  return raw ? decodeTerms(raw) : null;
-}
-
-/**
  * Dịch danh sách câu tiếng Trung sang tiếng Việt (máy dịch, gộp lô).
  * - Bỏ qua câu không có chữ Hán (giữ nguyên).
  * - Gộp câu trùng để dịch 1 lần.

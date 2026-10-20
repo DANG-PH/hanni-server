@@ -11,10 +11,10 @@ import { dateOnly } from '../transformers';
 import { User } from './user.entity';
 
 /**
- * Đánh dấu nhiệm vụ hàng ngày ĐÃ NHẬN THƯỞNG — tiến độ mỗi nhiệm vụ tính
- * TRỰC TIẾP (live) từ ReviewLog/QuizAttempt/PracticeAttempt trong ngày,
- * bảng này CHỈ để chống thưởng xu 2 lần cho cùng 1 nhiệm vụ (xem
- * QuestsService.getToday()). `questKey` gồm cả khoá đặc biệt "all_done".
+ * Đánh dấu ngày đã nhận thưởng nhiệm vụ — tiến độ mỗi nhiệm vụ tính TRỰC TIẾP (live) từ
+ * ReviewLog/QuizAttempt/PracticeAttempt trong ngày, bảng này CHỈ để chống cấp lá chắn giữ chuỗi 2 lần
+ * (dòng `questKey = "all_done"`, xem QuestsService.getToday()). Dòng theo từng nhiệm vụ và cột `xu` là
+ * của thời còn thưởng xu (trước 2026-10-20), giờ ghi 0.
  */
 @Entity('DailyQuestClaim')
 @Index('DailyQuestClaim_userId_localDate_idx', ['userId', 'localDate'])

@@ -94,13 +94,6 @@ export class UpdateSettingsDto {
   courseLevel?: number;
 }
 
-export class SearchUsersQuery {
-  @IsString()
-  @MinLength(1)
-  @MaxLength(50)
-  q!: string;
-}
-
 export class DeleteAccountDto {
   @IsOptional()
   @IsString()

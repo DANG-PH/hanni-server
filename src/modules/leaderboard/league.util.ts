@@ -49,16 +49,25 @@ export function zoneOf(
   return 'stay';
 }
 
+export interface RolloverResult {
+  /** Bậc của tuần sau. */
+  tier: number;
+  movement: Movement;
+  /** Hạng trong nhóm-bậc tuần vừa chốt (từ 1) và số người trong nhóm. */
+  rank: number;
+  groupSize: number;
+}
+
 /** Chốt tuần: mỗi nhóm-bậc xếp theo điểm rồi thăng/giáng 1 bậc theo `zoneOf`. */
 export function planRollover(
   entries: { userId: string; tier: number }[],
   points: Map<string, number>,
-): Map<string, { tier: number; movement: Movement }> {
+): Map<string, RolloverResult> {
   const byTier = new Map<number, string[]>();
   for (const e of entries)
     byTier.set(e.tier, [...(byTier.get(e.tier) ?? []), e.userId]);
 
-  const plan = new Map<string, { tier: number; movement: Movement }>();
+  const plan = new Map<string, RolloverResult>();
   for (const [tier, userIds] of byTier) {
     const ranked = [...userIds].sort(
       (a, b) => (points.get(b) ?? 0) - (points.get(a) ?? 0),
@@ -72,7 +81,12 @@ export function planRollover(
       );
       const next =
         movement === 'up' ? tier + 1 : movement === 'down' ? tier - 1 : tier;
-      plan.set(userId, { tier: next, movement });
+      plan.set(userId, {
+        tier: next,
+        movement,
+        rank: i + 1,
+        groupSize: ranked.length,
+      });
     });
   }
   return plan;

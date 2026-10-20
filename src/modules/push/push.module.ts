@@ -6,9 +6,8 @@ import { ReminderService } from './reminder.service';
 @Module({
   controllers: [PushController],
   providers: [PushService, ReminderService],
-  // Export để NotificationsModule/MessagesModule đẩy được thông báo THẬT ra
-  // ngoài app. Trước đây PushService chỉ ReminderService dùng (nhắc học theo
-  // lịch), nên đóng app là không nhận được gì — kể cả tin nhắn mới.
+  // Export để NotificationsModule đẩy được thông báo THẬT ra ngoài app (đóng
+  // app vẫn nhận) — trước đây PushService chỉ ReminderService dùng.
   exports: [PushService],
 })
 export class PushModule {}

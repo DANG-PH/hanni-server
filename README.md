@@ -39,7 +39,7 @@ npm run start:dev
 | Thư mục | Làm gì |
 |---|---|
 | `auth` | Đăng ký/đăng nhập email + Google, JWT trong cookie, refresh token xoay vòng |
-| `users` | Hồ sơ, cài đặt học, tìm người, hồ sơ công khai; `users/follows` theo dõi |
+| `users` | Hồ sơ, cài đặt học, hồ sơ công khai, xoá tài khoản |
 | `learn` | Lộ trình theo cấp, bài học, **phiên học bài** (giới thiệu từ → luyện → điền câu), kiểm tra trình độ |
 | `srs` | Ôn tập ngắt quãng: hàng đợi, chấm thẻ (SM-2 / FSRS ở `scheduler/`), ẩn từ đã biết, từ khó nhớ |
 | `vocabulary` | Từ điển: tra có xếp hạng, trang từ, Hán tự, câu ví dụ, "từ bạn đã biết sẵn" |
@@ -50,16 +50,16 @@ npm run start:dev
 | `progress` | Tiến độ theo cấp, cache tiến độ bài/cấp |
 | `insights` | Báo cáo tuần/tháng/quý + Hanni Coach (AI, Premium) |
 | `gamification` | Chuỗi ngày học (`streak`), huy hiệu (`achievements`), quiz |
-| `quests` · `leaderboard` | Nhiệm vụ ngày · bảng xếp hạng + giải đấu tuần |
-| `minigame` | 4 trò chơi luyện từ (khách chơi được) |
-| `wallet` · `shop` · `premium` · `payments` | Ví xu · danh hiệu · gói Premium · thanh toán payOS |
-| `videos` | Học qua video: phụ đề song ngữ, bấm từ để tra; `comments`, `likes` |
+| `quests` · `leaderboard` | Nhiệm vụ ngày (xong cả 3 → 1 lá chắn giữ chuỗi) · bảng xếp hạng + giải đấu tuần |
+| `minigame` | 4 trò chơi luyện từ, tính điểm + bảng xếp hạng (khách chơi được) |
+| `shop` · `premium` · `payments` | Danh hiệu theo huy hiệu · gói Premium · thanh toán payOS |
+| `videos` | Học qua video: phụ đề song ngữ, bấm từ để tra |
 | `assistant` · `roleplay` · `ai-tools` · `scan` | Trợ lý AI (RAG) · luyện nói nhập vai · mẹo nhớ/chấm câu/bài đọc AI · quét ảnh |
 | `classrooms` · `partners` | Lớp học cho giáo viên · form liên hệ hợp tác |
 | `onboarding` | Khảo sát đầu vào → lộ trình đề xuất |
 | `practice` | Lưu kết quả luyện nghe/phát âm |
-| `notifications` · `push` · `mail` | Thông báo realtime (WebSocket) · Web Push + nhắc học theo giờ · email |
-| `messages` · `referrals` | Nhắn tin 1-1 (giao diện đang ẩn) · mời bạn bè |
+| `notifications` · `push` · `mail` | Thông báo trong app (huy hiệu, bài giao, kết quả giải đấu, lá chắn) qua WebSocket + push · Web Push + nhắc học theo giờ · email |
+| `referrals` | Mời bạn bè (cả hai nhận lá chắn giữ chuỗi) |
 
 ## Mẫu truy vấn hay gặp (TypeORM)
 
@@ -72,7 +72,7 @@ this.words.createQueryBuilder('word').select('word.hskLevel', 'hskLevel')
   .addSelect('COUNT(*)::int', 'count').groupBy('word.hskLevel').getRawMany();
 // ghi
 this.progress.update({ userId, wordId }, { isSuspended: true });
-await insertIfAbsent(this.claims, { userId, localDate, questKey, xu }); // chỉ làm 1 lần, an toàn khi 2 request cùng lúc
+await insertIfAbsent(this.claims, { userId, localDate, questKey, xu: 0 }); // chỉ làm 1 lần, an toàn khi 2 request cùng lúc
 this.dataSource.transaction(async (db) => { await db.insert(ReviewLog, {...}); ... });
 ```
 

@@ -9,14 +9,11 @@ import { In, IsNull, Not, Repository } from 'typeorm';
 import { notTestAccount } from '../../common/test-accounts';
 import {
   MinigameSession,
-  User,
   UserWordProgress,
   Word,
 } from '../../database/entities';
 import { GameMode } from '../../database/enums';
 import { RedisService } from '../../infra/redis/redis.service';
-import { applyPremiumMultiplier } from '../premium/premium-plans';
-import { WalletService } from '../wallet/wallet.service';
 import type { FinishMinigameDto } from './dto/minigame.dto';
 
 function shuffle<T>(arr: T[]): T[] {
@@ -96,7 +93,7 @@ function matchScore(dto: FinishMinigameDto): number {
  * đã làm cho câu nghe). Khác `QuizService` (tin thẳng `isCorrect` client tự
  * báo): ở đây server LƯU SẴN đáp án đúng lúc bắt đầu
  * (`MinigameSession.questions`), và tự so khớp lúc nộp bài — cần thiết vì
- * kết quả game này quy đổi ra xu thật.
+ * điểm lên bảng xếp hạng ngày/tuần.
  *
  * MATCH (lật thẻ tìm cặp) khác hẳn các mode trên — không có "đáp án bí mật"
  * để giấu (việc so khớp 2 thẻ vốn công khai ngay khi tải dữ liệu, bản chất
@@ -112,14 +109,11 @@ export class MinigameService {
     @InjectRepository(Word) private readonly words: Repository<Word>,
     @InjectRepository(UserWordProgress)
     private readonly progress: Repository<UserWordProgress>,
-    @InjectRepository(User) private readonly users: Repository<User>,
-    private readonly wallet: WalletService,
     private readonly redis: RedisService,
   ) {}
 
   /** Khách (`userId` null) chơi được như người đã đăng nhập — lượt chơi giữ tạm
-   * trong Redis vì `MinigameSession` bắt buộc có người chơi; không có xu, không
-   * lên bảng xếp hạng. */
+   * trong Redis vì `MinigameSession` bắt buộc có người chơi; không lên bảng xếp hạng. */
   private async saveSession(
     userId: string | null,
     mode: GameMode,
@@ -280,7 +274,7 @@ export class MinigameService {
     }
 
     if (session.mode === GameMode.MATCH) {
-      return this.finishMatchGame(userId, sessionId, dto);
+      return this.finishMatchGame(sessionId, dto);
     }
 
     const answers = dto.answers ?? [];
@@ -293,68 +287,31 @@ export class MinigameService {
       finishedAt: new Date(),
     });
 
-    // 1 xu / câu đúng — đơn giản, minh bạch cho giai đoạn kiểm chứng gameplay.
-    const { coinsEarned, balance } = await this.creditMinigameReward(
-      userId,
-      score,
-    );
-
-    return {
-      score,
-      totalAsked: answers.length,
-      coinsEarned,
-      balance,
-    };
+    return { score, totalAsked: answers.length };
   }
 
   /** Khách: chấm giống hệt người đã đăng nhập (đáp án lấy từ Redis, đọc 1 lần
-   * rồi xoá) nhưng không cộng xu, không lưu điểm. */
+   * rồi xoá) nhưng không lưu điểm. */
   private async finishGuest(sessionId: string, dto: FinishMinigameDto) {
     const session = await this.redis.takeJson<GuestSession>(
       guestKey(sessionId),
     );
     if (!session) throw new NotFoundException('Không tìm thấy lượt chơi');
     if (session.mode === GameMode.MATCH) {
-      return {
-        score: matchScore(dto),
-        totalAsked: MATCH_PAIRS,
-        coinsEarned: 0,
-        balance: null,
-      };
+      return { score: matchScore(dto), totalAsked: MATCH_PAIRS };
     }
     const answers = dto.answers ?? [];
     return {
       score: gradeAnswers(session.questions as StoredQuestion[], answers),
       totalAsked: answers.length,
-      coinsEarned: 0,
-      balance: null,
     };
-  }
-
-  /** Premium nhân đôi xu kiếm được từ minigame (xem `PREMIUM_XU_MULTIPLIER`
-   * ở premium-plans.ts) — dùng chung cho cả trắc nghiệm lẫn "Ghép cặp". */
-  private async creditMinigameReward(
-    userId: string,
-    score: number,
-  ): Promise<{ coinsEarned: number; balance: number }> {
-    const user = await this.users.findOneOrFail({
-      where: { id: userId },
-      select: { id: true, premiumUntil: true },
-    });
-    const coinsEarned = applyPremiumMultiplier(score, user.premiumUntil);
-    const balance = await this.wallet.credit(userId, coinsEarned, 'minigame');
-    return { coinsEarned, balance };
   }
 
   /** "Ghép cặp": không có gì bí mật để so khớp lại (khác trắc nghiệm — xem
    * ghi chú ở `startMatchGame`), chỉ chặn báo cáo gian dối lộ liễu nhất
    * (hoàn thành nhanh hơn mức vật lý có thể) bằng `MATCH_MIN_MS_PER_PAIR`.
    * Điểm = số cặp trừ đi số lần lật sai, tối thiểu 1 nếu hoàn thành. */
-  private async finishMatchGame(
-    userId: string,
-    sessionId: string,
-    dto: FinishMinigameDto,
-  ) {
+  private async finishMatchGame(sessionId: string, dto: FinishMinigameDto) {
     const score = matchScore(dto);
 
     await this.sessions.update(sessionId, {
@@ -364,17 +321,7 @@ export class MinigameService {
       finishedAt: new Date(),
     });
 
-    const { coinsEarned, balance } = await this.creditMinigameReward(
-      userId,
-      score,
-    );
-
-    return {
-      score,
-      totalAsked: MATCH_PAIRS,
-      coinsEarned,
-      balance,
-    };
+    return { score, totalAsked: MATCH_PAIRS };
   }
 
   async leaderboard(

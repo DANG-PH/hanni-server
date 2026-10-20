@@ -121,9 +121,13 @@ export const VideoKind = {
 export type VideoKind = (typeof VideoKind)[keyof typeof VideoKind];
 
 export const NotificationType = {
+  /** Cũ (bình luận, theo dõi — đã gỡ 2026-10-20): còn trong DB, không tạo/hiện nữa. */
   COMMENT_REPLY: 'COMMENT_REPLY',
   NEW_FOLLOWER: 'NEW_FOLLOWER',
   ACHIEVEMENT_UNLOCKED: 'ACHIEVEMENT_UNLOCKED',
+  CLASS_ASSIGNMENT: 'CLASS_ASSIGNMENT',
+  LEAGUE_RESULT: 'LEAGUE_RESULT',
+  STREAK_SAVED: 'STREAK_SAVED',
 } as const;
 export type NotificationType =
   (typeof NotificationType)[keyof typeof NotificationType];

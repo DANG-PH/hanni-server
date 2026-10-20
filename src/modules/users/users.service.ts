@@ -7,19 +7,10 @@ import { ConfigService } from '@nestjs/config';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import {
-  DataSource,
-  ILike,
-  In,
-  IsNull,
-  MoreThanOrEqual,
-  Not,
-  Repository,
-} from 'typeorm';
+import { DataSource, IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import type { Env } from '../../config/env.validation';
 import {
   Account,
-  Follow,
   User,
   UserAchievement,
   UserLessonProgress,
@@ -28,17 +19,10 @@ import {
   UserWordProgress,
 } from '../../database/entities';
 import { AuthProvider, SrsState } from '../../database/enums';
-import { insertIfAbsent, likeEscape } from '../../database/repository.util';
+import { insertIfAbsent } from '../../database/repository.util';
 import { PasswordService } from '../auth/password.service';
 import { TITLE_CATALOG } from '../shop/title-catalog';
 import { isPremiumActive } from '../premium/premium-plans';
-
-/** Người dùng khác hiện trong danh sách: chỉ tên + ảnh (không lộ email…). */
-const person = (u: User) => ({
-  id: u.id,
-  displayName: u.displayName,
-  avatarUrl: u.avatarUrl,
-});
 
 interface CreateUserInput {
   email: string;
@@ -63,7 +47,6 @@ export class UsersService {
     private readonly lessonProgress: Repository<UserLessonProgress>,
     @InjectRepository(UserAchievement)
     private readonly userAchievements: Repository<UserAchievement>,
-    @InjectRepository(Follow) private readonly follows: Repository<Follow>,
     private readonly config: ConfigService<Env, true>,
     private readonly password: PasswordService,
   ) {}
@@ -111,10 +94,8 @@ export class UsersService {
     };
   }
 
-  /** Hồ sơ công khai xem được bởi người khác — CHỈ trả field an toàn để lộ
-   * (không email/settings/oauth như getProfile()). Kèm huy hiệu đã mở khoá,
-   * số liệu học tập, và danh sách rút gọn người theo dõi/đang theo dõi (tối
-   * đa 30) để có trang "hồ sơ + bạn bè" mà roadmap còn thiếu. */
+  /** Hồ sơ công khai xem được bởi người khác (mở từ bảng xếp hạng) — CHỈ trả field an toàn để lộ
+   * (không email/settings/oauth như getProfile()). Kèm huy hiệu đã mở khoá và số liệu học tập. */
   async getPublicProfile(targetId: string, viewerId: string) {
     const [
       user,
@@ -122,11 +103,6 @@ export class UsersService {
       learnedWordsCount,
       completedLessonsCount,
       achievements,
-      followerCount,
-      followingCount,
-      isFollowing,
-      followers,
-      following,
     ] = await Promise.all([
       this.users.findOne({
         where: { id: targetId },
@@ -161,21 +137,6 @@ export class UsersService {
         relations: { achievement: true },
         order: { unlockedAt: 'DESC' },
       }),
-      this.follows.countBy({ followingId: targetId }),
-      this.follows.countBy({ followerId: targetId }),
-      this.follows.existsBy({ followerId: viewerId, followingId: targetId }),
-      this.follows.find({
-        where: { followingId: targetId },
-        take: 30,
-        order: { createdAt: 'DESC' },
-        relations: { follower: true },
-      }),
-      this.follows.find({
-        where: { followerId: targetId },
-        take: 30,
-        order: { createdAt: 'DESC' },
-        relations: { following: true },
-      }),
     ]);
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
     const equippedTitle = TITLE_CATALOG.find(
@@ -199,63 +160,8 @@ export class UsersService {
         descriptionVi: a.achievement.descriptionVi,
         unlockedAt: a.unlockedAt,
       })),
-      followerCount,
-      followingCount,
-      isFollowing,
       isMe: targetId === viewerId,
-      followers: followers.map((f) => person(f.follower)),
-      following: following.map((f) => person(f.following)),
     };
-  }
-
-  /** Tìm người dùng theo tên hiển thị HOẶC đúng mã người dùng (UID) — để
-   * theo dõi/nhắn tin khi họ không lọt vào bảng xếp hạng, hoặc khi trùng
-   * tên khó tìm thì gửi thẳng UID cho nhau. Kèm streak hiện tại +
-   * isFollowing giống style `LeaderboardService.top()`. */
-  async search(viewerId: string, q: string) {
-    const query = q.trim();
-    if (!query) return [];
-    const isUuid =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-        query,
-      );
-
-    if (isUuid && query === viewerId) return [];
-
-    const users = await this.users.find({
-      where: isUuid
-        ? { id: query }
-        : {
-            id: Not(viewerId),
-            displayName: ILike(`%${likeEscape(query)}%`),
-          },
-      select: { id: true, displayName: true, avatarUrl: true },
-      order: { displayName: 'ASC' },
-      take: 20,
-    });
-    if (users.length === 0) return [];
-
-    const ids = users.map((u) => u.id);
-    const [streaks, myFollows] = await Promise.all([
-      this.streaks.find({
-        where: { userId: In(ids) },
-        select: { userId: true, currentStreak: true },
-      }),
-      this.follows.find({
-        where: { followerId: viewerId, followingId: In(ids) },
-        select: { id: true, followingId: true },
-      }),
-    ]);
-    const streakMap = new Map(streaks.map((s) => [s.userId, s.currentStreak]));
-    const followingSet = new Set(myFollows.map((f) => f.followingId));
-
-    return users.map((u) => ({
-      id: u.id,
-      displayName: u.displayName,
-      avatarUrl: u.avatarUrl,
-      currentStreak: streakMap.get(u.id) ?? 0,
-      isFollowing: followingSet.has(u.id),
-    }));
   }
 
   /** Tạo user kèm settings + streak mặc định trong 1 transaction. */

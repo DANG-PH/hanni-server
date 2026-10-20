@@ -8,7 +8,6 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
-  Query,
   Res,
   UploadedFile,
   UseInterceptors,
@@ -25,7 +24,6 @@ import { clearAuthCookies } from '../auth/cookies';
 import {
   ChangePasswordDto,
   DeleteAccountDto,
-  SearchUsersQuery,
   UpdateMeDto,
   UpdateSettingsDto,
 } from './dto/users.dto';
@@ -104,11 +102,6 @@ export class UsersController {
     await this.users.deleteAccount(user.id, dto.password);
     clearAuthCookies(res, this.cookieCfg);
     return { ok: true };
-  }
-
-  @Get('search')
-  search(@CurrentUser() user: AuthUser, @Query() q: SearchUsersQuery) {
-    return this.users.search(user.id, q.q);
   }
 
   @Get(':id/profile')

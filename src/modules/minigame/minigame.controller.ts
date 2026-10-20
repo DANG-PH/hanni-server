@@ -26,7 +26,7 @@ import { MinigameService } from './minigame.service';
 export class MinigameController {
   constructor(private readonly minigame: MinigameService) {}
 
-  /** Khách chơi được (lượt chơi giữ tạm, không xu) — xem `MinigameService.saveSession`. */
+  /** Khách chơi được (lượt chơi giữ tạm, không lên bảng xếp hạng) — xem `MinigameService.saveSession`. */
   @OptionalAuth()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('start')

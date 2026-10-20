@@ -27,7 +27,6 @@ import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
 import { LearnModule } from './modules/learn/learn.module';
 import { VideosModule } from './modules/videos/videos.module';
 import { MailModule } from './modules/mail/mail.module';
-import { MessagesModule } from './modules/messages/messages.module';
 import { MinigameModule } from './modules/minigame/minigame.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
@@ -44,7 +43,6 @@ import { ShopModule } from './modules/shop/shop.module';
 import { SrsModule } from './modules/srs/srs.module';
 import { UsersModule } from './modules/users/users.module';
 import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
-import { WalletModule } from './modules/wallet/wallet.module';
 
 @Module({
   imports: [
@@ -95,13 +93,11 @@ import { WalletModule } from './modules/wallet/wallet.module';
     LeaderboardModule,
     PushModule,
     NotificationsModule,
-    MessagesModule,
     PracticeModule,
     OnboardingModule,
     AssistantModule,
     RoleplayModule,
     ReferralsModule,
-    WalletModule,
     QuestsModule,
     ShopModule,
     MinigameModule,

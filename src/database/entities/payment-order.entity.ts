@@ -12,12 +12,9 @@ import { PaymentOrderKind, PaymentOrderStatus } from '../enums';
 import { User } from './user.entity';
 
 /**
- * Giai đoạn 5 minigame (FEATURES.md) — nạp tiền thật lấy xu qua payOS
- * (mô hình A2A, tiền về THẲNG tài khoản ngân hàng của Hanni, không qua ví
- * trung gian giữ tiền hộ — khác lo ngại pháp lý ban đầu về "trung gian
- * thanh toán"). `orderCode` là số nguyên RIÊNG (không phải `id` UUID) vì
- * payOS yêu cầu mã đơn hàng dạng số; dùng `@default(autoincrement())` cho
- * đơn giản, không cần tự sinh + kiểm tra trùng.
+ * Đơn thanh toán payOS — mua gói Premium (mô hình A2A, tiền về THẲNG tài khoản ngân hàng của Hanni, không qua
+ * ví trung gian giữ tiền hộ). `orderCode` là số nguyên RIÊNG (không phải `id` UUID) vì payOS yêu cầu mã đơn
+ * dạng số. Đơn `kind = TOPUP` (nạp xu) là của thời còn hệ thống xu (trước 2026-10-20).
  */
 @Entity('PaymentOrder')
 @Index('PaymentOrder_orderCode_key', ['orderCode'], { unique: true })
@@ -48,18 +45,11 @@ export class PaymentOrder {
   @Column({ type: 'integer' })
   amountVnd!: number;
 
-  /**
-   * = amountVnd (tỷ giá 1 VNĐ = 1 xu) — tách cột riêng để nếu sau này đổi
-   * tỷ giá khuyến mãi thì không cần suy ngược từ amountVnd. 0 với đơn Premium.
-   */
+  /** Số xu của đơn nạp xu cũ (1 VNĐ = 1 xu); 0 với đơn Premium. */
   @Column({ type: 'integer' })
   xuAmount!: number;
 
-  /**
-   * TOPUP (nạp xu) hay PREMIUM (mua gói Premium) — CÙNG 1 bảng/webhook để
-   * tái dùng nguyên vẹn logic xác thực chữ ký + idempotent của payOS thay
-   * vì dựng bảng/webhook riêng cho Premium.
-   */
+  /** PREMIUM (mua gói Premium) — TOPUP là đơn nạp xu cũ. */
   @Column({
     type: 'enum',
     enum: PaymentOrderKind,

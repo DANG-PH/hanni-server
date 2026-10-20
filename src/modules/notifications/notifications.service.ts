@@ -1,43 +1,29 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { Notification } from '../../database/entities';
 import { NotificationType } from '../../database/enums';
 import { PushService } from '../push/push.service';
 import type { NotificationQueryDto } from './dto/notifications.dto';
 import { NotificationsGateway } from './notifications.gateway';
 
-/** Quan hệ cần nạp để hiện 1 thông báo (ai, video nào, bình luận nào, huy hiệu nào). */
-const RELATIONS = {
-  actor: true,
-  video: true,
-  comment: true,
-  achievement: true,
-} as const;
+/** Loại còn hiện trong app. COMMENT_REPLY/NEW_FOLLOWER (bình luận, theo dõi — đã gỡ) vẫn còn dòng cũ trong DB. */
+const SHOWN_TYPES = [
+  NotificationType.ACHIEVEMENT_UNLOCKED,
+  NotificationType.CLASS_ASSIGNMENT,
+  NotificationType.LEAGUE_RESULT,
+  NotificationType.STREAK_SAVED,
+];
 
-/** Thông báo gửi cho client — chỉ những trường cần hiện (không lộ email… của người gây ra). */
+/** Thông báo gửi cho client — chỉ những trường cần hiện. */
 function notificationView(n: Notification) {
   return {
     id: n.id,
-    userId: n.userId,
     type: n.type,
-    actorId: n.actorId,
-    videoId: n.videoId,
-    commentId: n.commentId,
-    achievementId: n.achievementId,
+    message: n.message,
+    href: n.href,
     readAt: n.readAt,
     createdAt: n.createdAt,
-    actor: n.actor
-      ? {
-          id: n.actor.id,
-          displayName: n.actor.displayName,
-          avatarUrl: n.actor.avatarUrl,
-        }
-      : null,
-    video: n.video ? { id: n.video.id, title: n.video.title } : null,
-    comment: n.comment
-      ? { id: n.comment.id, content: n.comment.content }
-      : null,
     achievement: n.achievement
       ? {
           code: n.achievement.code,
@@ -51,37 +37,12 @@ function notificationView(n: Notification) {
 interface CreateNotificationInput {
   userId: string;
   type: NotificationType;
-  actorId?: string | null;
-  videoId?: string | null;
-  commentId?: string | null;
-  achievementId?: string | null;
-}
-
-/** Nội dung push cho từng loại thông báo. `actor` là tên người gây ra (đã
- * lọc trường hợp tự tác động lên mình ở `create()`). */
-function pushTextFor(
-  type: NotificationType,
-  actor: string,
-): { title: string; body: string } {
-  switch (type) {
-    case NotificationType.COMMENT_REPLY:
-      return {
-        title: 'Có người trả lời bạn',
-        body: `${actor} đã trả lời bình luận của bạn.`,
-      };
-    case NotificationType.NEW_FOLLOWER:
-      return {
-        title: 'Bạn có người theo dõi mới',
-        body: `${actor} vừa theo dõi bạn.`,
-      };
-    case NotificationType.ACHIEVEMENT_UNLOCKED:
-      return {
-        title: 'Mở khoá huy hiệu mới',
-        body: 'Bạn vừa đạt một huy hiệu — xem ngay nhé!',
-      };
-    default:
-      return { title: 'Hanni', body: 'Bạn có thông báo mới.' };
-  }
+  /** Loại mới: câu chữ + đường dẫn soạn sẵn. Huy hiệu thì lấy tên từ `achievementId`. */
+  message?: string;
+  href?: string;
+  achievementId?: string;
+  /** Tiêu đề push (thân push = `message`). */
+  pushTitle: string;
 }
 
 @Injectable()
@@ -95,38 +56,31 @@ export class NotificationsService {
     private readonly push: PushService,
   ) {}
 
-  /** Tạo thông báo + đẩy realtime + GỬI PUSH. Bỏ qua nếu người gây ra chính
-   * là người nhận.
-   *
-   * Push ở đây là phần từng THIẾU HẲN: trước 2026-09-22 `PushService` chỉ
-   * được `ReminderService` dùng (nhắc học theo lịch), nên mọi thông báo
-   * tương tác chỉ tới được người đang MỞ SẴN app qua WebSocket — đóng app là
-   * không biết gì, kể cả có người trả lời bình luận hay theo dõi mình. */
+  /** Lưu thông báo + đẩy realtime tới app đang mở (WebSocket) + gửi push tới máy đã bật thông báo. */
   async create(input: CreateNotificationInput) {
-    if (input.actorId && input.actorId === input.userId) return null;
     const { identifiers } = await this.notifications.insert({
       userId: input.userId,
       type: input.type,
-      actorId: input.actorId ?? null,
-      videoId: input.videoId ?? null,
-      commentId: input.commentId ?? null,
+      message: input.message ?? null,
+      href: input.href ?? null,
       achievementId: input.achievementId ?? null,
     });
     const notification = notificationView(
       await this.notifications.findOneOrFail({
         where: { id: identifiers[0].id as string },
-        relations: RELATIONS,
+        relations: { achievement: true },
       }),
     );
     this.gateway.emitToUser(input.userId, 'notification:new', notification);
 
-    // Không await: push chậm/lỗi không được làm chậm luồng tạo thông báo.
-    const { title, body } = pushTextFor(
-      notification.type,
-      notification.actor?.displayName ?? 'Ai đó',
-    );
+    const body =
+      notification.message ??
+      (notification.achievement
+        ? `Bạn vừa đạt huy hiệu “${notification.achievement.nameVi}”.`
+        : 'Bạn có thông báo mới.');
+    // Không await: push chậm/lỗi không được làm chậm luồng chính.
     void this.push
-      .sendToUser(input.userId, title, body)
+      .sendToUser(input.userId, input.pushTitle, body)
       .catch((err: Error) =>
         this.logger.warn(`Không gửi được push: ${err.message}`),
       );
@@ -136,16 +90,17 @@ export class NotificationsService {
   async list(userId: string, q: NotificationQueryDto) {
     const page = q.page ?? 1;
     const pageSize = q.pageSize ?? 20;
+    const where = { userId, type: In(SHOWN_TYPES) };
     const [items, total, unreadCount] = await Promise.all([
       this.notifications.find({
-        where: { userId },
+        where,
         order: { createdAt: 'DESC' },
         skip: (page - 1) * pageSize,
         take: pageSize,
-        relations: RELATIONS,
+        relations: { achievement: true },
       }),
-      this.notifications.countBy({ userId }),
-      this.notifications.countBy({ userId, readAt: IsNull() }),
+      this.notifications.countBy(where),
+      this.notifications.countBy({ ...where, readAt: IsNull() }),
     ]);
     return {
       items: items.map(notificationView),
@@ -155,14 +110,6 @@ export class NotificationsService {
       totalPages: Math.max(1, Math.ceil(total / pageSize)),
       unreadCount,
     };
-  }
-
-  async unreadCount(userId: string) {
-    const count = await this.notifications.countBy({
-      userId,
-      readAt: IsNull(),
-    });
-    return { count };
   }
 
   async markRead(userId: string, id: string) {

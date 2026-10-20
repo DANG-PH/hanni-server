@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { WalletModule } from '../wallet/wallet.module';
+import { GamificationModule } from '../gamification/gamification.module';
 import { QuestsController } from './quests.controller';
 import { QuestsService } from './quests.service';
 
 @Module({
-  imports: [WalletModule],
+  imports: [GamificationModule],
   controllers: [QuestsController],
   providers: [QuestsService],
 })

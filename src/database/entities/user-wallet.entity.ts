@@ -9,10 +9,7 @@ import {
 import { User } from './user.entity';
 
 /**
- * Ví xu (soft currency) — KHÔNG quy đổi tiền thật, chỉ kiếm được qua
- * chơi/học và tiêu trong app (xem WalletService). Tách riêng khỏi mọi
- * hình thức tiền tệ premium/nạp tiền thật sau này (nếu có) để tránh vướng
- * quy định về trung gian thanh toán khi neo tỷ giá trực tiếp vào VNĐ.
+ * KHÔNG CÒN DÙNG (bỏ hệ thống xu 2026-10-20) — ví xu cũ, giữ bảng làm lịch sử, không code nào đọc/ghi.
  */
 @Entity('UserWallet')
 export class UserWallet {

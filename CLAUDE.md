@@ -9,8 +9,7 @@ API học tiếng Trung theo chuẩn **HSK 3.0** (9 cấp). Xem `README.md` cho 
 - Redis (ioredis) — state OAuth, cache, và Redis adapter cho WebSocket (`RedisIoAdapter`,
   `src/infra/redis/redis-io.adapter.ts`) — sẵn sàng scale nhiều instance
 - `@nestjs/event-emitter` (in-process) cho luồng sự kiện; handler phải **idempotent**
-- `@nestjs/websockets` + `socket.io` (namespace `/notifications`) — đẩy thông báo realtime VÀ
-  tin nhắn trực tiếp (dùng chung 1 gateway, khác event name — xem mục Nhắn tin bên dưới)
+- `@nestjs/websockets` + `socket.io` (namespace `/notifications`) — đẩy thông báo realtime (`notification:new`)
 - `@google/genai` (Gemini) — trợ lý AI RAG, để trống `GEMINI_API_KEY` thì tự tắt (báo rõ, không crash)
 
 ## Cấu trúc thư mục
@@ -22,9 +21,9 @@ src/
 ├── infra/         redis/ (@Global)
 ├── common/        decorators (CurrentUser, Public, Roles), filters, time.util
 ├── events/        events.ts — hằng tên + kiểu payload
-├── modules/<domain>/   auth · users (+ users/follows) · mail · vocabulary · srs · progress
-│                        · gamification · learn · videos (+ videos/comments, videos/likes)
-│                        · grammar · exams · leaderboard · push · notifications (WebSocket gateway)
+├── modules/<domain>/   auth · users · mail · vocabulary · srs · progress
+│                        · gamification · learn · videos
+│                        · grammar · leaderboard · push · notifications (WebSocket gateway)
 │                        · practice (lưu kết quả luyện nghe/phát âm) · onboarding (khảo sát đầu vào)
 │                        · assistant (trợ lý AI RAG, Gemini)
 └── health/
@@ -652,7 +651,7 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
   nghĩa không còn là từ khó nữa. **Chưa làm**: chế độ "cram" ôn
   riêng từ khó bất kể có đến hạn hay không (enum `ReviewType.CRAM` cũng đang mồ côi tương tự,
   ghi nhận nhưng chưa làm vì cần thiết kế lại `review()` để không ảnh hưởng lịch SRS thật).
-- **Push GỬI CHO CẢ TIN NHẮN + TƯƠNG TÁC (sửa 2026-09-22)** — lỗi thật user báo: "chưa thấy
+- **[LỊCH SỬ — đã gỡ/đổi 2026-10-20, xem "Gỡ hệ thống xu"] Push GỬI CHO CẢ TIN NHẮN + TƯƠNG TÁC (sửa 2026-09-22)** — lỗi thật user báo: "chưa thấy
   app gửi thông báo, ví dụ tin nhắn tới". Kiểm tra đúng vậy: `PushService.sendToUser()` CHỈ
   được `ReminderService` gọi (nhắc học theo lịch). `NotificationsService.create()` chỉ lưu DB +
   `emitToUser` WebSocket, còn `MessagesService` thậm chí KHÔNG tạo `Notification` — chỉ emit
@@ -694,7 +693,7 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
   `time.util.ts`, ISO 5/6) cho ai chưa có hoạt động — KHÔNG thay thế lời nhắc 21h thường, cả 2
   job độc lập tự kiểm tra lại `UserDailyActivity` nên không gửi trùng nếu user đã học ở giữa 2
   mốc giờ.
-- **Bình luận + thích video + thông báo (`src/modules/videos/comments`, `.../likes`,
+- **[LỊCH SỬ — đã gỡ/đổi 2026-10-20, xem "Gỡ hệ thống xu"] Bình luận + thích video + thông báo (`src/modules/videos/comments`, `.../likes`,
   `src/modules/notifications`)**: bình luận 1 cấp trả lời (trả lời của trả lời tự gộp vào bình
   luận gốc — xem `CommentsService.create`), thích video kiểu upsert (idempotent). Tạo bình
   luận/thích phát `AppEvent.CommentCreated` / `AppEvent.VideoLiked` (xem `src/events/events.ts`)
@@ -710,7 +709,7 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
   `ACHIEVEMENT_UNLOCKED` (mở khoá huy hiệu mới — KHÔNG có `actorId` vì tự đạt được, không phải
   do người khác tác động; `AchievementsService.unlock()` phát `AppEvent.AchievementUnlocked`
   chỉ khi thật sự unlock lần đầu, nhờ bắt lỗi unique constraint có sẵn).
-- **Theo dõi (`src/modules/users/follows`, model `Follow`)**: 1 chiều (không cần theo dõi lại
+- **[LỊCH SỬ — đã gỡ/đổi 2026-10-20, xem "Gỡ hệ thống xu"] Theo dõi (`src/modules/users/follows`, model `Follow`)**: 1 chiều (không cần theo dõi lại
   nhau), `POST`/`DELETE /users/:id/follow` kiểu upsert/delete idempotent giống thích video, tự
   chặn tự theo dõi chính mình (400). Phát `AppEvent.UserFollowed` → `NotificationsListener` tạo
   `NEW_FOLLOWER`. `LeaderboardService.top()` trả thêm `isFollowing` mỗi dòng (so với người đang
@@ -733,7 +732,7 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
   nhận +1 "lá chắn" streak qua `StreakService.grantFreeze()` (tách khỏi mốc 7-ngày tự động ở
   `advanceStreak()`, cùng chung mức trần `MAX_STREAK_FREEZE`, nay `export` để dùng chéo module).
   `GET /referrals/me` trả số liệu cho trang "Mời bạn bè".
-- **Ví xu (`src/modules/wallet`, model `UserWallet` + `CoinTransaction`)**: soft currency —
+- **[LỊCH SỬ — đã gỡ/đổi 2026-10-20, xem "Gỡ hệ thống xu"] Ví xu (`src/modules/wallet`, model `UserWallet` + `CoinTransaction`)**: soft currency —
   KHÔNG hoàn tiền, KHÔNG chuyển nhượng giữa user, KHÔNG quy đổi ngược lại tiền mặt, chỉ tiêu
   được trong chính các tính năng của Hanni (xem `FEATURES.md` mục đánh giá rủi ro). Mọi thay đổi
   số dư đi qua `WalletService.credit()`/`debit()` — LUÔN ghi kèm 1 dòng `CoinTransaction` để đối
@@ -744,7 +743,7 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
   dõi riêng) + **nạp tiền thật qua payOS** (`src/modules/payments`, xem dưới). Nơi tiêu đầu tiên
   (sink): `POST /wallet/buy/streak-freeze` (300 xu/lá chắn, chặn nếu đã đạt `MAX_STREAK_FREEZE`,
   kiểm tra TRƯỚC khi trừ xu để không mất xu oan nếu không mua được).
-- **Nạp tiền thật (`src/modules/payments`, model `PaymentOrder`)**: Giai đoạn 5 minigame — dùng
+- **[LỊCH SỬ — đã gỡ/đổi 2026-10-20, xem "Gỡ hệ thống xu"] Nạp tiền thật (`src/modules/payments`, model `PaymentOrder`)**: Giai đoạn 5 minigame — dùng
   **payOS** (mô hình A2A qua VietQR/chuyển khoản, `@payos/node` SDK), KHÔNG dùng VNPay/MoMo vì
   payOS có gói MIỄN PHÍ không giới hạn giao dịch cho cá nhân/hộ kinh doanh (từ 01/2026, eKYC
   ngân hàng Kiên Long ~5 phút, không cần đăng ký doanh nghiệp đầy đủ) và tiền về THẲNG tài khoản
@@ -851,15 +850,35 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
   liễu nhất — `durationMs` phải ≥ `MATCH_PAIRS * MATCH_MIN_MS_PER_PAIR` (500ms/cặp) mới tính điểm,
   không xác minh được chi tiết từng lượt lật như MC. Điểm = `MATCH_PAIRS - mistakes` (tối thiểu
   1 nếu hợp lệ), `mistakes` (số lần lật sai) do client tự đếm và báo qua `FinishMinigameDto`.
+- **Gỡ hệ thống xu + nhắn tin/theo dõi/bình luận (2026-10-20 — user: "hệ thống xu chỉ để mua cái kia thôi sao, có nên bỏ
+  không", "logic backend nào không còn nữa thì xoá")**. Xu chỉ có MỘT chỗ tiêu (lá chắn giữ chuỗi 300 xu) nên là một vòng vô
+  nghĩa: kiếm xu → đổi lá chắn. Giờ thưởng thẳng:
+  - **Nhiệm vụ ngày** (`quests.service.ts`): xong cả 3 → `StreakService.grantFreeze()` (+1 lá chắn, trả false khi đã đủ
+    `MAX_STREAK_FREEZE` = 2). Dòng `DailyQuestClaim` khoá `all_done` (ghi TRƯỚC khi cấp, `insertIfAbsent`) chặn cấp 2 lần/ngày.
+    `GET /quests/today` → `{quests[{key,title,progress,target,done}], allDone, rewardClaimed, justEarnedFreeze, freezeCount, maxFreeze}`.
+  - **Trò chơi** (`minigame.service.ts`): chỉ chấm điểm, `finish` trả `{score, totalAsked}`; bảng xếp hạng giữ nguyên.
+  - **Premium** bỏ "xu x2"; **payments** chỉ còn bán Premium (`POST /payments/premium-checkout`, `GET /payments/orders/:orderCode`,
+    webhook) — gỡ `POST /payments/topup`, `GET /payments/history`; webhook gặp đơn `TOPUP` cũ vừa thanh toán thì chỉ log ERROR
+    để hoàn tiền tay (không còn gì để cộng).
+  - **Xoá hẳn module**: `wallet`, `messages`, `users/follows`, `users/search`, `videos/comments`, `videos/likes`, gateway bỏ sự kiện
+    `typing`; xoá thêm route không client nào gọi: `GET /notifications/unread-count`, `GET /progress/levels/:level`.
+    Bảng DB giữ làm lịch sử (danh sách ở đầu `entities/index.ts`, entity ghi "KHÔNG CÒN DÙNG"); xoá tài khoản vẫn xoá dây chuyền.
+  - **Thông báo làm lại** (`notifications.listener.ts` — mỗi loại 1 handler, soạn câu chữ ở MỘT chỗ): chỉ còn loại người học cần
+    biết — `ACHIEVEMENT_UNLOCKED`, `CLASS_ASSIGNMENT` (giáo viên giao bài; `ClassroomsService` phát `AppEvent.ClassAssignmentCreated`
+    thay vì tự gửi push), `LEAGUE_RESULT` (chốt tuần xong `LeagueService` phát cho người có ôn trong tuần hoặc có lên/xuống bậc),
+    `STREAK_SAVED` (`StreakService` phát `StreakFreezeUsed` khi lá chắn vừa giữ chuỗi). Cột mới `Notification.message`/`href`
+    (migration `1792500000000-NotificationMessages`: thêm 3 giá trị enum bằng `ADD VALUE IF NOT EXISTS` + 2 cột) — client hiện
+    `message`, bấm mở `href`; push dùng cùng câu. `list`/`markRead` chỉ lọc `SHOWN_TYPES` (dòng `COMMENT_REPLY`/`NEW_FOLLOWER` cũ
+    còn trong DB nhưng không hiện). Kiểm chứng trên Postgres thật: lớp giao bài → học viên nhận đúng câu + đường dẫn; chốt tuần
+    giải đấu phát đúng 5 thông báo, chạy lại không phát thêm.
 - **GỠ 2026-10-19 (user duyệt "triển khai nhé" sau danh sách audit): Đấu 1v1/ELO/mùa giải, khung avatar Phượng
   Hoàng, API `/exams` cũ** — `DuelModule`/`ExamsModule` không còn nạp ở `app.module.ts`, `DuelService` bỏ khỏi
   `NotificationsModule`, gateway bỏ 3 sự kiện `duel:*` và hook kết nối/ngắt, bảng xếp hạng bỏ tiêu chí `elo`, shop
   chỉ còn danh hiệu (`GET/POST /shop/frames*` gỡ), hồ sơ công khai bỏ `equippedFrame`. DB GIỮ NGUYÊN (`UserRating`,
   `DuelMatch`, `DuelSeason*`, `ExamAttempt`, `UserSettings.equippedFrame`). File code chết của các phần này
   (`src/modules/duel/`, `src/modules/exams/`, `shop/shop.service.ts`, `shop/frame-catalog.ts`, `shop/dto/equip-frame.dto.ts`)
-  đã XOÁ HẲN khi chuyển TypeORM (2026-10-20). **Còn dở, chờ user**: **nạp xu bằng tiền thật CHƯA gỡ**
-  (`POST /payments/topup` còn, client tự ẩn vì payOS chưa bật) — bộ phân loại chặn sửa luồng thanh toán. Các mục cũ
-  dưới đây giữ làm lịch sử.
+  đã XOÁ HẲN khi chuyển TypeORM (2026-10-20). Nạp xu gỡ cùng hệ thống xu (mục ngay trên). Các mục cũ dưới đây giữ
+  làm lịch sử.
 - **Đấu 1v1 + rank tier + mùa giải (`src/modules/duel`, model `UserRating` + `DuelMatch` +
   `DuelSeason` + `DuelSeasonResult`)**: Giai đoạn 2+3 minigame — ghép trận + đấu realtime qua
   WebSocket, ELO thô (K=32, công thức chuẩn cờ vua), CHỈ có chế độ `TRANSLATE` (chưa ghép LISTENING
@@ -947,7 +966,7 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
   `/leaderboard` (khác hẳn cấu trúc dữ liệu — nhóm theo bậc + vùng thăng/giáng, không phải 1
   bảng metric đơn giản) để tránh phải sửa `components/leaderboard.tsx` đang được dev FE khác
   chỉnh song song.
-- **Nhiệm vụ hàng ngày** (`src/modules/quests`, `QuestsService`, từ 2026-09-19) — mục tiêu
+- **Nhiệm vụ hàng ngày** (`src/modules/quests`, `QuestsService`, từ 2026-09-19; thưởng xu đổi thành lá chắn từ 2026-10-20 — xem "Gỡ hệ thống xu") — mục tiêu
   chính là LIÊN KẾT các tính năng đang đứng riêng lẻ (user từng phản ánh app "quá nhiều chức
   năng rời rạc, không liên kết"): mỗi nhiệm vụ trong 3 nhiệm vụ/ngày lấy tiêu chí từ 1 tính năng
   KHÁC NHAU đã có sẵn — ôn từ vựng (`ReviewLog`), làm quiz (`QuizAttempt.completedAt`), luyện
@@ -1031,7 +1050,7 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
   phẩm, gộp sớm là abstraction thừa. `equippedTitle` lưu ở `UserSettings` (giống `equippedFrame`),
   `getPublicProfile()` trả thêm field này (chuỗi label, không phải object như frame vì không cần
   màu sắc gì thêm).
-  **Quyền lợi Premium mới: NHÂN ĐÔI xu** (`PREMIUM_XU_MULTIPLIER = 2`, `applyPremiumMultiplier()`
+  **[ĐÃ GỠ 2026-10-20] Quyền lợi Premium mới: NHÂN ĐÔI xu** (`PREMIUM_XU_MULTIPLIER = 2`, `applyPremiumMultiplier()`
   ở `premium-plans.ts`) — áp dụng cho xu kiếm từ minigame (`MinigameService.creditMinigameReward()`,
   dùng chung cho cả trắc nghiệm lẫn "Ghép cặp") và nhiệm vụ hàng ngày (`QuestsService.getToday()`'s
   `xuOf()` — nhân TRƯỚC khi hiển thị lẫn khi thưởng, tránh UI hiện số gốc rồi thực nhận nhiều hơn
@@ -1052,7 +1071,7 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
   số bài đã xong, huy hiệu ĐÃ MỞ KHOÁ (không phải toàn bộ catalog như `/achievements` của chính
   mình), số người theo dõi/đang theo dõi + danh sách rút gọn tối đa 30 mỗi bên, và `isFollowing`
   tương đối với người đang xem (`viewerId`).
-- **Tìm người dùng (`GET /users/search?q=`, `UsersService.search()`)**: khớp `displayName`
+- **[LỊCH SỬ — đã gỡ/đổi 2026-10-20, xem "Gỡ hệ thống xu"] Tìm người dùng (`GET /users/search?q=`, `UsersService.search()`)**: khớp `displayName`
   không phân biệt hoa/thường, HOẶC đúng mã người dùng (UID, tự nhận diện `q` có đúng định dạng
   UUID hay không để đổi cách khớp) — hữu ích khi trùng tên khó tìm, chỉ cần gửi UID cho nhau.
   Tối đa 20 kết quả, kèm `currentStreak`/`isFollowing` giống style `LeaderboardService.top()` —
@@ -1067,7 +1086,7 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
   `SetNull` (nội dung/thông báo liên quan tới người KHÁC vẫn giữ lại, chỉ mất gắn tác giả), còn
   lại (settings, tiến độ, bình luận, tin nhắn, follow...) dùng `Cascade` (dữ liệu CÁ NHÂN xoá
   sạch). Route tự xoá cookie auth (`clearAuthCookies`) như lúc `/auth/logout`.
-- **Nhắn tin trực tiếp (`src/modules/messages`, model `Conversation` + `DirectMessage`)**: 1-1,
+- **[LỊCH SỬ — đã gỡ/đổi 2026-10-20, xem "Gỡ hệ thống xu"] Nhắn tin trực tiếp (`src/modules/messages`, model `Conversation` + `DirectMessage`)**: 1-1,
   `Conversation.userAId` LUÔN nhỏ hơn `userBId` theo thứ tự chuỗi (chuẩn hoá ở
   `MessagesService.pairIds()`) để 1 cặp user chỉ có đúng 1 hội thoại dù ai nhắn trước.
   `GET /messages/conversations` (kèm tin nhắn cuối + số chưa đọc), `POST /messages/with/:userId`

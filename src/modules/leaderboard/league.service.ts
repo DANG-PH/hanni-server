@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, IsNull, Repository } from 'typeorm';
 import {
@@ -9,6 +10,7 @@ import {
   User,
 } from '../../database/entities';
 import { findOrCreate, insertAndReturn } from '../../database/repository.util';
+import { AppEvent, type LeagueResultPayload } from '../../events/events';
 import {
   currentWeekKey,
   LEAGUE_TIERS,
@@ -42,6 +44,7 @@ export class LeagueService {
     private readonly reviewLogs: Repository<ReviewLog>,
     @InjectRepository(User) private readonly users: Repository<User>,
     @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly events: EventEmitter2,
   ) {}
 
   getOrCreateCurrentWeek() {
@@ -198,5 +201,22 @@ export class LeagueService {
           ['weekId', 'userId'],
         );
     });
+
+    // Báo kết quả tuần (thông báo + push) — chỉ người có ôn trong tuần hoặc có lên/xuống bảng, không làm phiền người đã nghỉ.
+    for (const e of entries) {
+      const result = plan.get(e.userId);
+      const weekPoints = points.get(e.userId) ?? 0;
+      if (!result || (weekPoints === 0 && result.movement === 'stay')) continue;
+      const payload: LeagueResultPayload = {
+        userId: e.userId,
+        tierName: LEAGUE_TIERS[e.tier].name,
+        nextTierName: LEAGUE_TIERS[result.tier].name,
+        movement: result.movement,
+        rank: result.rank,
+        groupSize: result.groupSize,
+        points: weekPoints,
+      };
+      this.events.emit(AppEvent.LeagueResult, payload);
+    }
   }
 }

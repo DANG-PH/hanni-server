@@ -2,10 +2,10 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
-  Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { isUniqueViolation } from '../../database/db-errors';
@@ -22,8 +22,11 @@ import {
   UserWordProgress,
 } from '../../database/entities';
 import { insertIfAbsent } from '../../database/repository.util';
+import {
+  AppEvent,
+  type ClassAssignmentCreatedPayload,
+} from '../../events/events';
 import { PAPERS } from '../mock-exams/mock-exam.content';
-import { PushService } from '../push/push.service';
 import {
   isAssignmentDone,
   makeClassCode,
@@ -112,8 +115,6 @@ function describe(a: AssignmentRow) {
  */
 @Injectable()
 export class ClassroomsService {
-  private readonly logger = new Logger(ClassroomsService.name);
-
   constructor(
     @InjectRepository(Classroom)
     private readonly classrooms: Repository<Classroom>,
@@ -132,7 +133,7 @@ export class ClassroomsService {
     private readonly wordProgress: Repository<UserWordProgress>,
     @InjectRepository(MockExamAttempt)
     private readonly mockAttempts: Repository<MockExamAttempt>,
-    private readonly push: PushService,
+    private readonly events: EventEmitter2,
   ) {}
 
   async create(ownerId: string, dto: CreateClassroomDto) {
@@ -300,27 +301,20 @@ export class ClassroomsService {
       relations: { lesson: true },
     });
     const { label, href } = describe(created);
-    // Báo cho cả lớp — chạy nền, push lỗi không chặn việc giao bài.
+    // Báo cho cả lớp: thông báo trong app + push (NotificationsListener, chạy nền — lỗi không chặn việc giao bài).
     const members = await this.members.find({
       where: { classroomId },
       select: { classroomId: true, userId: true },
     });
-    const due = dueAt
-      ? ` — hạn ${dueAt.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}`
-      : '';
-    void Promise.allSettled(
-      members.map((m) =>
-        this.push.sendToUser(
-          m.userId,
-          `Bài tập mới · ${c.name}`,
-          `${c.owner.displayName} vừa giao: ${label}${due}`,
-        ),
-      ),
-    ).then((results) => {
-      const failed = results.filter((r) => r.status === 'rejected').length;
-      if (failed)
-        this.logger.warn(`Không gửi được push bài giao cho ${failed} học viên`);
-    });
+    const event: ClassAssignmentCreatedPayload = {
+      memberIds: members.map((m) => m.userId),
+      teacherName: c.owner.displayName,
+      className: c.name,
+      title: label,
+      href,
+      dueAt,
+    };
+    this.events.emit(AppEvent.ClassAssignmentCreated, event);
     return { ...assignmentView(created), label, href };
   }
 
