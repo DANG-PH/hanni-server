@@ -1,5 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, MoreThanOrEqual, Repository } from 'typeorm';
+import { CoinTransaction, UserWallet } from '../../database/entities';
+import { findOrCreate } from '../../database/repository.util';
 import {
   MAX_STREAK_FREEZE,
   StreakService,
@@ -14,30 +17,30 @@ export const DAILY_CHECKIN_REWARD = 5;
 /**
  * Ví xu (soft currency) — KHÔNG quy đổi tiền thật. Mọi thay đổi số dư đều
  * đi qua `credit()`/`debit()` để luôn có 1 dòng `CoinTransaction` tương ứng
- * (đối soát/chống gian lận), và `debit()` dùng `updateMany` có điều kiện
- * `balance >= amount` (atomic) thay vì đọc-rồi-ghi để tránh ví âm khi có
- * nhiều request cùng lúc.
+ * (đối soát/chống gian lận). Cộng/trừ chạy NGAY TRONG DB (`balance = balance ± n`), `debit()` kèm điều
+ * kiện `balance >= amount` — không đọc-rồi-ghi, nên nhiều request cùng lúc không làm ví âm hay mất xu.
  */
 @Injectable()
 export class WalletService {
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectDataSource() private readonly dataSource: DataSource,
+    @InjectRepository(UserWallet)
+    private readonly wallets: Repository<UserWallet>,
+    @InjectRepository(CoinTransaction)
+    private readonly transactions: Repository<CoinTransaction>,
     private readonly streak: StreakService,
   ) {}
 
   async getBalance(userId: string): Promise<number> {
-    const wallet = await this.prisma.userWallet.upsert({
-      where: { userId },
-      create: { userId },
-      update: {},
-    });
+    // Ví tạo lười: lần đầu hỏi số dư thì tạo ví 0 xu.
+    const wallet = await findOrCreate(this.wallets, { userId });
     return wallet.balance;
   }
 
   async getRecentTransactions(userId: string, limit = 20) {
-    return this.prisma.coinTransaction.findMany({
+    return this.transactions.find({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
+      order: { createdAt: 'DESC' },
       take: limit,
     });
   }
@@ -48,29 +51,32 @@ export class WalletService {
     reason: string,
   ): Promise<number> {
     if (amount <= 0) return this.getBalance(userId);
-    const [wallet] = await this.prisma.$transaction([
-      this.prisma.userWallet.upsert({
-        where: { userId },
-        create: { userId, balance: amount },
-        update: { balance: { increment: amount } },
-      }),
-      this.prisma.coinTransaction.create({ data: { userId, amount, reason } }),
-    ]);
-    return wallet.balance;
+    return this.dataSource.transaction(async (db) => {
+      await db
+        .createQueryBuilder()
+        .insert()
+        .into(UserWallet)
+        .values({ userId })
+        .orIgnore()
+        .execute();
+      await db.increment(UserWallet, { userId }, 'balance', amount);
+      await db.insert(CoinTransaction, { userId, amount, reason });
+      const wallet = await db.findOneByOrFail(UserWallet, { userId });
+      return wallet.balance;
+    });
   }
 
   async debit(userId: string, amount: number, reason: string): Promise<number> {
     if (amount <= 0) return this.getBalance(userId);
-    const result = await this.prisma.userWallet.updateMany({
-      where: { userId, balance: { gte: amount } },
-      data: { balance: { decrement: amount } },
-    });
-    if (result.count === 0) {
+    const result = await this.wallets.decrement(
+      { userId, balance: MoreThanOrEqual(amount) },
+      'balance',
+      amount,
+    );
+    if (!result.affected) {
       throw new BadRequestException('Không đủ xu');
     }
-    await this.prisma.coinTransaction.create({
-      data: { userId, amount: -amount, reason },
-    });
+    await this.transactions.insert({ userId, amount: -amount, reason });
     return this.getBalance(userId);
   }
 

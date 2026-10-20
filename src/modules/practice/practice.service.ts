@@ -1,32 +1,33 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { PracticeSkill } from '@prisma/client';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { PracticeAttempt, Word } from '../../database/entities';
+import { PracticeSkill } from '../../database/enums';
 import { AppEvent, type PracticeAttemptedPayload } from '../../events/events';
-import { PrismaService } from '../../infra/prisma/prisma.service';
 import type { RecordAttemptDto } from './dto/practice.dto';
 
 @Injectable()
 export class PracticeService {
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(Word) private readonly words: Repository<Word>,
+    @InjectRepository(PracticeAttempt)
+    private readonly attempts: Repository<PracticeAttempt>,
     private readonly events: EventEmitter2,
   ) {}
 
   async record(userId: string, dto: RecordAttemptDto) {
-    const word = await this.prisma.word.findUnique({
-      where: { id: dto.wordId },
-      select: { id: true },
-    });
-    if (!word) throw new NotFoundException('Không tìm thấy từ');
+    if (!(await this.words.existsBy({ id: dto.wordId })))
+      throw new NotFoundException('Không tìm thấy từ');
 
-    const attempt = await this.prisma.practiceAttempt.create({
-      data: {
+    const attempt = await this.attempts.save(
+      this.attempts.create({
         userId,
         wordId: dto.wordId,
         skill: dto.skill,
         isCorrect: dto.isCorrect ?? null,
-      },
-    });
+      }),
+    );
 
     const payload: PracticeAttemptedPayload = {
       userId,
@@ -41,9 +42,9 @@ export class PracticeService {
   }
 
   async stats(userId: string, skill: PracticeSkill) {
-    const rows = await this.prisma.practiceAttempt.findMany({
+    const rows = await this.attempts.find({
       where: { userId, skill },
-      select: { wordId: true, isCorrect: true },
+      select: { id: true, wordId: true, isCorrect: true },
     });
     const totalAttempts = rows.length;
     const distinctWordsCount = new Set(rows.map((r) => r.wordId)).size;

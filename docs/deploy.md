@@ -21,10 +21,9 @@ docker compose up -d
 # Bỏ qua nếu VPS đã có Postgres/Redis riêng — nhớ sửa DATABASE_URL/REDIS_URL trong .env cho khớp.
 
 npm ci
-npx prisma generate
-npx prisma migrate deploy       # áp toàn bộ migration, bao gồm push_subscriptions
-npm run db:seed                 # một lần duy nhất — KHÔNG nằm trong CI/CD, không tự chạy lại mỗi lần deploy
 npm run build
+node dist/src/database/migrate.js   # tạo toàn bộ bảng (migration TypeORM)
+npm run db:seed                     # một lần duy nhất — KHÔNG nằm trong CI/CD, không tự chạy lại mỗi lần deploy
 
 npm i -g pm2                    # nếu VPS chưa có
 pm2 start dist/src/main.js --name hanni-server
@@ -48,9 +47,10 @@ sử commit `e63c860`, sửa 6 lỗi type thật + để `npm run lint --fix` d�
 Sau khi sửa `VPS_APP_PATH` (từng để trống, khiến bước SSH `cd ""` ra `/root` không phải repo),
 một push thật lên `main` đã chạy trọn `ci` → `deploy` → health check trả `ok`.
 
-Sau bước này, mọi push lên `main` sẽ tự động: lint + build (job `ci`) → SSH vào VPS → `git reset --hard
-origin/main` → `npm ci` → `prisma generate` → `prisma migrate deploy` → `npm run build` →
-`pm2 restart all --update-env`. Không cần lặp lại các bước thủ công ở trên.
+Sau bước này, mọi push lên `main` sẽ tự động: lint + test + build trên runner GitHub (job `ci`) → chép
+`dist/` sang VPS → `git reset --hard origin/main` → `npm install` (chỉ khi package-lock đổi) →
+`node dist/src/database/migrate.js` (migration TypeORM) → `pm2 restart hanni-server --update-env` → chờ
+`/api/health`. Không cần lặp lại các bước thủ công ở trên.
 
 ## Domain backend: đang chuyển từ `api.hanni.dangpham.id.vn` sang `hanni-api.dangpham.id.vn`
 

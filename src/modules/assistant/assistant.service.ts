@@ -7,13 +7,40 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { GoogleGenAI, Type } from '@google/genai';
 import type { Content, FunctionCall, Tool } from '@google/genai';
 import { promises as fs } from 'fs';
 import { join } from 'path';
-import { ChatRole, SrsState } from '@prisma/client';
 import { Observable } from 'rxjs';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import {
+  DataSource,
+  ILike,
+  IsNull,
+  LessThanOrEqual,
+  Like,
+  MoreThan,
+  MoreThanOrEqual,
+  Not,
+  Repository,
+} from 'typeorm';
+import {
+  ChatMessage,
+  ChatSession,
+  GrammarPoint,
+  OnboardingProfile,
+  PracticeAttempt,
+  ReviewLog,
+  User,
+  UserLessonProgress,
+  UserStreak,
+  UserVideoProgress,
+  UserWordProgress,
+  Video,
+  Word,
+} from '../../database/entities';
+import { ChatRole, SrsState } from '../../database/enums';
+import { insertAndReturn, likeEscape } from '../../database/repository.util';
 import type { Env } from '../../config/env.validation';
 import { startOfLocalDayInstant } from '../../common/time.util';
 import { isPremiumActive } from '../premium/premium-plans';
@@ -230,7 +257,30 @@ export class AssistantService implements OnModuleInit {
 
   constructor(
     private readonly config: ConfigService<Env, true>,
-    private readonly prisma: PrismaService,
+    @InjectDataSource() private readonly dataSource: DataSource,
+    @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(ChatSession)
+    private readonly sessions: Repository<ChatSession>,
+    @InjectRepository(ChatMessage)
+    private readonly messages: Repository<ChatMessage>,
+    @InjectRepository(GrammarPoint)
+    private readonly grammarPoints: Repository<GrammarPoint>,
+    @InjectRepository(Word) private readonly words: Repository<Word>,
+    @InjectRepository(Video) private readonly videos: Repository<Video>,
+    @InjectRepository(UserStreak)
+    private readonly streaks: Repository<UserStreak>,
+    @InjectRepository(UserWordProgress)
+    private readonly wordProgress: Repository<UserWordProgress>,
+    @InjectRepository(OnboardingProfile)
+    private readonly onboardingProfiles: Repository<OnboardingProfile>,
+    @InjectRepository(UserLessonProgress)
+    private readonly lessonProgress: Repository<UserLessonProgress>,
+    @InjectRepository(UserVideoProgress)
+    private readonly videoProgress: Repository<UserVideoProgress>,
+    @InjectRepository(ReviewLog)
+    private readonly reviewLogs: Repository<ReviewLog>,
+    @InjectRepository(PracticeAttempt)
+    private readonly practiceAttempts: Repository<PracticeAttempt>,
   ) {
     const apiKey = this.config.get('GEMINI_API_KEY', { infer: true });
     this.genAI = apiKey ? new GoogleGenAI({ apiKey }) : null;
@@ -241,9 +291,9 @@ export class AssistantService implements OnModuleInit {
    * `STREAK_DAY_CUTOFF_HOUR`) cho nhất quán với streak/nhiệm vụ hàng ngày,
    * không phải nửa đêm UTC. */
   private async checkDailyAskQuota(userId: string): Promise<void> {
-    const user = await this.prisma.user.findUniqueOrThrow({
+    const user = await this.users.findOneOrFail({
       where: { id: userId },
-      select: { premiumUntil: true, timezone: true },
+      select: { id: true, premiumUntil: true, timezone: true },
     });
     if (isPremiumActive(user.premiumUntil)) return;
 
@@ -251,10 +301,10 @@ export class AssistantService implements OnModuleInit {
       infer: true,
     });
     const since = startOfLocalDayInstant(new Date(), user.timezone, cutoffHour);
-    const usedToday = await this.prisma.chatMessage.count({
+    const usedToday = await this.messages.count({
       where: {
         role: ChatRole.USER,
-        createdAt: { gte: since },
+        createdAt: MoreThanOrEqual(since),
         session: { userId },
       },
     });
@@ -279,8 +329,8 @@ export class AssistantService implements OnModuleInit {
   }
 
   async getStatus(): Promise<AssistantStatus> {
-    const totalGrammarPoints = await this.prisma.grammarPoint.count({
-      where: { explanationVi: { not: '' } },
+    const totalGrammarPoints = await this.grammarPoints.countBy({
+      explanationVi: Not(''),
     });
     return {
       configured: Boolean(this.genAI),
@@ -312,8 +362,8 @@ export class AssistantService implements OnModuleInit {
   /** Nguồn ngữ pháp (từ DB) + FAQ Hanni (tĩnh, khớp với trang chủ) gộp
    * chung 1 danh sách để đánh index cùng cơ chế resume bên dưới. */
   private async collectIndexSources(): Promise<IndexSourceItem[]> {
-    const points = await this.prisma.grammarPoint.findMany({
-      where: { explanationVi: { not: '' } },
+    const points = await this.grammarPoints.find({
+      where: { explanationVi: Not('') },
       select: {
         id: true,
         hskLevel: true,
@@ -323,7 +373,7 @@ export class AssistantService implements OnModuleInit {
         explanationVi: true,
         patterns: true,
       },
-      orderBy: [{ hskLevel: 'asc' }, { orderIndex: 'asc' }],
+      order: { hskLevel: 'ASC', orderIndex: 'ASC' },
     });
     const grammarItems: IndexSourceItem[] = points.map((p) => ({
       sourceId: `grammar:${p.id}`,
@@ -422,22 +472,20 @@ export class AssistantService implements OnModuleInit {
 
   /** Danh sách cuộc trò chuyện của user, mới nhất trước — như ChatGPT/Claude. */
   async listSessions(userId: string) {
-    return this.prisma.chatSession.findMany({
+    return this.sessions.find({
       where: { userId },
-      orderBy: { updatedAt: 'desc' },
+      order: { updatedAt: 'DESC' },
       select: { id: true, title: true, createdAt: true, updatedAt: true },
     });
   }
 
   createSession(userId: string) {
-    return this.prisma.chatSession.create({ data: { userId } });
+    return insertAndReturn(this.sessions, { userId });
   }
 
   /** 404 nếu không phải cuộc trò chuyện của chính user này — tránh dò UUID người khác. */
   private async requireOwnSession(userId: string, sessionId: string) {
-    const session = await this.prisma.chatSession.findUnique({
-      where: { id: sessionId },
-    });
+    const session = await this.sessions.findOneBy({ id: sessionId });
     if (!session || session.userId !== userId) {
       throw new NotFoundException('Không tìm thấy cuộc trò chuyện');
     }
@@ -445,19 +493,19 @@ export class AssistantService implements OnModuleInit {
   }
 
   private async getOrCreateLatestSession(userId: string) {
-    const existing = await this.prisma.chatSession.findFirst({
+    const existing = await this.sessions.findOne({
       where: { userId },
-      orderBy: { updatedAt: 'desc' },
+      order: { updatedAt: 'DESC' },
     });
     if (existing) return existing;
-    return this.prisma.chatSession.create({ data: { userId } });
+    return insertAndReturn(this.sessions, { userId });
   }
 
   async getMessages(userId: string, sessionId: string) {
     await this.requireOwnSession(userId, sessionId);
-    return this.prisma.chatMessage.findMany({
+    return this.messages.find({
       where: { sessionId },
-      orderBy: { createdAt: 'asc' },
+      order: { createdAt: 'ASC' },
     });
   }
 
@@ -465,9 +513,7 @@ export class AssistantService implements OnModuleInit {
     userId: string,
     sessionId: string,
   ): Promise<{ ok: true }> {
-    await this.prisma.chatSession.deleteMany({
-      where: { id: sessionId, userId },
-    });
+    await this.sessions.delete({ id: sessionId, userId });
     return { ok: true };
   }
 
@@ -481,9 +527,7 @@ export class AssistantService implements OnModuleInit {
       ? await this.requireOwnSession(userId, sessionId)
       : await this.getOrCreateLatestSession(userId);
 
-    const priorCount = await this.prisma.chatMessage.count({
-      where: { sessionId: session.id },
-    });
+    const priorCount = await this.messages.countBy({ sessionId: session.id });
     const { text: replyText, action } = await this.generateReply(
       userId,
       message,
@@ -542,8 +586,8 @@ export class AssistantService implements OnModuleInit {
           const session = sessionId
             ? await this.requireOwnSession(userId, sessionId)
             : await this.getOrCreateLatestSession(userId);
-          const priorCount = await this.prisma.chatMessage.count({
-            where: { sessionId: session.id },
+          const priorCount = await this.messages.countBy({
+            sessionId: session.id,
           });
           let contents = await this.buildPromptContents(
             userId,
@@ -650,39 +694,34 @@ export class AssistantService implements OnModuleInit {
     // tay 1ms lệch nhau để đảm bảo đúng thứ tự hiển thị.
     const userCreatedAt = new Date();
     const modelCreatedAt = new Date(userCreatedAt.getTime() + 1);
-    await this.prisma.$transaction([
-      this.prisma.chatMessage.create({
-        data: {
+    await this.dataSource.transaction(async (db) => {
+      await db.insert(ChatMessage, [
+        {
           sessionId,
           role: ChatRole.USER,
           text: userMessage,
           createdAt: userCreatedAt,
         },
-      }),
-      this.prisma.chatMessage.create({
-        data: {
+        {
           sessionId,
           role: ChatRole.MODEL,
           text: replyText,
           createdAt: modelCreatedAt,
         },
-      }),
-      this.prisma.chatSession.update({
-        where: { id: sessionId },
-        data: {
-          updatedAt: new Date(),
-          // Đặt tên cuộc trò chuyện từ tin nhắn đầu tiên, không đổi lại sau đó.
-          ...(priorCount === 0 && !existingTitle
-            ? {
-                title:
-                  userMessage.length > this.TITLE_MAX_LEN
-                    ? `${userMessage.slice(0, this.TITLE_MAX_LEN).trim()}…`
-                    : userMessage,
-              }
-            : {}),
-        },
-      }),
-    ]);
+      ]);
+      await db.update(ChatSession, sessionId, {
+        updatedAt: new Date(),
+        // Đặt tên cuộc trò chuyện từ tin nhắn đầu tiên, không đổi lại sau đó.
+        ...(priorCount === 0 && !existingTitle
+          ? {
+              title:
+                userMessage.length > this.TITLE_MAX_LEN
+                  ? `${userMessage.slice(0, this.TITLE_MAX_LEN).trim()}…`
+                  : userMessage,
+            }
+          : {}),
+      });
+    });
   }
 
   private async generateReply(
@@ -760,9 +799,9 @@ export class AssistantService implements OnModuleInit {
     message: string,
     sessionId: string,
   ): Promise<Content[]> {
-    const history = await this.prisma.chatMessage.findMany({
+    const history = await this.messages.find({
       where: { sessionId },
-      orderBy: { createdAt: 'desc' },
+      order: { createdAt: 'DESC' },
       take: HISTORY_LIMIT,
     });
     history.reverse();
@@ -841,56 +880,55 @@ Hướng dẫn trả lời:
       recentReviewCount,
       practiceBySkill,
     ] = await Promise.all([
-      this.prisma.userStreak.findUnique({
+      this.streaks.findOne({
         where: { userId },
-        select: { currentStreak: true, longestStreak: true },
+        select: { userId: true, currentStreak: true, longestStreak: true },
       }),
-      this.prisma.userWordProgress.count({
-        where: {
-          userId,
-          OR: [
-            { learnedAt: { not: null } },
-            {
-              state: SrsState.REVIEW,
-              intervalDays: { gte: LEARNED_INTERVAL_DAYS },
-            },
-          ],
-        },
+      // Từ "đã thuộc" — cùng định nghĩa với bảng xếp hạng.
+      this.wordProgress.count({
+        where: [
+          { userId, learnedAt: Not(IsNull()) },
+          {
+            userId,
+            state: SrsState.REVIEW,
+            intervalDays: MoreThanOrEqual(LEARNED_INTERVAL_DAYS),
+          },
+        ],
       }),
-      this.prisma.userWordProgress.count({
-        where: {
-          userId,
-          isSuspended: false,
-          state: { not: SrsState.NEW },
-          dueAt: { lte: new Date() },
-        },
+      this.wordProgress.countBy({
+        userId,
+        isSuspended: false,
+        state: Not(SrsState.NEW),
+        dueAt: LessThanOrEqual(new Date()),
       }),
-      this.prisma.onboardingProfile.findUnique({
+      this.onboardingProfiles.findOne({
         where: { userId },
-        select: { recommendedLevel: true, targetLevel: true },
+        select: { userId: true, recommendedLevel: true, targetLevel: true },
       }),
-      this.prisma.userLessonProgress.findFirst({
-        where: { userId, completedAt: null, startedAt: { not: null } },
-        orderBy: { updatedAt: 'desc' },
-        select: {
-          learnedWords: true,
-          totalWords: true,
-          lesson: { select: { title: true, hskLevel: true } },
-        },
+      // Bài đang học dở gần nhất.
+      this.lessonProgress.findOne({
+        where: { userId, completedAt: IsNull(), startedAt: Not(IsNull()) },
+        order: { updatedAt: 'DESC' },
+        relations: { lesson: true },
       }),
-      this.prisma.userVideoProgress.findFirst({
-        where: { userId, completedAt: null, linesRead: { gt: 0 } },
-        orderBy: { updatedAt: 'desc' },
-        select: { video: { select: { title: true } } },
+      // Video đang xem dở gần nhất.
+      this.videoProgress.findOne({
+        where: { userId, completedAt: IsNull(), linesRead: MoreThan(0) },
+        order: { updatedAt: 'DESC' },
+        relations: { video: true },
       }),
-      this.prisma.reviewLog.count({
-        where: { userId, reviewedAt: { gte: sevenDaysAgo } },
+      this.reviewLogs.countBy({
+        userId,
+        reviewedAt: MoreThanOrEqual(sevenDaysAgo),
       }),
-      this.prisma.practiceAttempt.groupBy({
-        by: ['skill'],
-        where: { userId, createdAt: { gte: sevenDaysAgo } },
-        _count: true,
-      }),
+      // Số lượt luyện nghe / phát âm trong 7 ngày.
+      this.practiceAttempts
+        .createQueryBuilder('p')
+        .select('p.skill', 'skill')
+        .addSelect('COUNT(*)::int', 'count')
+        .where({ userId, createdAt: MoreThanOrEqual(sevenDaysAgo) })
+        .groupBy('p.skill')
+        .getRawMany<{ skill: string; count: number }>(),
     ]);
 
     const lines = [
@@ -910,7 +948,7 @@ Hướng dẫn trả lời:
       recentReviewCount > 0 ? `${recentReviewCount} lượt ôn từ vựng` : null,
       ...practiceBySkill.map(
         (p) =>
-          `${p._count} lượt luyện ${p.skill === 'LISTENING' ? 'nghe' : 'phát âm'}`,
+          `${p.count} lượt luyện ${p.skill === 'LISTENING' ? 'nghe' : 'phát âm'}`,
       ),
     ].filter(Boolean);
     if (trend.length) {
@@ -934,13 +972,12 @@ Hướng dẫn trả lời:
   private async searchWordsByChineseTerms(message: string, limit = 6) {
     const terms = [...new Set(message.match(/[一-鿿]+/g) ?? [])].slice(0, 5);
     if (!terms.length) return [];
-    return this.prisma.word.findMany({
-      where: {
-        OR: terms.flatMap((t) => [
-          { simplified: { contains: t } },
-          { traditional: { contains: t } },
-        ]),
-      },
+    return this.words.find({
+      // Mảng where = HOẶC: từ nào chứa 1 trong các cụm chữ Hán của câu hỏi.
+      where: terms.flatMap((t) => [
+        { simplified: Like(`%${likeEscape(t)}%`) },
+        { traditional: Like(`%${likeEscape(t)}%`) },
+      ]),
       select: {
         simplified: true,
         traditional: true,
@@ -1050,13 +1087,11 @@ Hướng dẫn trả lời:
       const query = typeof args.query === 'string' ? args.query.trim() : '';
       if (!query)
         return { resultForModel: 'Chưa rõ tên/chủ đề video cần tìm.' };
-      const video = await this.prisma.video.findFirst({
-        where: {
-          OR: [
-            { title: { contains: query, mode: 'insensitive' } },
-            { titleZh: { contains: query } },
-          ],
-        },
+      const video = await this.videos.findOne({
+        where: [
+          { title: ILike(`%${likeEscape(query)}%`) },
+          { titleZh: Like(`%${likeEscape(query)}%`) },
+        ],
         select: { id: true, title: true },
       });
       if (!video) {

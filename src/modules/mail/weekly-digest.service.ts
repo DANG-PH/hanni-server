@@ -9,9 +9,16 @@ import {
   shiftIsoDate,
 } from '../../common/time.util';
 import type { Env } from '../../config/env.validation';
-import { PrismaService } from '../../infra/prisma/prisma.service';
 import { MailService } from './mail.service';
-import { ReviewType } from '@prisma/client';
+import { InjectRepository } from '@nestjs/typeorm';
+import { MoreThanOrEqual, Repository } from 'typeorm';
+import {
+  ReviewLog,
+  User,
+  UserDailyActivity,
+  UserStreak,
+} from '../../database/entities';
+import { ReviewType } from '../../database/enums';
 
 const DIGEST_HOUR = 9; // 9h sáng local — giờ mở email hợp lý, không làm phiền
 const DIGEST_WEEKDAY = 1; // luxon: 1 = Thứ Hai
@@ -31,7 +38,13 @@ export class WeeklyDigestService {
   private readonly logger = new Logger(WeeklyDigestService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(UserDailyActivity)
+    private readonly activities: Repository<UserDailyActivity>,
+    @InjectRepository(UserStreak)
+    private readonly streaks: Repository<UserStreak>,
+    @InjectRepository(ReviewLog)
+    private readonly reviewLogs: Repository<ReviewLog>,
     private readonly mail: MailService,
     private readonly config: ConfigService<Env, true>,
   ) {}
@@ -43,7 +56,7 @@ export class WeeklyDigestService {
       infer: true,
     });
 
-    const users = await this.prisma.user.findMany({
+    const users = await this.users.find({
       where: { settings: { weeklyDigestEnabled: true } },
       select: { id: true, email: true, displayName: true, timezone: true },
     });
@@ -64,16 +77,16 @@ export class WeeklyDigestService {
         // Đếm số từ MỚI BẮT ĐẦU học trong tuần (ReviewLog LEARN) thay vào:
         // phản ánh đúng nỗ lực và luôn dương với người có học.
         const [activity, streak, wordsStarted] = await Promise.all([
-          this.prisma.userDailyActivity.findMany({
-            where: { userId: user.id, localDate: { gte: sinceDate } },
-            select: { wordsReviewed: true },
+          this.activities.find({
+            where: { userId: user.id, localDate: MoreThanOrEqual(sinceDate) },
+            select: { id: true, wordsReviewed: true },
           }),
-          this.prisma.userStreak.findUnique({ where: { userId: user.id } }),
-          this.prisma.reviewLog.count({
+          this.streaks.findOneBy({ userId: user.id }),
+          this.reviewLogs.count({
             where: {
               userId: user.id,
               reviewType: ReviewType.LEARN,
-              reviewedAt: { gte: sinceDate },
+              reviewedAt: MoreThanOrEqual(sinceDate),
             },
           }),
         ]);

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { LessThanOrEqual, Repository } from 'typeorm';
+import { MockExamAttempt, Word } from '../../database/entities';
 import { StreakService } from '../gamification/streak/streak.service';
 import {
   isCorrect,
@@ -40,14 +41,16 @@ export class MockExamsService {
   }>;
 
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(Word) private readonly words: Repository<Word>,
+    @InjectRepository(MockExamAttempt)
+    private readonly attempts: Repository<MockExamAttempt>,
     private readonly streak: StreakService,
   ) {}
 
   private build() {
     this.built ??= (async () => {
-      const words = await this.prisma.word.findMany({
-        where: { hskLevel: { lte: DICTIONARY_MAX_LEVEL } },
+      const words = await this.words.find({
+        where: { hskLevel: LessThanOrEqual(DICTIONARY_MAX_LEVEL) },
         select: {
           id: true,
           simplified: true,
@@ -108,19 +111,21 @@ export class MockExamsService {
   /** Danh sách đề + (đã đăng nhập) điểm cao nhất và số lần làm mỗi đề. */
   async list(userId?: string) {
     const mine = userId
-      ? await this.prisma.mockExamAttempt.groupBy({
-          by: ['examSlug'],
-          where: { userId },
-          _max: { score: true },
-          _count: { _all: true },
-        })
+      ? await this.attempts
+          .createQueryBuilder('attempt')
+          .select('attempt.examSlug', 'examSlug')
+          .addSelect('MAX(attempt.score)', 'best')
+          .addSelect('COUNT(*)::int', 'attempts')
+          .where('attempt.userId = :userId', { userId })
+          .groupBy('attempt.examSlug')
+          .getRawMany<{ examSlug: string; best: number; attempts: number }>()
       : [];
     const bySlug = new Map(mine.map((m) => [m.examSlug, m]));
     return PAPERS.map((p) => {
       const m = bySlug.get(p.slug);
       return {
         ...paperMeta(p),
-        ...(m ? { best: m._max.score, attempts: m._count._all } : {}),
+        ...(m ? { best: m.best, attempts: m.attempts } : {}),
       };
     });
   }
@@ -144,21 +149,18 @@ export class MockExamsService {
     const result = scorePaper(paper, answers);
     let attemptId: string | null = null;
     if (userId) {
-      const attempt = await this.prisma.mockExamAttempt.create({
-        data: {
-          userId,
-          examSlug: slug,
-          hskLevel: paper.level,
-          score: result.score,
-          maxScore: result.maxScore,
-          passed: result.passed,
-          sectionScores: result.sections as unknown as Prisma.InputJsonValue,
-          answers,
-          durationSec: durationSec ?? null,
-        },
-        select: { id: true },
+      const { identifiers } = await this.attempts.insert({
+        userId,
+        examSlug: slug,
+        hskLevel: paper.level,
+        score: result.score,
+        maxScore: result.maxScore,
+        passed: result.passed,
+        sectionScores: result.sections,
+        answers,
+        durationSec: durationSec ?? null,
       });
-      attemptId = attempt.id;
+      attemptId = identifiers[0].id as string;
       await this.streak.recordActivity(userId, new Date(), {
         minutesStudied: (durationSec ?? 0) / 60,
       });
@@ -180,9 +182,9 @@ export class MockExamsService {
   }
 
   history(userId: string) {
-    return this.prisma.mockExamAttempt.findMany({
+    return this.attempts.find({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
+      order: { createdAt: 'DESC' },
       take: 30,
       select: {
         id: true,
@@ -234,9 +236,9 @@ export class MockExamsService {
 
   /** Điểm mạnh/yếu theo từng phần đề, cộng dồn mọi lượt đã làm. */
   async analysis(userId: string) {
-    const attempts = await this.prisma.mockExamAttempt.findMany({
+    const attempts = await this.attempts.find({
       where: { userId },
-      select: { examSlug: true, answers: true },
+      select: { id: true, examSlug: true, answers: true },
     });
     return { attempts: attempts.length, parts: partStats(attempts) };
   }

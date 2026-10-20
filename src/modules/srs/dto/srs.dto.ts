@@ -8,7 +8,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
-import { ReviewRating, StudySource } from '@prisma/client';
+import { ReviewRating, StudySource } from '../../../database/enums';
 
 export class AddWordDto {
   @IsUUID()

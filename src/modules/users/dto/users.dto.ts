@@ -9,7 +9,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { GoalType } from '@prisma/client';
+import { GoalType } from '../../../database/enums';
 
 export class ChangePasswordDto {
   @IsOptional()

@@ -3,14 +3,21 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
-import { GameMode, type Prisma } from '@prisma/client';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { In, IsNull, Not, Repository } from 'typeorm';
+import { notTestAccount } from '../../common/test-accounts';
+import {
+  MinigameSession,
+  User,
+  UserWordProgress,
+  Word,
+} from '../../database/entities';
+import { GameMode } from '../../database/enums';
 import { RedisService } from '../../infra/redis/redis.service';
 import { applyPremiumMultiplier } from '../premium/premium-plans';
 import { WalletService } from '../wallet/wallet.service';
 import type { FinishMinigameDto } from './dto/minigame.dto';
-import { NOT_TEST_ACCOUNT } from '../../common/test-accounts';
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -100,7 +107,12 @@ function matchScore(dto: FinishMinigameDto): number {
 @Injectable()
 export class MinigameService {
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(MinigameSession)
+    private readonly sessions: Repository<MinigameSession>,
+    @InjectRepository(Word) private readonly words: Repository<Word>,
+    @InjectRepository(UserWordProgress)
+    private readonly progress: Repository<UserWordProgress>,
+    @InjectRepository(User) private readonly users: Repository<User>,
     private readonly wallet: WalletService,
     private readonly redis: RedisService,
   ) {}
@@ -122,14 +134,12 @@ export class MinigameService {
       );
       return id;
     }
-    const session = await this.prisma.minigameSession.create({
-      data: {
-        userId,
-        mode,
-        questions: questions as unknown as Prisma.InputJsonValue,
-      },
+    const { identifiers } = await this.sessions.insert({
+      userId,
+      mode,
+      questions,
     });
-    return session.id;
+    return identifiers[0].id as string;
   }
 
   /** Kho từ cho 1 ván — ƯU TIÊN từ chính người chơi ĐANG HỌC, thiếu thì bù
@@ -144,15 +154,15 @@ export class MinigameService {
   private async buildPool(userId: string | null, mode: GameMode) {
     const needsAudio = mode === GameMode.LISTENING;
     const wordWhere = {
-      meaningVi: { not: null },
-      ...(needsAudio ? { audioUrl: { not: null } } : {}),
+      meaningVi: Not(IsNull()),
+      ...(needsAudio ? { audioUrl: Not(IsNull()) } : {}),
     };
 
     const learning = userId
-      ? await this.prisma.userWordProgress.findMany({
+      ? await this.progress.find({
           where: { userId, word: wordWhere },
-          include: { word: true },
-          orderBy: { updatedAt: 'desc' },
+          relations: { word: true },
+          order: { updatedAt: 'DESC' },
           take: POOL_SIZE,
         })
       : [];
@@ -160,9 +170,9 @@ export class MinigameService {
     if (pool.length >= POOL_SIZE) return pool;
 
     // Bù từ phổ biến (bỏ những từ đã có để không trùng đáp án).
-    const extra = await this.prisma.word.findMany({
-      where: { ...wordWhere, id: { notIn: pool.map((w) => w.id) } },
-      orderBy: { frequencyRank: 'asc' },
+    const extra = await this.words.find({
+      where: { ...wordWhere, id: Not(In(pool.map((w) => w.id))) },
+      order: { frequencyRank: 'ASC' },
       take: POOL_SIZE - pool.length,
     });
     return [...pool, ...extra];
@@ -224,9 +234,9 @@ export class MinigameService {
    * thẻ vốn công khai ngay khi tải dữ liệu (bản chất trò lật thẻ trí nhớ),
    * nên không cần giấu `wordId` như giấu `correctIndex` ở 2 mode kia. */
   private async startMatchGame(userId: string | null) {
-    const pool = await this.prisma.word.findMany({
-      where: { meaningVi: { not: null } },
-      orderBy: { frequencyRank: 'asc' },
+    const pool = await this.words.find({
+      where: { meaningVi: Not(IsNull()) },
+      order: { frequencyRank: 'ASC' },
       take: POOL_SIZE,
     });
     if (pool.length < MATCH_PAIRS) {
@@ -261,9 +271,7 @@ export class MinigameService {
     dto: FinishMinigameDto,
   ) {
     if (!userId) return this.finishGuest(sessionId, dto);
-    const session = await this.prisma.minigameSession.findUnique({
-      where: { id: sessionId },
-    });
+    const session = await this.sessions.findOneBy({ id: sessionId });
     if (!session || session.userId !== userId) {
       throw new NotFoundException('Không tìm thấy lượt chơi');
     }
@@ -276,19 +284,13 @@ export class MinigameService {
     }
 
     const answers = dto.answers ?? [];
-    const score = gradeAnswers(
-      session.questions as unknown as StoredQuestion[],
-      answers,
-    );
+    const score = gradeAnswers(session.questions as StoredQuestion[], answers);
 
-    await this.prisma.minigameSession.update({
-      where: { id: sessionId },
-      data: {
-        score,
-        totalAsked: answers.length,
-        durationMs: dto.durationMs,
-        finishedAt: new Date(),
-      },
+    await this.sessions.update(sessionId, {
+      score,
+      totalAsked: answers.length,
+      durationMs: dto.durationMs,
+      finishedAt: new Date(),
     });
 
     // 1 xu / câu đúng — đơn giản, minh bạch cho giai đoạn kiểm chứng gameplay.
@@ -335,9 +337,9 @@ export class MinigameService {
     userId: string,
     score: number,
   ): Promise<{ coinsEarned: number; balance: number }> {
-    const user = await this.prisma.user.findUniqueOrThrow({
+    const user = await this.users.findOneOrFail({
       where: { id: userId },
-      select: { premiumUntil: true },
+      select: { id: true, premiumUntil: true },
     });
     const coinsEarned = applyPremiumMultiplier(score, user.premiumUntil);
     const balance = await this.wallet.credit(userId, coinsEarned, 'minigame');
@@ -355,14 +357,11 @@ export class MinigameService {
   ) {
     const score = matchScore(dto);
 
-    await this.prisma.minigameSession.update({
-      where: { id: sessionId },
-      data: {
-        score,
-        totalAsked: MATCH_PAIRS,
-        durationMs: dto.durationMs,
-        finishedAt: new Date(),
-      },
+    await this.sessions.update(sessionId, {
+      score,
+      totalAsked: MATCH_PAIRS,
+      durationMs: dto.durationMs,
+      finishedAt: new Date(),
     });
 
     const { coinsEarned, balance } = await this.creditMinigameReward(
@@ -392,14 +391,16 @@ export class MinigameService {
 
     // Xếp hạng riêng theo TỪNG mode — ghép cả 2 vào 1 bảng sẽ không công
     // bằng vì độ khó (số từ có audio ít hơn số từ có nghĩa) khác nhau.
-    const rows = await this.prisma.minigameSession.findMany({
-      where: { finishedAt: { gte: since }, mode, user: NOT_TEST_ACCOUNT },
-      orderBy: [{ score: 'desc' }, { durationMs: 'asc' }],
-      take: 20,
-      include: {
-        user: { select: { id: true, displayName: true, avatarUrl: true } },
-      },
-    });
+    const rows = await this.sessions
+      .createQueryBuilder('s')
+      .innerJoinAndSelect('s.user', 'u')
+      .where('s.finishedAt >= :since', { since })
+      .andWhere('s.mode = :mode', { mode })
+      .andWhere(notTestAccount('u'))
+      .orderBy('s.score', 'DESC')
+      .addOrderBy('s.durationMs', 'ASC')
+      .take(20)
+      .getMany();
 
     return rows.map((r, i) => ({
       rank: i + 1,

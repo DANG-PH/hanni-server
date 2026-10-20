@@ -1,4 +1,4 @@
-import { GameMode } from '@prisma/client';
+import { GameMode } from '../../../database/enums';
 import { Type } from 'class-transformer';
 import {
   IsArray,

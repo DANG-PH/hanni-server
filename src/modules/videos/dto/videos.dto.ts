@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
-import { VideoKind } from '@prisma/client';
+import { VideoKind } from '../../../database/enums';
 
 export class VideoQueryDto {
   @IsOptional()

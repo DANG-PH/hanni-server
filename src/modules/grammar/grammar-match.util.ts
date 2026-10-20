@@ -12,7 +12,7 @@ function normalizeZh(s: string): string {
 }
 
 /**
- * Từ khoá tay cho 40 điểm HSK1-3 (prisma/seed/grammar.ts) — titleZh của các điểm
+ * Từ khoá tay cho 40 điểm HSK1-3 (database/seed/grammar.ts) — titleZh của các điểm
  * này phần lớn chỉ có 1 hư từ nên tách tự động dễ sai, chỉ định thẳng cho chắc.
  */
 const MANUAL_TOKENS: Record<string, string[]> = {

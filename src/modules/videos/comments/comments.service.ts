@@ -4,16 +4,36 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { InjectRepository } from '@nestjs/typeorm';
+import { IsNull, Repository } from 'typeorm';
+import { Video, VideoComment } from '../../../database/entities';
 import { AppEvent, type CommentCreatedPayload } from '../../../events/events';
-import { PrismaService } from '../../../infra/prisma/prisma.service';
 import type { CommentQueryDto, CreateCommentDto } from './comments.dto';
 
-const AUTHOR_SELECT = { id: true, displayName: true, avatarUrl: true };
+/** 1 bình luận gửi cho client: nội dung + người viết (tên, ảnh — không lộ gì khác). */
+function commentView(c: VideoComment) {
+  return {
+    id: c.id,
+    videoId: c.videoId,
+    userId: c.userId,
+    content: c.content,
+    parentId: c.parentId,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+    user: {
+      id: c.user.id,
+      displayName: c.user.displayName,
+      avatarUrl: c.user.avatarUrl,
+    },
+  };
+}
 
 @Injectable()
 export class CommentsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(Video) private readonly videos: Repository<Video>,
+    @InjectRepository(VideoComment)
+    private readonly comments: Repository<VideoComment>,
     private readonly events: EventEmitter2,
   ) {}
 
@@ -21,23 +41,24 @@ export class CommentsService {
     const page = q.page ?? 1;
     const pageSize = q.pageSize ?? 20;
     const [items, total] = await Promise.all([
-      this.prisma.videoComment.findMany({
-        where: { videoId, parentId: null },
-        orderBy: { createdAt: 'desc' },
+      // Bình luận gốc mới nhất trước (trả lời sắp theo thời gian ở dưới — sắp theo cột của
+      // quan hệ 1-nhiều ngay trong truy vấn phân trang sẽ làm lệch trang).
+      this.comments.find({
+        where: { videoId, parentId: IsNull() },
+        order: { createdAt: 'DESC' },
         skip: (page - 1) * pageSize,
         take: pageSize,
-        include: {
-          user: { select: AUTHOR_SELECT },
-          replies: {
-            orderBy: { createdAt: 'asc' },
-            include: { user: { select: AUTHOR_SELECT } },
-          },
-        },
+        relations: { user: true, replies: { user: true } },
       }),
-      this.prisma.videoComment.count({ where: { videoId, parentId: null } }),
+      this.comments.countBy({ videoId, parentId: IsNull() }),
     ]);
     return {
-      items,
+      items: items.map((c) => ({
+        ...commentView(c),
+        replies: c.replies
+          .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+          .map(commentView),
+      })),
       total,
       page,
       pageSize,
@@ -46,17 +67,14 @@ export class CommentsService {
   }
 
   async create(userId: string, videoId: string, dto: CreateCommentDto) {
-    const video = await this.prisma.video.findUnique({
-      where: { id: videoId },
-      select: { id: true },
-    });
-    if (!video) throw new NotFoundException('Không tìm thấy video');
+    if (!(await this.videos.existsBy({ id: videoId })))
+      throw new NotFoundException('Không tìm thấy video');
 
     // Chỉ trả lời 1 cấp: nếu trả lời một bình luận vốn đã là trả lời, gắn
     // luôn vào bình luận gốc của nó để tránh cây lồng sâu trên giao diện.
     let parentId: string | null = null;
     if (dto.parentId) {
-      const parent = await this.prisma.videoComment.findUnique({
+      const parent = await this.comments.findOne({
         where: { id: dto.parentId },
         select: { id: true, videoId: true, parentId: true, userId: true },
       });
@@ -66,10 +84,18 @@ export class CommentsService {
       parentId = parent.parentId ?? parent.id;
     }
 
-    const comment = await this.prisma.videoComment.create({
-      data: { videoId, userId, content: dto.content.trim(), parentId },
-      include: { user: { select: AUTHOR_SELECT } },
+    const { identifiers } = await this.comments.insert({
+      videoId,
+      userId,
+      content: dto.content.trim(),
+      parentId,
     });
+    const comment = commentView(
+      await this.comments.findOneOrFail({
+        where: { id: identifiers[0].id as string },
+        relations: { user: true },
+      }),
+    );
 
     const payload: CommentCreatedPayload = {
       commentId: comment.id,
@@ -88,9 +114,9 @@ export class CommentsService {
     commentId: string,
     role: string,
   ) {
-    const comment = await this.prisma.videoComment.findUnique({
+    const comment = await this.comments.findOne({
       where: { id: commentId },
-      select: { userId: true, videoId: true },
+      select: { id: true, userId: true, videoId: true },
     });
     if (!comment || comment.videoId !== videoId) {
       throw new NotFoundException('Không tìm thấy bình luận');
@@ -98,7 +124,7 @@ export class CommentsService {
     if (comment.userId !== userId && role !== 'admin') {
       throw new ForbiddenException('Chỉ người viết bình luận mới xoá được');
     }
-    await this.prisma.videoComment.delete({ where: { id: commentId } });
+    await this.comments.delete(commentId);
     return { ok: true };
   }
 }

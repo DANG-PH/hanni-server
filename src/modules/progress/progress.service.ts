@@ -1,6 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { SrsState } from '@prisma/client';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
+import {
+  HskLevel,
+  Lesson,
+  UserLessonProgress,
+  UserLevelProgress,
+  UserWordProgress,
+  Word,
+} from '../../database/entities';
+import { SrsState } from '../../database/enums';
 
 const LEARNED_INTERVAL_DAYS = 21;
 
@@ -19,7 +28,27 @@ export interface LevelBucket {
 
 @Injectable()
 export class ProgressService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(HskLevel) private readonly levels: Repository<HskLevel>,
+    @InjectRepository(Word) private readonly words: Repository<Word>,
+    @InjectRepository(Lesson) private readonly lessons: Repository<Lesson>,
+    @InjectRepository(UserWordProgress)
+    private readonly wordProgress: Repository<UserWordProgress>,
+    @InjectRepository(UserLevelProgress)
+    private readonly levelProgress: Repository<UserLevelProgress>,
+    @InjectRepository(UserLessonProgress)
+    private readonly lessonProgress: Repository<UserLessonProgress>,
+  ) {}
+
+  /** Số từ mỗi cấp HSK. */
+  private wordCountByLevel() {
+    return this.words
+      .createQueryBuilder('word')
+      .select('word.hskLevel', 'hskLevel')
+      .addSelect('COUNT(*)::int', 'count')
+      .groupBy('word.hskLevel')
+      .getRawMany<{ hskLevel: number; count: number }>();
+  }
 
   /** Tổng quan tiến độ theo từng cấp HSK (tính trực tiếp — nguồn sự thật). */
   async overview(userId: string): Promise<{
@@ -30,11 +59,12 @@ export class ProgressService {
     const soon = new Date(now + 24 * 60 * 60 * 1000);
 
     const [levels, wordCounts, rows] = await Promise.all([
-      this.prisma.hskLevel.findMany({ orderBy: { level: 'asc' } }),
-      this.prisma.word.groupBy({ by: ['hskLevel'], _count: { _all: true } }),
-      this.prisma.userWordProgress.findMany({
+      this.levels.find({ order: { level: 'ASC' } }),
+      this.wordCountByLevel(),
+      this.wordProgress.find({
         where: { userId },
         select: {
+          id: true,
           hskLevel: true,
           state: true,
           learnedAt: true,
@@ -45,9 +75,7 @@ export class ProgressService {
       }),
     ]);
 
-    const totalByLevel = new Map(
-      wordCounts.map((c) => [c.hskLevel, c._count._all]),
-    );
+    const totalByLevel = new Map(wordCounts.map((c) => [c.hskLevel, c.count]));
 
     const buckets: LevelBucket[] = levels.map((lv) => {
       const mine = rows.filter((r) => r.hskLevel === lv.level);
@@ -114,7 +142,7 @@ export class ProgressService {
   }
 
   async levelDetail(userId: string, level: number) {
-    const info = await this.prisma.hskLevel.findUnique({ where: { level } });
+    const info = await this.levels.findOneBy({ level });
     if (!info) throw new NotFoundException('Cấp HSK không hợp lệ');
     const { levels } = await this.overview(userId);
     const bucket = levels.find((l) => l.level === level);
@@ -128,10 +156,11 @@ export class ProgressService {
   ): Promise<{ justCompleted: boolean }> {
     const now = new Date();
     const [totalWords, mine] = await Promise.all([
-      this.prisma.word.count({ where: { hskLevel: level } }),
-      this.prisma.userWordProgress.findMany({
+      this.words.countBy({ hskLevel: level }),
+      this.wordProgress.find({
         where: { userId, hskLevel: level },
         select: {
+          id: true,
           state: true,
           learnedAt: true,
           dueAt: true,
@@ -160,13 +189,13 @@ export class ProgressService {
     }
 
     const isComplete = totalWords > 0 && learnedWords >= totalWords;
-    const prev = await this.prisma.userLevelProgress.findUnique({
-      where: { userId_hskLevel: { userId, hskLevel: level } },
+    const prev = await this.levelProgress.findOneBy({
+      userId,
+      hskLevel: level,
     });
 
-    await this.prisma.userLevelProgress.upsert({
-      where: { userId_hskLevel: { userId, hskLevel: level } },
-      create: {
+    await this.levelProgress.upsert(
+      {
         userId,
         hskLevel: level,
         totalWords,
@@ -174,17 +203,11 @@ export class ProgressService {
         reviewingWords,
         dueWords,
         atRiskWords,
-        completedAt: isComplete ? now : null,
-      },
-      update: {
-        totalWords,
-        learnedWords,
-        reviewingWords,
-        dueWords,
-        atRiskWords,
+        // Giữ mốc hoàn thành cũ nếu đã có.
         completedAt: isComplete ? (prev?.completedAt ?? now) : null,
       },
-    });
+      ['userId', 'hskLevel'],
+    );
 
     return { justCompleted: isComplete && !prev?.completedAt };
   }
@@ -207,49 +230,40 @@ export class ProgressService {
    * từ trong bài ít nhất 1 lần) để 2 nơi không nói 2 kiểu.
    */
   async recomputeLessonCache(userId: string, wordId: string): Promise<void> {
-    const word = await this.prisma.word.findUnique({
+    const word = await this.words.findOne({
       where: { id: wordId },
-      select: { lessonId: true },
+      select: { id: true, lessonId: true },
     });
     if (!word?.lessonId) return;
 
-    const lesson = await this.prisma.lesson.findUnique({
+    const lesson = await this.lessons.findOne({
       where: { id: word.lessonId },
       select: { id: true, wordCount: true },
     });
     if (!lesson) return;
 
+    const inLesson = { word: { lessonId: lesson.id } };
     const [startedWords, learnedWords, prev] = await Promise.all([
-      this.prisma.userWordProgress.count({
-        where: { userId, word: { lessonId: lesson.id } },
+      this.wordProgress.count({ where: { userId, ...inLesson } }),
+      this.wordProgress.count({
+        where: { userId, ...inLesson, learnedAt: Not(IsNull()) },
       }),
-      this.prisma.userWordProgress.count({
-        where: { userId, word: { lessonId: lesson.id }, learnedAt: { not: null } },
-      }),
-      this.prisma.userLessonProgress.findUnique({
-        where: { userId_lessonId: { userId, lessonId: lesson.id } },
-      }),
+      this.lessonProgress.findOneBy({ userId, lessonId: lesson.id }),
     ]);
 
     const now = new Date();
     const isComplete = lesson.wordCount > 0 && startedWords >= lesson.wordCount;
-    await this.prisma.userLessonProgress.upsert({
-      where: { userId_lessonId: { userId, lessonId: lesson.id } },
-      create: {
+    await this.lessonProgress.upsert(
+      {
         userId,
         lessonId: lesson.id,
-        learnedWords,
-        totalWords: lesson.wordCount,
-        startedAt: now,
-        completedAt: isComplete ? now : null,
-      },
-      update: {
         learnedWords,
         totalWords: lesson.wordCount,
         startedAt: prev?.startedAt ?? now,
         // Giữ nguyên mốc hoàn thành CŨ, không ghi đè mỗi lần ôn lại.
         completedAt: isComplete ? (prev?.completedAt ?? now) : null,
       },
-    });
+      ['userId', 'lessonId'],
+    );
   }
 }

@@ -5,7 +5,9 @@
  */
 export const TEST_EMAIL_DOMAINS = ['@mailinator.com', '@example.com'];
 
-/** Điều kiện Prisma cho quan hệ `user`: không phải tài khoản thử. */
-export const NOT_TEST_ACCOUNT = {
-  NOT: TEST_EMAIL_DOMAINS.map((d) => ({ email: { endsWith: d } })),
-};
+/** Điều kiện SQL "không phải tài khoản thử" cho bảng User có bí danh `userAlias` trong QueryBuilder. */
+export function notTestAccount(userAlias: string): string {
+  return TEST_EMAIL_DOMAINS.map(
+    (domain) => `${userAlias}.email NOT LIKE '%${domain}'`,
+  ).join(' AND ');
+}

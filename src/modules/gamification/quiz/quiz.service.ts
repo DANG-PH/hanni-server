@@ -4,9 +4,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import type { Word } from '@prisma/client';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, In, IsNull, Not, Repository } from 'typeorm';
+import {
+  QuizAnswer,
+  QuizAttempt,
+  UserWordProgress,
+  Word,
+} from '../../../database/entities';
 import { AppEvent, type QuizCompletedPayload } from '../../../events/events';
-import { PrismaService } from '../../../infra/prisma/prisma.service';
 import type { GenerateQuizDto, SubmitQuizDto } from './dto/quiz.dto';
 
 function shuffle<T>(arr: T[]): T[] {
@@ -34,7 +40,12 @@ const LISTENING_RATIO = 0.4;
 @Injectable()
 export class QuizService {
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectDataSource() private readonly dataSource: DataSource,
+    @InjectRepository(Word) private readonly words: Repository<Word>,
+    @InjectRepository(UserWordProgress)
+    private readonly progress: Repository<UserWordProgress>,
+    @InjectRepository(QuizAttempt)
+    private readonly attempts: Repository<QuizAttempt>,
     private readonly events: EventEmitter2,
   ) {}
 
@@ -44,28 +55,29 @@ export class QuizService {
 
     let pool: Word[];
     if (dto.wordIds?.length) {
-      pool = await this.prisma.word.findMany({
-        where: { id: { in: dto.wordIds }, meaningVi: { not: null } },
+      pool = await this.words.findBy({
+        id: In(dto.wordIds),
+        meaningVi: Not(IsNull()),
       });
     } else {
       // ưu tiên từ user đang học ở cấp yêu cầu
-      const progress = await this.prisma.userWordProgress.findMany({
+      const progress = await this.progress.find({
         where: {
           userId,
           ...(dto.level ? { hskLevel: dto.level } : {}),
-          word: { meaningVi: { not: null } },
+          word: { meaningVi: Not(IsNull()) },
         },
-        include: { word: true },
+        relations: { word: true },
         take: 200,
       });
       pool = progress.map((p) => p.word);
       if (pool.length < size) {
-        const extra = await this.prisma.word.findMany({
+        const extra = await this.words.find({
           where: {
             ...(dto.level ? { hskLevel: dto.level } : {}),
-            meaningVi: { not: null },
+            meaningVi: Not(IsNull()),
           },
-          orderBy: { frequencyRank: 'asc' },
+          order: { frequencyRank: 'ASC' },
           take: size * 4,
         });
         pool = [...pool, ...extra];
@@ -116,21 +128,17 @@ export class QuizService {
       };
     });
 
-    const attempt = await this.prisma.quizAttempt.create({
-      data: {
-        userId,
-        totalQuestions: questions.length,
-        format: { type: 'hanzi_to_vi_mixed_listening' },
-      },
+    const { identifiers } = await this.attempts.insert({
+      userId,
+      totalQuestions: questions.length,
+      format: { type: 'hanzi_to_vi_mixed_listening' },
     });
 
-    return { attemptId: attempt.id, questions };
+    return { attemptId: identifiers[0].id as string, questions };
   }
 
   async submit(userId: string, dto: SubmitQuizDto) {
-    const attempt = await this.prisma.quizAttempt.findUnique({
-      where: { id: dto.attemptId },
-    });
+    const attempt = await this.attempts.findOneBy({ id: dto.attemptId });
     if (!attempt || attempt.userId !== userId) {
       throw new NotFoundException('Không tìm thấy bài quiz');
     }
@@ -140,27 +148,28 @@ export class QuizService {
     const total = dto.answers.length || attempt.totalQuestions || 1;
     const scorePct = Math.round((correctCount / total) * 1000) / 10;
 
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.quizAttempt.update({
-        where: { id: attempt.id },
-        data: {
-          completedAt: new Date(),
-          totalQuestions: dto.answers.length || attempt.totalQuestions,
-          correctCount,
-          scorePct,
-        },
-      }),
-      this.prisma.quizAnswer.createMany({
-        data: dto.answers.map((a) => ({
-          quizAttemptId: attempt.id,
-          wordId: a.wordId,
-          isCorrect: a.isCorrect,
-          chosen: a.chosen ?? null,
-          correct: a.correct ?? null,
-          responseMs: a.responseMs ?? null,
-        })),
-      }),
-    ]);
+    // Chốt bài + lưu từng câu trả lời trong cùng 1 transaction.
+    await this.dataSource.transaction(async (db) => {
+      await db.update(QuizAttempt, attempt.id, {
+        completedAt: new Date(),
+        totalQuestions: dto.answers.length || attempt.totalQuestions,
+        correctCount,
+        scorePct,
+      });
+      if (dto.answers.length)
+        await db.insert(
+          QuizAnswer,
+          dto.answers.map((a) => ({
+            quizAttemptId: attempt.id,
+            wordId: a.wordId,
+            isCorrect: a.isCorrect,
+            chosen: a.chosen ?? null,
+            correct: a.correct ?? null,
+            responseMs: a.responseMs ?? null,
+          })),
+        );
+    });
+    const updated = await this.attempts.findOneByOrFail({ id: attempt.id });
 
     const payload: QuizCompletedPayload = {
       userId,
@@ -173,9 +182,9 @@ export class QuizService {
   }
 
   async recent(userId: string, limit = 10) {
-    return this.prisma.quizAttempt.findMany({
-      where: { userId, completedAt: { not: null } },
-      orderBy: { completedAt: 'desc' },
+    return this.attempts.find({
+      where: { userId, completedAt: Not(IsNull()) },
+      order: { completedAt: 'DESC' },
       take: limit,
     });
   }

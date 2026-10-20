@@ -1,4 +1,4 @@
-import type { ReviewRating, SrsState } from '@prisma/client';
+import type { ReviewRating, SrsState } from '../../../database/enums';
 
 /** Trạng thái 1 thẻ trước khi review + đánh giá của user. */
 export interface SchedulerInput {

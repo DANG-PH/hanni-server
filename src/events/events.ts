@@ -1,4 +1,4 @@
-import type { ReviewRating } from '@prisma/client';
+import type { ReviewRating } from '../database/enums';
 
 /**
  * Tên sự kiện nội bộ (dùng @nestjs/event-emitter, in-process).

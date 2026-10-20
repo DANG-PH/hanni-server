@@ -16,12 +16,15 @@
  *
  * Chạy:  npx tsx scripts/fetch-word-images.ts [--level=1,2,3] [--limit=500]
  */
-import { PrismaClient, WordPos } from '@prisma/client';
+import { ArrayContains, In, IsNull, LessThanOrEqual } from 'typeorm';
+import { Word } from '../src/database/entities';
+import { WordPos } from '../src/database/enums';
 import {
   imageQueryFrom,
   searchCommonsImage,
   searchWikipediaImage,
 } from '../src/modules/vocabulary/word-image.util';
+import { connect } from './db';
 
 const DELAY_MS = 400;
 
@@ -35,7 +38,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const IMAGE_MAX_HSK_LEVEL = 5;
 
 async function main() {
-  const prisma = new PrismaClient();
+  const db = await connect();
+  const wordRepo = db.getRepository(Word);
   const levels = argOf('level')
     ?.split(',')
     .map((n) => Number(n.trim()))
@@ -59,22 +63,20 @@ async function main() {
       `Các cấp ${levels.join(',')} đều vượt trần HSK${maxLevel} — xem lý do trong file này. ` +
         'Muốn chạy thật thì thêm --max-level= tường minh.',
     );
-    await prisma.$disconnect();
+    await db.destroy();
     return;
   }
 
-  const words = await prisma.word.findMany({
+  const words = await wordRepo.find({
     where: {
-      ...(refresh ? {} : { imageUrl: null }),
-      pos: { has: WordPos.NOUN },
-      ...(picked?.length
-        ? { hskLevel: { in: picked } }
-        : { hskLevel: { lte: maxLevel } }),
+      ...(refresh ? {} : { imageUrl: IsNull() }),
+      pos: ArrayContains([WordPos.NOUN]),
+      hskLevel: picked?.length ? In(picked) : LessThanOrEqual(maxLevel),
     },
     select: { id: true, simplified: true, meaningEn: true, hskLevel: true },
     // từ thông dụng trước: nếu dừng giữa chừng thì phần đã lấy vẫn là phần
     // người học hay gặp nhất
-    orderBy: [{ hskLevel: 'asc' }, { frequencyRank: 'asc' }],
+    order: { hskLevel: 'ASC', frequencyRank: 'ASC' },
     ...(limit ? { take: limit } : {}),
   });
 
@@ -93,7 +95,7 @@ async function main() {
       (await searchWikipediaImage(w.simplified)) ??
       (query ? await searchCommonsImage(query) : null);
     if (imageUrl) {
-      await prisma.word.update({ where: { id: w.id }, data: { imageUrl } });
+      await wordRepo.update(w.id, { imageUrl });
       found += 1;
     } else {
       missed += 1;
@@ -107,7 +109,7 @@ async function main() {
   }
 
   console.log(`\n✓ Xong: ${found} từ có ảnh mới, ${missed} từ không tìm được.`);
-  await prisma.$disconnect();
+  await db.destroy();
 }
 
 main().catch((e) => {

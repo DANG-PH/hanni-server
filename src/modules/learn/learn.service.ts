@@ -1,7 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { SrsState } from '@prisma/client';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, IsNull, LessThanOrEqual, Not, Repository } from 'typeorm';
+import {
+  GrammarPoint,
+  HskLevel,
+  Lesson,
+  UserLessonProgress,
+  UserSettings,
+  UserWordProgress,
+  Word,
+} from '../../database/entities';
+import { SrsState } from '../../database/enums';
 import { relatedGrammarForWords } from '../grammar/grammar-match.util';
-import { PrismaService } from '../../infra/prisma/prisma.service';
 
 const LEARNED_INTERVAL_DAYS = 21;
 
@@ -21,41 +31,59 @@ export interface LessonNode {
 
 @Injectable()
 export class LearnService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(UserSettings)
+    private readonly settings: Repository<UserSettings>,
+    @InjectRepository(HskLevel) private readonly levels: Repository<HskLevel>,
+    @InjectRepository(Lesson) private readonly lessons: Repository<Lesson>,
+    @InjectRepository(Word) private readonly words: Repository<Word>,
+    @InjectRepository(UserWordProgress)
+    private readonly wordProgress: Repository<UserWordProgress>,
+    @InjectRepository(UserLessonProgress)
+    private readonly lessonProgress: Repository<UserLessonProgress>,
+    @InjectRepository(GrammarPoint)
+    private readonly grammarPoints: Repository<GrammarPoint>,
+  ) {}
 
   /** Cấp học "hiện tại": cấp người học ĐÃ CHỌN (`UserSettings.courseLevel`),
    * chưa chọn thì cấp thấp nhất chưa thuộc hết. Trước đây chỉ có cách suy
    * ra, nên người muốn học HSK1 không có chỗ nào để nói "tôi học HSK1" — mọi
    * trang tự đoán theo cách riêng (lỗi thật user báo: flashcard nhảy HSK4). */
   async currentLevel(userId: string): Promise<number> {
-    const settings = await this.prisma.userSettings.findUnique({
+    const settings = await this.settings.findOne({
       where: { userId },
-      select: { courseLevel: true },
+      select: { userId: true, courseLevel: true },
     });
     if (settings?.courseLevel) return settings.courseLevel;
     const [totals, learned] = await Promise.all([
-      this.prisma.word.groupBy({
-        by: ['hskLevel'],
-        _count: true,
-        orderBy: { hskLevel: 'asc' },
-      }),
-      this.prisma.userWordProgress.groupBy({
-        by: ['hskLevel'],
-        where: { userId, learnedAt: { not: null } },
-        _count: true,
-      }),
+      // Số từ mỗi cấp, cấp thấp trước.
+      this.words
+        .createQueryBuilder('word')
+        .select('word.hskLevel', 'hskLevel')
+        .addSelect('COUNT(*)::int', 'count')
+        .groupBy('word.hskLevel')
+        .orderBy('word.hskLevel', 'ASC')
+        .getRawMany<{ hskLevel: number; count: number }>(),
+      // Số từ đã thuộc mỗi cấp của người này.
+      this.wordProgress
+        .createQueryBuilder('p')
+        .select('p.hskLevel', 'hskLevel')
+        .addSelect('COUNT(*)::int', 'count')
+        .where({ userId, learnedAt: Not(IsNull()) })
+        .groupBy('p.hskLevel')
+        .getRawMany<{ hskLevel: number; count: number }>(),
     ]);
-    const learnedBy = new Map(learned.map((l) => [l.hskLevel, l._count]));
+    const learnedBy = new Map(learned.map((l) => [l.hskLevel, l.count]));
     for (const t of totals) {
-      if ((learnedBy.get(t.hskLevel) ?? 0) < t._count) return t.hskLevel;
+      if ((learnedBy.get(t.hskLevel) ?? 0) < t.count) return t.hskLevel;
     }
     return totals[0]?.hskLevel ?? 1;
   }
 
   async firstLesson(level: number) {
-    const lesson = await this.prisma.lesson.findFirst({
+    const lesson = await this.lessons.findOne({
       where: { hskLevel: Math.min(level, 7) },
-      orderBy: { orderIndex: 'asc' },
+      order: { orderIndex: 'ASC' },
       select: { id: true, title: true, hskLevel: true, orderIndex: true },
     });
     if (!lesson) throw new NotFoundException('Cấp này chưa có bài học');
@@ -67,26 +95,34 @@ export class LearnService {
     const lvl = level ?? (userId ? await this.currentLevel(userId) : 1);
 
     const [levelInfo, lessons, progressRows, levelSummary] = await Promise.all([
-      this.prisma.hskLevel.findUnique({ where: { level: lvl } }),
-      this.prisma.lesson.findMany({
+      this.levels.findOneBy({ level: lvl }),
+      this.lessons.find({
         where: { hskLevel: lvl },
-        orderBy: { orderIndex: 'asc' },
+        order: { orderIndex: 'ASC' },
       }),
       userId
-        ? this.prisma.userWordProgress.findMany({
+        ? this.wordProgress.find({
             where: { userId, hskLevel: lvl },
+            relations: { word: true },
             select: {
+              id: true,
               wordId: true,
               state: true,
               learnedAt: true,
               intervalDays: true,
               dueAt: true,
               isSuspended: true,
-              word: { select: { lessonId: true } },
+              word: { id: true, lessonId: true },
             },
           })
         : [],
-      this.prisma.lesson.groupBy({ by: ['hskLevel'], _count: true }),
+      // Số bài mỗi cấp (để biết cấp nào có bài).
+      this.lessons
+        .createQueryBuilder('lesson')
+        .select('lesson.hskLevel', 'hskLevel')
+        .addSelect('COUNT(*)::int', 'count')
+        .groupBy('lesson.hskLevel')
+        .getRawMany<{ hskLevel: number; count: number }>(),
     ]);
     if (!levelInfo) throw new NotFoundException('Cấp HSK không hợp lệ');
 
@@ -116,13 +152,13 @@ export class LearnService {
     }
 
     // preview: 3 từ đầu mỗi bài
-    const firstWords = await this.prisma.word.findMany({
+    const firstWords = await this.words.find({
       where: {
-        lessonId: { in: lessons.map((l) => l.id) },
-        lessonOrder: { lte: 3 },
+        lessonId: In(lessons.map((l) => l.id)),
+        lessonOrder: LessThanOrEqual(3),
       },
-      select: { lessonId: true, simplified: true, lessonOrder: true },
-      orderBy: { lessonOrder: 'asc' },
+      select: { id: true, lessonId: true, simplified: true, lessonOrder: true },
+      order: { lessonOrder: 'ASC' },
     });
     const previewBy = new Map<string, string[]>();
     for (const w of firstWords) {
@@ -167,7 +203,7 @@ export class LearnService {
     });
 
     const totalLessonsBy = new Map(
-      levelSummary.map((s) => [s.hskLevel, s._count]),
+      levelSummary.map((s) => [s.hskLevel, s.count]),
     );
 
     return {
@@ -199,16 +235,16 @@ export class LearnService {
    * + tiến độ từng bài) mới ra — quá nặng cho việc chỉ cần 1 dòng. */
   async currentLesson(userId: string) {
     const level = await this.currentLevel(userId);
-    const lessons = await this.prisma.lesson.findMany({
+    const lessons = await this.lessons.find({
       where: { hskLevel: level },
-      orderBy: { orderIndex: 'asc' },
+      order: { orderIndex: 'ASC' },
       select: { id: true, title: true, orderIndex: true, hskLevel: true },
     });
     if (lessons.length === 0) return null;
 
-    const progress = await this.prisma.userLessonProgress.findMany({
-      where: { userId, lessonId: { in: lessons.map((l) => l.id) } },
-      select: { lessonId: true, completedAt: true },
+    const progress = await this.lessonProgress.find({
+      where: { userId, lessonId: In(lessons.map((l) => l.id)) },
+      select: { id: true, lessonId: true, completedAt: true },
     });
     const doneIds = new Set(
       progress.filter((p) => p.completedAt).map((p) => p.lessonId),
@@ -230,28 +266,32 @@ export class LearnService {
   }
 
   async lesson(userId: string | null, lessonId: string) {
-    const lesson = await this.prisma.lesson.findUnique({
-      where: { id: lessonId },
-    });
+    const lesson = await this.lessons.findOneBy({ id: lessonId });
     if (!lesson) throw new NotFoundException('Không tìm thấy bài học');
 
-    const words = await this.prisma.word.findMany({
+    const words = await this.words.find({
       where: { lessonId },
-      orderBy: { lessonOrder: 'asc' },
-      include: { examples: { orderBy: { orderIndex: 'asc' } } },
+      relations: { examples: true },
+      order: { lessonOrder: 'ASC', examples: { orderIndex: 'ASC' } },
     });
     const progress = userId
-      ? await this.prisma.userWordProgress.findMany({
-          where: { userId, wordId: { in: words.map((w) => w.id) } },
-          select: { wordId: true, state: true, learnedAt: true, dueAt: true },
+      ? await this.wordProgress.find({
+          where: { userId, wordId: In(words.map((w) => w.id)) },
+          select: {
+            id: true,
+            wordId: true,
+            state: true,
+            learnedAt: true,
+            dueAt: true,
+          },
         })
       : [];
-    const pBy = new Map(progress.map((p) => [p.wordId, p]));
+    const pBy = new Map(progress.map((p) => [p.wordId, p] as const));
 
-    const grammarPoints = await this.prisma.grammarPoint.findMany({
+    const grammarPoints = await this.grammarPoints.find({
       // chỉ lấy mục ĐÃ có giải thích thật — mục "đại cương" rút gọn (explanationVi
       // rỗng) không mở rộng được trên trang /grammar, gợi ý sẽ dẫn tới ngõ cụt.
-      where: { hskLevel: lesson.hskLevel, NOT: { explanationVi: '' } },
+      where: { hskLevel: lesson.hskLevel, explanationVi: Not('') },
       select: {
         slug: true,
         hskLevel: true,

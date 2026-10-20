@@ -1,9 +1,28 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, WordPos, type Word } from '@prisma/client';
+import { InjectRepository } from '@nestjs/typeorm';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import {
+  And,
+  type FindOptionsWhere,
+  ILike,
+  In,
+  IsNull,
+  LessThanOrEqual,
+  Like,
+  Not,
+  Repository,
+} from 'typeorm';
 import { paginate, type Paginated } from '../../common/dto/pagination.dto';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import {
+  Lesson,
+  Video,
+  VideoLine,
+  Word,
+  WordExample,
+} from '../../database/entities';
+import { WordPos } from '../../database/enums';
+import { likeEscape } from '../../database/repository.util';
 import type { WordQueryDto } from './dto/word-query.dto';
 import { radicalOf } from './radicals';
 import {
@@ -26,7 +45,15 @@ const SEARCH_INDEX_TTL_MS = 3_600_000;
 
 @Injectable()
 export class WordsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(Word) private readonly words: Repository<Word>,
+    @InjectRepository(WordExample)
+    private readonly examples: Repository<WordExample>,
+    @InjectRepository(Lesson) private readonly lessons: Repository<Lesson>,
+    @InjectRepository(Video) private readonly videos: Repository<Video>,
+    @InjectRepository(VideoLine)
+    private readonly videoLines: Repository<VideoLine>,
+  ) {}
 
   private searchIndex: SearchRow[] | null = null;
   private searchIndexAt = 0;
@@ -40,7 +67,7 @@ export class WordsService {
       Date.now() - this.searchIndexAt < SEARCH_INDEX_TTL_MS
     )
       return this.searchIndex;
-    const rows = await this.prisma.word.findMany({
+    const rows = await this.words.find({
       select: {
         id: true,
         simplified: true,
@@ -69,9 +96,7 @@ export class WordsService {
     const pageIds = ranked
       .slice(query.skip, query.skip + query.take)
       .map((r) => r.id);
-    const rows = await this.prisma.word.findMany({
-      where: { id: { in: pageIds } },
-    });
+    const rows = await this.words.findBy({ id: In(pageIds) });
     const byId = new Map(rows.map((r) => [r.id, r]));
     const items = pageIds
       .map((id) => byId.get(id))
@@ -101,54 +126,53 @@ export class WordsService {
       (await searchWikipediaImage(word.simplified)) ??
       (query ? await searchCommonsImage(query) : null);
     if (!imageUrl) return word;
-    await this.prisma.word
-      .update({ where: { id: word.id }, data: { imageUrl } })
-      .catch(() => undefined);
+    await this.words.update(word.id, { imageUrl }).catch(() => undefined);
     return { ...word, imageUrl };
   }
 
   async list(query: WordQueryDto): Promise<Paginated<unknown>> {
     if (query.q?.trim() && !query.lessonId && !query.needsReview)
       return this.search(query);
-    const where: Prisma.WordWhereInput = {};
-    if (query.level) where.hskLevel = query.level;
-    if (query.lessonId) where.lessonId = query.lessonId;
-    if (query.needsReview === 'true') where.needsReview = true;
-    if (query.needsReview === 'false') where.needsReview = false;
+    const base: FindOptionsWhere<Word> = {};
+    if (query.level) base.hskLevel = query.level;
+    if (query.lessonId) base.lessonId = query.lessonId;
+    if (query.needsReview === 'true') base.needsReview = true;
+    if (query.needsReview === 'false') base.needsReview = false;
+    let where: FindOptionsWhere<Word> | FindOptionsWhere<Word>[] = base;
     if (query.q) {
       const q = query.q.trim();
-      where.OR = [
-        { simplified: { contains: q } },
-        { traditional: { contains: q } },
-        { pinyinNumeric: { contains: q.toLowerCase() } },
-        { pinyin: { contains: q } },
-        { meaningVi: { contains: q, mode: 'insensitive' } },
-        { meaningEn: { contains: q, mode: 'insensitive' } },
+      const has = `%${likeEscape(q)}%`;
+      // Mảng where = HOẶC: khớp ở bất kỳ cột nào (mặt chữ/pinyin phân biệt hoa thường như cũ).
+      where = [
+        { ...base, simplified: Like(has) },
+        { ...base, traditional: Like(has) },
+        { ...base, pinyinNumeric: Like(`%${likeEscape(q.toLowerCase())}%`) },
+        { ...base, pinyin: Like(has) },
+        { ...base, meaningVi: ILike(has) },
+        { ...base, meaningEn: ILike(has) },
         // tìm bằng âm Hán Việt — vd gõ "học hiệu" ra được 学校 dù nghĩa
         // tiếng Việt hiển thị là "trường học" (không trùng chuỗi)
-        { hanViet: { contains: q, mode: 'insensitive' } },
+        { ...base, hanViet: ILike(has) },
       ];
     }
 
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.word.findMany({
-        where,
-        orderBy: query.lessonId
-          ? [{ lessonOrder: 'asc' }, { simplified: 'asc' }]
-          : [{ frequencyRank: 'asc' }, { simplified: 'asc' }],
-        skip: query.skip,
-        take: query.take,
-      }),
-      this.prisma.word.count({ where }),
-    ]);
+    const [items, total] = await this.words.findAndCount({
+      where,
+      order: query.lessonId
+        ? { lessonOrder: 'ASC', simplified: 'ASC' }
+        : { frequencyRank: 'ASC', simplified: 'ASC' },
+      skip: query.skip,
+      take: query.take,
+    });
 
     return paginate(items, total, query);
   }
 
   async get(id: string) {
-    const word = await this.prisma.word.findUnique({
+    const word = await this.words.findOne({
       where: { id },
-      include: { examples: { orderBy: { orderIndex: 'asc' } } },
+      relations: { examples: true },
+      order: { examples: { orderIndex: 'ASC' } },
     });
     if (!word) throw new NotFoundException('Không tìm thấy từ');
     return this.attachImage(word);
@@ -157,9 +181,9 @@ export class WordsService {
   /** Thống kê công khai cho trang chủ (chưa đăng nhập) — "bạn đã biết trước
    * bao nhiêu từ nhờ âm Hán Việt", điểm khác biệt cốt lõi của Hanni. */
   async stats() {
-    const [total, withHanViet] = await this.prisma.$transaction([
-      this.prisma.word.count(),
-      this.prisma.word.count({ where: { hanViet: { not: null } } }),
+    const [total, withHanViet] = await Promise.all([
+      this.words.count(),
+      this.words.countBy({ hanViet: Not(IsNull()) }),
     ]);
     return { total, withHanViet };
   }
@@ -174,10 +198,14 @@ export class WordsService {
    * KHÔNG gọi attachImage() — trang công khai có thể bị bot quét hàng loạt,
    * không nên kéo theo hàng nghìn request sang Wikimedia. */
   async lookup(slug: string) {
-    const words = await this.prisma.word.findMany({
+    const words = await this.words.find({
       where: { simplified: slug },
-      include: { examples: { orderBy: { orderIndex: 'asc' } } },
-      orderBy: [{ frequencyRank: 'asc' }, { hskLevel: 'asc' }],
+      relations: { examples: true },
+      order: {
+        frequencyRank: 'ASC',
+        hskLevel: 'ASC',
+        examples: { orderIndex: 'ASC' },
+      },
     });
     if (words.length === 0) throw new NotFoundException('Không tìm thấy từ');
 
@@ -186,16 +214,16 @@ export class WordsService {
     const lessonId = words[0].lessonId;
     const [topic, related] = await Promise.all([
       lessonId
-        ? this.prisma.lesson.findUnique({
+        ? this.lessons.findOne({
             where: { id: lessonId },
             select: { id: true, title: true, hskLevel: true, orderIndex: true },
           })
         : null,
-      this.prisma.word.findMany({
+      this.words.find({
         where: {
           ...(lessonId ? { lessonId } : { hskLevel: words[0].hskLevel }),
-          simplified: { not: slug },
-          meaningVi: { not: null },
+          simplified: Not(slug),
+          meaningVi: Not(IsNull()),
         },
         select: {
           simplified: true,
@@ -203,7 +231,7 @@ export class WordsService {
           meaningVi: true,
           hanViet: true,
         },
-        orderBy: lessonId ? { lessonOrder: 'asc' } : { frequencyRank: 'asc' },
+        order: lessonId ? { lessonOrder: 'ASC' } : { frequencyRank: 'ASC' },
         take: 16,
       }),
     ]);
@@ -248,13 +276,9 @@ export class WordsService {
     if (!char || !/\p{Script=Han}/u.test(char))
       throw new NotFoundException('Không phải chữ Hán');
     const info = this.loadCharInfo()[char];
-    const words = await this.prisma.word.findMany({
-      where: {
-        OR: [
-          { simplified: { contains: char } },
-          { traditional: { contains: char } },
-        ],
-      },
+    const has = `%${likeEscape(char)}%`;
+    const words = await this.words.find({
+      where: [{ simplified: Like(has) }, { traditional: Like(has) }],
       select: {
         simplified: true,
         traditional: true,
@@ -263,10 +287,10 @@ export class WordsService {
         meaningVi: true,
         hskLevel: true,
       },
-      orderBy: [
-        { hskLevel: 'asc' },
-        { frequencyRank: { sort: 'asc', nulls: 'last' } },
-      ],
+      order: {
+        hskLevel: 'ASC',
+        frequencyRank: { direction: 'ASC', nulls: 'LAST' },
+      },
       take: 60,
     });
     if (!info && words.length === 0)
@@ -318,15 +342,16 @@ export class WordsService {
     const trad = word.traditional ? Array.from(word.traditional) : [];
     const readings = word.hanViet ? word.hanViet.split(/\s+/) : [];
     const syllables = word.pinyin.split(/\s+/);
-    const singles = await this.prisma.word.findMany({
-      where: { simplified: { in: chars } },
+    const singles = await this.words.find({
+      where: { simplified: In(chars) },
       select: {
+        id: true,
         simplified: true,
         pinyin: true,
         meaningVi: true,
         hanViet: true,
       },
-      orderBy: { frequencyRank: 'asc' },
+      order: { frequencyRank: 'ASC' },
     });
     const byChar = new Map<string, (typeof singles)[number]>();
     for (const r of singles)
@@ -360,9 +385,10 @@ export class WordsService {
       const [char, pn] = c.split('|');
       return { char, pn };
     });
-    const rows = await this.prisma.word.findMany({
-      where: { simplified: { in: parsed.map((p) => p.char) } },
+    const rows = await this.words.find({
+      where: { simplified: In(parsed.map((p) => p.char)) },
       select: {
+        id: true,
         simplified: true,
         pinyin: true,
         pinyinNumeric: true,
@@ -388,33 +414,30 @@ export class WordsService {
   async searchExamples(raw: string, page = 1) {
     const q = raw.trim().slice(0, 40);
     if (!q) return { items: [], total: 0, page: 1, pageSize: 20 };
-    const where: Prisma.WordExampleWhereInput = /\p{Script=Han}/u.test(q)
-      ? { zh: { contains: q } }
-      : { vi: { contains: q, mode: 'insensitive' } };
+    const has = `%${likeEscape(q)}%`;
+    const where: FindOptionsWhere<WordExample> = /\p{Script=Han}/u.test(q)
+      ? { zh: Like(has) }
+      : { vi: ILike(has) };
     const pageSize = 20;
-    const [items, total] = await Promise.all([
-      this.prisma.wordExample.findMany({
-        where,
-        select: {
-          id: true,
-          zh: true,
-          pinyin: true,
-          vi: true,
-          word: {
-            select: {
-              simplified: true,
-              pinyin: true,
-              hanViet: true,
-              hskLevel: true,
-            },
-          },
-        },
-        orderBy: [{ word: { hskLevel: 'asc' } }, { zh: 'asc' }],
-        skip: (Math.max(1, page) - 1) * pageSize,
-        take: pageSize,
-      }),
-      this.prisma.wordExample.count({ where }),
-    ]);
+    const [rows, total] = await this.examples.findAndCount({
+      where,
+      relations: { word: true },
+      order: { word: { hskLevel: 'ASC' }, zh: 'ASC', id: 'ASC' },
+      skip: (Math.max(1, page) - 1) * pageSize,
+      take: pageSize,
+    });
+    const items = rows.map((e) => ({
+      id: e.id,
+      zh: e.zh,
+      pinyin: e.pinyin,
+      vi: e.vi,
+      word: {
+        simplified: e.word.simplified,
+        pinyin: e.word.pinyin,
+        hanViet: e.word.hanViet,
+        hskLevel: e.word.hskLevel,
+      },
+    }));
     return { items, total, page: Math.max(1, page), pageSize };
   }
 
@@ -430,19 +453,22 @@ export class WordsService {
    * Đưa người học sang xem cả đoạn video thì ngữ cảnh đầy đủ và có giọng
    * thật — an toàn hơn hẳn mà vẫn nối được từ vựng với video. */
   private async videosUsingWord(slug: string) {
-    const rows = await this.prisma.videoLine.groupBy({
-      by: ['videoId'],
-      where: { zh: { contains: slug } },
-      _count: { _all: true },
-      orderBy: { _count: { videoId: 'desc' } },
-      take: 3,
-    });
+    // 3 video có nhiều câu thoại chứa từ này nhất.
+    const rows = await this.videoLines
+      .createQueryBuilder('line')
+      .select('line.videoId', 'videoId')
+      .addSelect('COUNT(*)::int', 'count')
+      .where('line.zh LIKE :has', { has: `%${likeEscape(slug)}%` })
+      .groupBy('line.videoId')
+      .orderBy('COUNT(*)', 'DESC')
+      .limit(3)
+      .getRawMany<{ videoId: string; count: number }>();
     if (rows.length === 0) return [];
-    const videos = await this.prisma.video.findMany({
-      where: { id: { in: rows.map((r) => r.videoId) } },
+    const videos = await this.videos.find({
+      where: { id: In(rows.map((r) => r.videoId)) },
       select: { id: true, title: true, thumbnailUrl: true, hskLevel: true },
     });
-    const countById = new Map(rows.map((r) => [r.videoId, r._count._all]));
+    const countById = new Map(rows.map((r) => [r.videoId, r.count]));
     return videos
       .map((v) => ({ ...v, lineCount: countById.get(v.id) ?? 0 }))
       .sort((a, b) => b.lineCount - a.lineCount);
@@ -468,10 +494,10 @@ export class WordsService {
     // Chỉ dùng khi số âm khớp số chữ — lệch thì thà bỏ còn hơn gán sai âm.
     const aligned = readings.length === chars.length;
 
-    const singles = await this.prisma.word.findMany({
-      where: { simplified: { in: chars }, meaningVi: { not: null } },
-      select: { simplified: true, pinyin: true, meaningVi: true },
-      orderBy: { frequencyRank: 'asc' },
+    const singles = await this.words.find({
+      where: { simplified: In(chars), meaningVi: Not(IsNull()) },
+      select: { id: true, simplified: true, pinyin: true, meaningVi: true },
+      order: { frequencyRank: 'ASC' },
     });
     const byChar = new Map<string, (typeof singles)[number]>();
     for (const s of singles)
@@ -493,11 +519,11 @@ export class WordsService {
     // Từ 1 chữ: tìm từ ghép chứa nó. Từ ghép: lấy theo chữ ĐẦU (đại diện đủ
     // tốt, tránh truy vấn OR dài dòng cho từ 3-4 chữ).
     const key = chars[0];
-    return this.prisma.word.findMany({
+    return this.words.find({
       where: {
-        simplified: { contains: key, not: slug },
-        meaningVi: { not: null },
-        hanViet: { not: null },
+        simplified: And(Like(`%${likeEscape(key)}%`), Not(slug)),
+        meaningVi: Not(IsNull()),
+        hanViet: Not(IsNull()),
       },
       select: {
         simplified: true,
@@ -505,7 +531,7 @@ export class WordsService {
         hanViet: true,
         meaningVi: true,
       },
-      orderBy: { frequencyRank: 'asc' },
+      order: { frequencyRank: 'ASC' },
       take: 10,
     });
   }
@@ -539,25 +565,25 @@ export class WordsService {
    * người Việt nhận ra mình đã biết sẵn hàng nghìn từ.
    */
   async trialWords(count = 8) {
-    const rows = await this.prisma.word.findMany({
+    const rows = await this.words.find({
       where: {
-        hskLevel: { lte: 3 },
-        hanViet: { not: null },
-        meaningVi: { not: null },
-        frequencyRank: { not: null },
+        hskLevel: LessThanOrEqual(3),
+        hanViet: Not(IsNull()),
+        meaningVi: Not(IsNull()),
+        frequencyRank: Not(IsNull()),
       },
-      include: { examples: { orderBy: { orderIndex: 'asc' } } },
-      orderBy: { frequencyRank: 'asc' },
+      relations: { examples: true },
+      order: { frequencyRank: 'ASC', examples: { orderIndex: 'ASC' } },
     });
     return rows.filter((w) => hanVietMatchesMeaning(w)).slice(0, count);
   }
 
   async familiarWords(level?: number) {
-    const rows = await this.prisma.word.findMany({
+    const rows = await this.words.find({
       where: {
-        hanViet: { not: null },
-        meaningVi: { not: null },
-        frequencyRank: { not: null },
+        hanViet: Not(IsNull()),
+        meaningVi: Not(IsNull()),
+        frequencyRank: Not(IsNull()),
         ...(level ? { hskLevel: level } : {}),
       },
       select: {
@@ -567,7 +593,7 @@ export class WordsService {
         meaningVi: true,
         hskLevel: true,
       },
-      orderBy: { frequencyRank: 'asc' },
+      order: { frequencyRank: 'ASC' },
     });
 
     const items = rows.filter((w) => hanVietMatchesMeaning(w));
@@ -588,13 +614,16 @@ export class WordsService {
   /** Danh sách Hán tự công khai cho sitemap (chỉ từ CÓ nghĩa tiếng Việt —
    * từ thiếu nghĩa thì trang sẽ mỏng, không nên mời Google index). */
   async publicSlugs() {
-    const rows = await this.prisma.word.findMany({
-      where: { meaningVi: { not: null } },
+    const rows = await this.words.find({
+      where: { meaningVi: Not(IsNull()) },
       select: { simplified: true, updatedAt: true },
-      orderBy: { frequencyRank: 'asc' },
-      distinct: ['simplified'],
+      order: { frequencyRank: 'ASC' },
     });
-    return rows;
+    // 1 URL cho mỗi mặt chữ (từ đa âm có nhiều dòng) — giữ dòng thông dụng nhất.
+    const seen = new Set<string>();
+    return rows.filter(
+      (r) => !seen.has(r.simplified) && seen.add(r.simplified),
+    );
   }
 
   /** "Từ vựng hôm nay": chọn CỐ ĐỊNH theo ngày (giống nhau cho mọi user, đổi
@@ -603,24 +632,24 @@ export class WordsService {
    * gọi nên luôn khớp ngày hiện tại kể cả khi có từ mới được thêm vào.
    * `level` (1–7, 7 = HSK 7–9) giới hạn đúng cấp người học đang học. */
   async ofTheDay(level?: number) {
-    const where: Prisma.WordWhereInput = {
-      meaningVi: { not: null },
-      frequencyRank: { not: null },
+    const where: FindOptionsWhere<Word> = {
+      meaningVi: Not(IsNull()),
+      frequencyRank: Not(IsNull()),
       ...(level && level >= 1 && level <= 9 ? { hskLevel: level } : {}),
     };
-    const total = await this.prisma.word.count({ where });
+    const total = await this.words.countBy(where);
     if (total === 0) throw new NotFoundException('Chưa có dữ liệu từ vựng');
 
     const dayIndex = Math.floor(Date.now() / 86_400_000);
-    const [word] = await this.prisma.word.findMany({
+    const [pick] = await this.words.find({
       where,
-      orderBy: { frequencyRank: 'asc' },
+      order: { frequencyRank: 'ASC' },
       skip: dayIndex % total,
       take: 1,
-      include: { examples: { orderBy: { orderIndex: 'asc' } } },
+      select: { id: true },
     });
-    if (!word) throw new NotFoundException('Chưa có dữ liệu từ vựng');
-    return this.attachImage(word);
+    if (!pick) throw new NotFoundException('Chưa có dữ liệu từ vựng');
+    return this.get(pick.id);
   }
 }
 

@@ -1,7 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { SrsState } from '@prisma/client';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, LessThanOrEqual, Repository } from 'typeorm';
+import {
+  User,
+  UserDailyActivity,
+  UserWordProgress,
+} from '../../database/entities';
+import { SrsState } from '../../database/enums';
 import {
   getLocalHour,
   getLocalWeekday,
@@ -9,8 +16,11 @@ import {
   localStudyDate,
 } from '../../common/time.util';
 import type { Env } from '../../config/env.validation';
-import { PrismaService } from '../../infra/prisma/prisma.service';
 import { PushService } from './push.service';
+
+/** Điều kiện SQL: người dùng (bí danh `u`) có ít nhất 1 thiết bị đăng ký nhận push. */
+const HAS_PUSH_DEVICE =
+  'EXISTS (SELECT 1 FROM "PushSubscription" ps WHERE ps."userId" = u.id)';
 
 const ACTIVE_SRS_STATES: SrsState[] = [
   SrsState.LEARNING,
@@ -51,7 +61,11 @@ export class ReminderService {
   private readonly logger = new Logger(ReminderService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(UserDailyActivity)
+    private readonly activities: Repository<UserDailyActivity>,
+    @InjectRepository(UserWordProgress)
+    private readonly progress: Repository<UserWordProgress>,
     private readonly push: PushService,
     private readonly config: ConfigService<Env, true>,
   ) {}
@@ -63,17 +77,19 @@ export class ReminderService {
       infer: true,
     });
 
-    const users = await this.prisma.user.findMany({
-      where: {
-        settings: { reminderHour: { not: null } },
-        pushSubscriptions: { some: {} },
-      },
-      select: {
-        id: true,
-        timezone: true,
-        settings: { select: { reminderHour: true } },
-      },
-    });
+    // Ai đã đặt giờ nhắc VÀ có ít nhất 1 thiết bị nhận thông báo đẩy.
+    const users = await this.users
+      .createQueryBuilder('u')
+      .innerJoin('u.settings', 'settings')
+      .select([
+        'u.id',
+        'u.timezone',
+        'settings.userId',
+        'settings.reminderHour',
+      ])
+      .where('settings.reminderHour IS NOT NULL')
+      .andWhere(HAS_PUSH_DEVICE)
+      .getMany();
     if (users.length === 0) return;
 
     let sentCount = 0;
@@ -84,13 +100,9 @@ export class ReminderService {
         if (getLocalHour(now, user.timezone) !== reminderHour) return;
 
         const todayIso = localStudyDate(now, user.timezone, cutoffHour);
-        const activity = await this.prisma.userDailyActivity.findUnique({
-          where: {
-            userId_localDate: {
-              userId: user.id,
-              localDate: isoDateToUtcDate(todayIso),
-            },
-          },
+        const activity = await this.activities.findOneBy({
+          userId: user.id,
+          localDate: isoDateToUtcDate(todayIso),
         });
         if (activity?.goalMet) return; // đã học đủ hôm nay, khỏi nhắc
 
@@ -98,13 +110,11 @@ export class ReminderService {
         // số liệu thật đã được ghi nhận là hiệu quả hơn nhiều so với nhắc
         // nhở mơ hồ (nghiên cứu hành vi push notification: cá nhân hoá tăng
         // tỷ lệ mở đáng kể so với nội dung generic).
-        const dueCount = await this.prisma.userWordProgress.count({
-          where: {
-            userId: user.id,
-            isSuspended: false,
-            state: { in: ACTIVE_SRS_STATES },
-            dueAt: { lte: now },
-          },
+        const dueCount = await this.progress.countBy({
+          userId: user.id,
+          isSuspended: false,
+          state: In(ACTIVE_SRS_STATES),
+          dueAt: LessThanOrEqual(now),
         });
         // Diễn đạt theo hướng MẤT MÁT thay vì nhiệm vụ: "N từ sắp quên" thúc
         // đẩy mạnh hơn "N từ cần ôn" (loss aversion — người ta ngại mất cái
@@ -136,17 +146,7 @@ export class ReminderService {
       infer: true,
     });
 
-    const users = await this.prisma.user.findMany({
-      where: {
-        pushSubscriptions: { some: {} },
-        streak: { currentStreak: { gt: 0 } },
-      },
-      select: {
-        id: true,
-        timezone: true,
-        streak: { select: { currentStreak: true } },
-      },
-    });
+    const users = await this.usersOnStreakWithPush();
     if (users.length === 0) return;
 
     let sentCount = 0;
@@ -155,13 +155,9 @@ export class ReminderService {
         if (getLocalHour(now, user.timezone) !== STREAK_RISK_HOUR) return;
 
         const todayIso = localStudyDate(now, user.timezone, cutoffHour);
-        const activity = await this.prisma.userDailyActivity.findUnique({
-          where: {
-            userId_localDate: {
-              userId: user.id,
-              localDate: isoDateToUtcDate(todayIso),
-            },
-          },
+        const activity = await this.activities.findOneBy({
+          userId: user.id,
+          localDate: isoDateToUtcDate(todayIso),
         });
         if (activity) return; // đã có hoạt động hôm nay -> streak đã an toàn
 
@@ -187,17 +183,7 @@ export class ReminderService {
       infer: true,
     });
 
-    const users = await this.prisma.user.findMany({
-      where: {
-        pushSubscriptions: { some: {} },
-        streak: { currentStreak: { gt: 0 } },
-      },
-      select: {
-        id: true,
-        timezone: true,
-        streak: { select: { currentStreak: true } },
-      },
-    });
+    const users = await this.usersOnStreakWithPush();
     if (users.length === 0) return;
 
     let sentCount = 0;
@@ -211,13 +197,9 @@ export class ReminderService {
           return;
 
         const todayIso = localStudyDate(now, user.timezone, cutoffHour);
-        const activity = await this.prisma.userDailyActivity.findUnique({
-          where: {
-            userId_localDate: {
-              userId: user.id,
-              localDate: isoDateToUtcDate(todayIso),
-            },
-          },
+        const activity = await this.activities.findOneBy({
+          userId: user.id,
+          localDate: isoDateToUtcDate(todayIso),
         });
         if (activity) return; // đã có hoạt động hôm nay -> streak đã an toàn
 
@@ -234,5 +216,16 @@ export class ReminderService {
     if (sentCount > 0) {
       this.logger.log(`Đã gửi nhắc sớm cuối tuần tới ${sentCount} người dùng`);
     }
+  }
+
+  /** Ai đang có chuỗi ngày học (> 0) VÀ có ít nhất 1 thiết bị nhận thông báo đẩy. */
+  private usersOnStreakWithPush() {
+    return this.users
+      .createQueryBuilder('u')
+      .innerJoin('u.streak', 'streak')
+      .select(['u.id', 'u.timezone', 'streak.userId', 'streak.currentStreak'])
+      .where('streak.currentStreak > 0')
+      .andWhere(HAS_PUSH_DEVICE)
+      .getMany();
   }
 }

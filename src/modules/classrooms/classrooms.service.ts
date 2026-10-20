@@ -6,8 +6,22 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
+import { isUniqueViolation } from '../../database/db-errors';
+import {
+  ClassAssignment,
+  Classroom,
+  ClassroomMember,
+  Lesson,
+  MockExamAttempt,
+  User,
+  UserDailyActivity,
+  UserLessonProgress,
+  UserStreak,
+  UserWordProgress,
+} from '../../database/entities';
+import { insertIfAbsent } from '../../database/repository.util';
 import { PAPERS } from '../mock-exams/mock-exam.content';
 import { PushService } from '../push/push.service';
 import {
@@ -24,22 +38,53 @@ import type {
   UpdateClassroomDto,
 } from './dto/classroom.dto';
 
-const PERSON = { id: true, displayName: true, avatarUrl: true } as const;
-const ASSIGNMENT_SELECT = {
-  id: true,
-  kind: true,
-  lessonId: true,
-  examSlug: true,
-  dueAt: true,
-  createdAt: true,
-  lesson: {
-    select: { id: true, title: true, hskLevel: true, orderIndex: true },
-  },
-} as const;
+/** Người trong lớp: chỉ tên + ảnh (không lộ email…). */
+const person = (u: User) => ({
+  id: u.id,
+  displayName: u.displayName,
+  avatarUrl: u.avatarUrl,
+});
 
-type AssignmentRow = Prisma.ClassAssignmentGetPayload<{
-  select: typeof ASSIGNMENT_SELECT;
-}>;
+/** 1 bài giao (đã nạp kèm `lesson`). */
+type AssignmentRow = ClassAssignment;
+
+/** Bài giao gửi cho client: loại bài + bài học (tên, cấp, số thứ tự) nếu là bài học. */
+function assignmentView(a: AssignmentRow) {
+  return {
+    id: a.id,
+    kind: a.kind,
+    lessonId: a.lessonId,
+    examSlug: a.examSlug,
+    dueAt: a.dueAt,
+    createdAt: a.createdAt,
+    lesson: a.lesson
+      ? {
+          id: a.lesson.id,
+          title: a.lesson.title,
+          hskLevel: a.lesson.hskLevel,
+          orderIndex: a.lesson.orderIndex,
+        }
+      : null,
+  };
+}
+
+interface MemberStats {
+  currentStreak: number;
+  minutes7d: number;
+  daysActive7d: number;
+  /** Ngày học gần nhất 'YYYY-MM-DD' (theo ngày học của người đó). */
+  lastStudiedOn: string | null;
+  lessonsCompleted: number;
+  wordsStudied: number;
+  examCount: number;
+  bestExam: {
+    slug: string;
+    title: string;
+    score: number;
+    maxScore: number;
+    passed: boolean;
+  } | null;
+}
 
 interface CompletionFacts {
   completedLessons: Map<string, Set<string>>;
@@ -70,34 +115,53 @@ export class ClassroomsService {
   private readonly logger = new Logger(ClassroomsService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(Classroom)
+    private readonly classrooms: Repository<Classroom>,
+    @InjectRepository(ClassroomMember)
+    private readonly members: Repository<ClassroomMember>,
+    @InjectRepository(ClassAssignment)
+    private readonly assignments: Repository<ClassAssignment>,
+    @InjectRepository(Lesson) private readonly lessons: Repository<Lesson>,
+    @InjectRepository(UserStreak)
+    private readonly streaks: Repository<UserStreak>,
+    @InjectRepository(UserDailyActivity)
+    private readonly activities: Repository<UserDailyActivity>,
+    @InjectRepository(UserLessonProgress)
+    private readonly lessonProgress: Repository<UserLessonProgress>,
+    @InjectRepository(UserWordProgress)
+    private readonly wordProgress: Repository<UserWordProgress>,
+    @InjectRepository(MockExamAttempt)
+    private readonly mockAttempts: Repository<MockExamAttempt>,
     private readonly push: PushService,
   ) {}
 
   async create(ownerId: string, dto: CreateClassroomDto) {
-    const owned = await this.prisma.classroom.count({ where: { ownerId } });
+    const owned = await this.classrooms.countBy({ ownerId });
     if (owned >= MAX_CLASSES_PER_OWNER)
       throw new BadRequestException(
         `Mỗi tài khoản tạo tối đa ${MAX_CLASSES_PER_OWNER} lớp`,
       );
+    const values = {
+      ownerId,
+      name: dto.name.trim(),
+      hskLevel: dto.hskLevel ?? null,
+    };
     for (let attempt = 0; attempt < 5; attempt++) {
+      const code = makeClassCode();
       try {
-        return await this.prisma.classroom.create({
-          data: {
-            ownerId,
-            name: dto.name.trim(),
-            hskLevel: dto.hskLevel ?? null,
-            code: makeClassCode(),
-          },
-          select: { id: true, name: true, code: true, hskLevel: true },
+        const { identifiers } = await this.classrooms.insert({
+          ...values,
+          code,
         });
+        return {
+          id: identifiers[0].id as string,
+          name: values.name,
+          code,
+          hskLevel: values.hskLevel,
+        };
       } catch (err) {
         // Trùng mã (rất hiếm, 31^6 mã) thì sinh mã khác.
-        if (
-          err instanceof Prisma.PrismaClientKnownRequestError &&
-          err.code === 'P2002'
-        )
-          continue;
+        if (isUniqueViolation(err)) continue;
         throw err;
       }
     }
@@ -106,35 +170,20 @@ export class ClassroomsService {
 
   async mine(userId: string) {
     const [owned, joined, pending] = await Promise.all([
-      this.prisma.classroom.findMany({
+      this.classrooms.find({
         where: { ownerId: userId },
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          name: true,
-          code: true,
-          hskLevel: true,
-          createdAt: true,
-          _count: { select: { members: true, assignments: true } },
-        },
+        order: { createdAt: 'DESC' },
       }),
-      this.prisma.classroomMember.findMany({
+      this.members.find({
         where: { userId },
-        orderBy: { joinedAt: 'desc' },
-        select: {
-          joinedAt: true,
-          classroom: {
-            select: {
-              id: true,
-              name: true,
-              hskLevel: true,
-              owner: { select: PERSON },
-              _count: { select: { members: true } },
-            },
-          },
-        },
+        order: { joinedAt: 'DESC' },
+        relations: { classroom: { owner: true } },
       }),
       this.myAssignments(userId),
+    ]);
+    const counts = await this.countsPerClass([
+      ...owned.map((c) => c.id),
+      ...joined.map((m) => m.classroomId),
     ]);
     return {
       owned: owned.map((c) => ({
@@ -143,15 +192,15 @@ export class ClassroomsService {
         code: c.code,
         hskLevel: c.hskLevel,
         createdAt: c.createdAt,
-        memberCount: c._count.members,
-        assignmentCount: c._count.assignments,
+        memberCount: counts.members.get(c.id) ?? 0,
+        assignmentCount: counts.assignments.get(c.id) ?? 0,
       })),
       joined: joined.map((m) => ({
         id: m.classroom.id,
         name: m.classroom.name,
         hskLevel: m.classroom.hskLevel,
-        teacher: m.classroom.owner,
-        memberCount: m.classroom._count.members,
+        teacher: person(m.classroom.owner),
+        memberCount: counts.members.get(m.classroomId) ?? 0,
         joinedAt: m.joinedAt,
         pendingCount: pending.filter((p) => p.classId === m.classroom.id)
           .length,
@@ -163,16 +212,14 @@ export class ClassroomsService {
   async preview(rawCode: string, userId: string | null) {
     const c = await this.findByCode(rawCode);
     const isMember = userId
-      ? !!(await this.prisma.classroomMember.findUnique({
-          where: { classroomId_userId: { classroomId: c.id, userId } },
-        }))
+      ? await this.members.existsBy({ classroomId: c.id, userId })
       : false;
     return {
       id: c.id,
       name: c.name,
       hskLevel: c.hskLevel,
-      teacher: c.owner,
-      memberCount: c._count.members,
+      teacher: person(c.owner),
+      memberCount: c.memberCount,
       isOwner: c.ownerId === userId,
       isMember,
     };
@@ -182,48 +229,44 @@ export class ClassroomsService {
     const c = await this.findByCode(rawCode);
     if (c.ownerId === userId)
       throw new BadRequestException('Bạn là giáo viên của lớp này rồi');
-    if (c._count.members >= MAX_MEMBERS_PER_CLASS)
+    if (c.memberCount >= MAX_MEMBERS_PER_CLASS)
       throw new BadRequestException(
         `Lớp đã đủ ${MAX_MEMBERS_PER_CLASS} học viên`,
       );
-    await this.prisma.classroomMember.upsert({
-      where: { classroomId_userId: { classroomId: c.id, userId } },
-      create: { classroomId: c.id, userId },
-      update: {},
-    });
+    // Vào lại lớp đã vào rồi thì không sao (idempotent).
+    await insertIfAbsent(this.members, { classroomId: c.id, userId });
     return { id: c.id };
   }
 
   async leave(classroomId: string, userId: string) {
-    await this.prisma.classroomMember.deleteMany({
-      where: { classroomId, userId },
-    });
+    await this.members.delete({ classroomId, userId });
     return { ok: true };
   }
 
   async update(classroomId: string, ownerId: string, dto: UpdateClassroomDto) {
     await this.ownedOrThrow(classroomId, ownerId);
-    return this.prisma.classroom.update({
+    const changes = {
+      ...(dto.name !== undefined && { name: dto.name.trim() }),
+      ...(dto.hskLevel !== undefined && { hskLevel: dto.hskLevel }),
+    };
+    if (Object.keys(changes).length)
+      await this.classrooms.update(classroomId, changes);
+    return this.classrooms.findOneOrFail({
       where: { id: classroomId },
-      data: {
-        ...(dto.name !== undefined && { name: dto.name.trim() }),
-        ...(dto.hskLevel !== undefined && { hskLevel: dto.hskLevel }),
-      },
       select: { id: true, name: true, code: true, hskLevel: true },
     });
   }
 
   async remove(classroomId: string, ownerId: string) {
     await this.ownedOrThrow(classroomId, ownerId);
-    await this.prisma.classroom.delete({ where: { id: classroomId } });
+    // Học viên + bài giao của lớp xoá theo khoá ngoại ON DELETE CASCADE.
+    await this.classrooms.delete(classroomId);
     return { ok: true };
   }
 
   async removeMember(classroomId: string, ownerId: string, memberId: string) {
     await this.ownedOrThrow(classroomId, ownerId);
-    await this.prisma.classroomMember.deleteMany({
-      where: { classroomId, userId: memberId },
-    });
+    await this.members.delete({ classroomId, userId: memberId });
     return { ok: true };
   }
 
@@ -233,38 +276,34 @@ export class ClassroomsService {
     dto: CreateAssignmentDto,
   ) {
     const c = await this.ownedOrThrow(classroomId, ownerId);
-    const count = await this.prisma.classAssignment.count({
-      where: { classroomId },
-    });
+    const count = await this.assignments.countBy({ classroomId });
     if (count >= MAX_ASSIGNMENTS_PER_CLASS)
       throw new BadRequestException(
         `Mỗi lớp giữ tối đa ${MAX_ASSIGNMENTS_PER_CLASS} bài giao — xoá bớt bài cũ trước`,
       );
     if (dto.kind === 'LESSON') {
-      const lesson = await this.prisma.lesson.findUnique({
-        where: { id: dto.lessonId! },
-        select: { id: true },
-      });
-      if (!lesson) throw new NotFoundException('Không tìm thấy bài học');
+      if (!(await this.lessons.existsBy({ id: dto.lessonId! })))
+        throw new NotFoundException('Không tìm thấy bài học');
     } else if (!PAPERS.some((p) => p.slug === dto.examSlug)) {
       throw new NotFoundException('Không tìm thấy đề thi thử');
     }
     const dueAt = dto.dueAt ? new Date(dto.dueAt) : null;
-    const created = await this.prisma.classAssignment.create({
-      data: {
-        classroomId,
-        kind: dto.kind,
-        lessonId: dto.kind === 'LESSON' ? dto.lessonId! : null,
-        examSlug: dto.kind === 'MOCK_EXAM' ? dto.examSlug! : null,
-        dueAt,
-      },
-      select: ASSIGNMENT_SELECT,
+    const { identifiers } = await this.assignments.insert({
+      classroomId,
+      kind: dto.kind,
+      lessonId: dto.kind === 'LESSON' ? dto.lessonId! : null,
+      examSlug: dto.kind === 'MOCK_EXAM' ? dto.examSlug! : null,
+      dueAt,
+    });
+    const created = await this.assignments.findOneOrFail({
+      where: { id: identifiers[0].id as string },
+      relations: { lesson: true },
     });
     const { label, href } = describe(created);
     // Báo cho cả lớp — chạy nền, push lỗi không chặn việc giao bài.
-    const members = await this.prisma.classroomMember.findMany({
+    const members = await this.members.find({
       where: { classroomId },
-      select: { userId: true },
+      select: { classroomId: true, userId: true },
     });
     const due = dueAt
       ? ` — hạn ${dueAt.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}`
@@ -282,7 +321,7 @@ export class ClassroomsService {
       if (failed)
         this.logger.warn(`Không gửi được push bài giao cho ${failed} học viên`);
     });
-    return { ...created, label, href };
+    return { ...assignmentView(created), label, href };
   }
 
   async removeAssignment(
@@ -291,41 +330,35 @@ export class ClassroomsService {
     assignmentId: string,
   ) {
     await this.ownedOrThrow(classroomId, ownerId);
-    await this.prisma.classAssignment.deleteMany({
-      where: { id: assignmentId, classroomId },
-    });
+    await this.assignments.delete({ id: assignmentId, classroomId });
     return { ok: true };
   }
 
   /** Giáo viên: tiến độ từng học viên + bài giao kèm ai đã xong. Học viên: bài giao
    * của mình + bảng phút học tuần này của cả lớp. */
   async detail(classroomId: string, userId: string) {
-    const c = await this.prisma.classroom.findUnique({
+    const c = await this.classrooms.findOne({
       where: { id: classroomId },
-      select: {
-        id: true,
-        name: true,
-        code: true,
-        hskLevel: true,
-        createdAt: true,
-        ownerId: true,
-        owner: { select: PERSON },
-        members: {
-          orderBy: { joinedAt: 'asc' },
-          select: { userId: true, joinedAt: true, user: { select: PERSON } },
-        },
-        assignments: {
-          orderBy: { createdAt: 'desc' },
-          select: ASSIGNMENT_SELECT,
-        },
-      },
+      relations: { owner: true },
     });
     if (!c) throw new NotFoundException('Không tìm thấy lớp');
+    const [classMembers, classAssignments] = await Promise.all([
+      this.members.find({
+        where: { classroomId },
+        order: { joinedAt: 'ASC' },
+        relations: { user: true },
+      }),
+      this.assignments.find({
+        where: { classroomId },
+        order: { createdAt: 'DESC' },
+        relations: { lesson: true },
+      }),
+    ]);
     const isOwner = c.ownerId === userId;
-    if (!isOwner && !c.members.some((m) => m.userId === userId))
+    if (!isOwner && !classMembers.some((m) => m.userId === userId))
       throw new ForbiddenException('Bạn chưa vào lớp này');
 
-    const ids = c.members.map((m) => m.userId);
+    const ids = classMembers.map((m) => m.userId);
     const [stats, facts] = await Promise.all([
       this.memberStats(ids),
       this.completionFacts(ids),
@@ -343,17 +376,17 @@ export class ClassroomsService {
       name: c.name,
       hskLevel: c.hskLevel,
       createdAt: c.createdAt,
-      teacher: c.owner,
+      teacher: person(c.owner),
       memberCount: ids.length,
     };
-    const members = c.members.map((m) => ({
-      ...m.user,
+    const members = classMembers.map((m) => ({
+      ...person(m.user),
       joinedAt: m.joinedAt,
       ...stats.get(m.userId)!,
     }));
 
     if (isOwner) {
-      const assignments = c.assignments.map((a) => {
+      const assignments = classAssignments.map((a) => {
         const done = doneBy(a);
         return {
           id: a.id,
@@ -384,7 +417,7 @@ export class ClassroomsService {
     return {
       role: 'member' as const,
       class: info,
-      assignments: c.assignments.map((a) => ({
+      assignments: classAssignments.map((a) => ({
         id: a.id,
         kind: a.kind,
         dueAt: a.dueAt,
@@ -410,29 +443,26 @@ export class ClassroomsService {
 
   /** Bài giao CHƯA làm ở mọi lớp mình đang học — thẻ "Bài tập của lớp" ở trang chủ. */
   async myAssignments(userId: string) {
-    const memberships = await this.prisma.classroomMember.findMany({
+    const memberships = await this.members.find({
       where: { userId },
-      select: {
-        classroom: {
-          select: {
-            id: true,
-            name: true,
-            assignments: {
-              orderBy: { createdAt: 'desc' },
-              take: 30,
-              select: ASSIGNMENT_SELECT,
-            },
-          },
-        },
-      },
+      relations: { classroom: true },
     });
     if (memberships.length === 0) return [];
-    const facts = await this.completionFacts([userId]);
+    const [all, facts] = await Promise.all([
+      this.assignments.find({
+        where: { classroomId: In(memberships.map((m) => m.classroomId)) },
+        order: { createdAt: 'DESC' },
+        relations: { lesson: true },
+      }),
+      this.completionFacts([userId]),
+    ]);
     const lessons = facts.completedLessons.get(userId) ?? new Set<string>();
     const attempts = facts.examAttempts.get(userId) ?? [];
     return memberships
       .flatMap(({ classroom }) =>
-        classroom.assignments
+        all
+          .filter((a) => a.classroomId === classroom.id)
+          .slice(0, 30) // 30 bài giao mới nhất mỗi lớp
           .filter((a) => !isAssignmentDone(a, lessons, attempts))
           .map((a) => ({
             id: a.id,
@@ -455,32 +485,21 @@ export class ClassroomsService {
   private async findByCode(rawCode: string) {
     const code = normalizeClassCode(rawCode);
     const c = code
-      ? await this.prisma.classroom.findUnique({
+      ? await this.classrooms.findOne({
           where: { code },
-          select: {
-            id: true,
-            name: true,
-            hskLevel: true,
-            ownerId: true,
-            owner: { select: PERSON },
-            _count: { select: { members: true } },
-          },
+          relations: { owner: true },
         })
       : null;
     if (!c)
       throw new NotFoundException('Không tìm thấy lớp — kiểm tra lại mã lớp');
-    return c;
+    const memberCount = await this.members.countBy({ classroomId: c.id });
+    return Object.assign(c, { memberCount });
   }
 
   private async ownedOrThrow(classroomId: string, ownerId: string) {
-    const c = await this.prisma.classroom.findUnique({
+    const c = await this.classrooms.findOne({
       where: { id: classroomId },
-      select: {
-        id: true,
-        name: true,
-        ownerId: true,
-        owner: { select: PERSON },
-      },
+      relations: { owner: true },
     });
     if (!c) throw new NotFoundException('Không tìm thấy lớp');
     if (c.ownerId !== ownerId)
@@ -490,17 +509,43 @@ export class ClassroomsService {
     return c;
   }
 
+  /** Số học viên + số bài giao của từng lớp. */
+  private async countsPerClass(classIds: string[]) {
+    const ids = [...new Set(classIds)];
+    if (ids.length === 0)
+      return {
+        members: new Map<string, number>(),
+        assignments: new Map<string, number>(),
+      };
+    const count = (
+      repo: Repository<ClassroomMember> | Repository<ClassAssignment>,
+    ) =>
+      repo
+        .createQueryBuilder('x')
+        .select('x.classroomId', 'classroomId')
+        .addSelect('COUNT(*)::int', 'count')
+        .where('x.classroomId IN (:...ids)', { ids })
+        .groupBy('x.classroomId')
+        .getRawMany<{ classroomId: string; count: number }>()
+        .then((rows) => new Map(rows.map((r) => [r.classroomId, r.count])));
+    const [members, assignments] = await Promise.all([
+      count(this.members),
+      count(this.assignments),
+    ]);
+    return { members, assignments };
+  }
+
   private async completionFacts(ids: string[]): Promise<CompletionFacts> {
     if (ids.length === 0)
       return { completedLessons: new Map(), examAttempts: new Map() };
     const [lessons, attempts] = await Promise.all([
-      this.prisma.userLessonProgress.findMany({
-        where: { userId: { in: ids }, completedAt: { not: null } },
-        select: { userId: true, lessonId: true },
+      this.lessonProgress.find({
+        where: { userId: In(ids), completedAt: Not(IsNull()) },
+        select: { id: true, userId: true, lessonId: true },
       }),
-      this.prisma.mockExamAttempt.findMany({
-        where: { userId: { in: ids } },
-        select: { userId: true, examSlug: true, createdAt: true },
+      this.mockAttempts.find({
+        where: { userId: In(ids) },
+        select: { id: true, userId: true, examSlug: true, createdAt: true },
       }),
     ]);
     const completedLessons = new Map<string, Set<string>>();
@@ -521,38 +566,39 @@ export class ClassroomsService {
   /** Số liệu học của từng học viên — đọc thẳng bảng có sẵn (chuỗi ngày, hoạt động
    * theo ngày, bài đã xong, từ đang học, lượt thi thử). */
   private async memberStats(ids: string[]) {
+    const out = new Map<string, MemberStats>();
+    if (ids.length === 0) return out;
     const since = new Date();
     since.setUTCHours(0, 0, 0, 0);
     since.setUTCDate(since.getUTCDate() - 6);
     const [streaks, week, last, lessons, words, exams] = await Promise.all([
-      this.prisma.userStreak.findMany({
-        where: { userId: { in: ids } },
+      this.streaks.find({
+        where: { userId: In(ids) },
         select: { userId: true, currentStreak: true },
       }),
-      this.prisma.userDailyActivity.groupBy({
-        by: ['userId'],
-        where: { userId: { in: ids }, localDate: { gte: since } },
-        _sum: { minutesStudied: true },
-        _count: true,
-      }),
-      this.prisma.userDailyActivity.groupBy({
-        by: ['userId'],
-        where: { userId: { in: ids } },
-        _max: { localDate: true },
-      }),
-      this.prisma.userLessonProgress.groupBy({
-        by: ['userId'],
-        where: { userId: { in: ids }, completedAt: { not: null } },
-        _count: true,
-      }),
-      this.prisma.userWordProgress.groupBy({
-        by: ['userId'],
-        where: { userId: { in: ids }, isSuspended: false },
-        _count: true,
-      }),
-      this.prisma.mockExamAttempt.findMany({
-        where: { userId: { in: ids } },
+      // 7 ngày gần nhất: tổng phút học + số ngày có học.
+      this.activities
+        .createQueryBuilder('a')
+        .select('a.userId', 'userId')
+        .addSelect('SUM(a.minutesStudied)', 'minutes')
+        .addSelect('COUNT(*)::int', 'days')
+        .where({ userId: In(ids), localDate: MoreThanOrEqual(since) })
+        .groupBy('a.userId')
+        .getRawMany<{ userId: string; minutes: number; days: number }>(),
+      // Ngày học gần nhất ('YYYY-MM-DD').
+      this.activities
+        .createQueryBuilder('a')
+        .select('a.userId', 'userId')
+        .addSelect('MAX(a.localDate)', 'lastDate')
+        .where({ userId: In(ids) })
+        .groupBy('a.userId')
+        .getRawMany<{ userId: string; lastDate: string }>(),
+      this.countPerUser(this.lessonProgress, ids, 'p.completedAt IS NOT NULL'),
+      this.countPerUser(this.wordProgress, ids, 'p.isSuspended = false'),
+      this.mockAttempts.find({
+        where: { userId: In(ids) },
         select: {
+          id: true,
           userId: true,
           examSlug: true,
           score: true,
@@ -561,39 +607,19 @@ export class ClassroomsService {
         },
       }),
     ]);
-    const out = new Map<
-      string,
-      {
-        currentStreak: number;
-        minutes7d: number;
-        daysActive7d: number;
-        lastStudiedOn: string | null;
-        lessonsCompleted: number;
-        wordsStudied: number;
-        examCount: number;
-        bestExam: {
-          slug: string;
-          title: string;
-          score: number;
-          maxScore: number;
-          passed: boolean;
-        } | null;
-      }
-    >();
     for (const id of ids) {
       const w = week.find((r) => r.userId === id);
       const mine = exams.filter((e) => e.userId === id);
       const best = [...mine].sort(
         (a, b) => b.score / b.maxScore - a.score / a.maxScore,
       )[0];
-      const lastDate = last.find((r) => r.userId === id)?._max.localDate;
       out.set(id, {
         currentStreak: streaks.find((s) => s.userId === id)?.currentStreak ?? 0,
-        minutes7d: Math.round(w?._sum.minutesStudied ?? 0),
-        daysActive7d: w?._count ?? 0,
-        lastStudiedOn: lastDate ? lastDate.toISOString().slice(0, 10) : null,
-        lessonsCompleted: lessons.find((r) => r.userId === id)?._count ?? 0,
-        wordsStudied: words.find((r) => r.userId === id)?._count ?? 0,
+        minutes7d: Math.round(w?.minutes ?? 0),
+        daysActive7d: w?.days ?? 0,
+        lastStudiedOn: last.find((r) => r.userId === id)?.lastDate ?? null,
+        lessonsCompleted: lessons.get(id) ?? 0,
+        wordsStudied: words.get(id) ?? 0,
         examCount: mine.length,
         bestExam: best
           ? {
@@ -609,5 +635,23 @@ export class ClassroomsService {
       });
     }
     return out;
+  }
+
+  /** Đếm số dòng mỗi người (bảng có cột `userId`, bí danh `p`) thoả điều kiện SQL. */
+  private async countPerUser(
+    repo: Repository<UserLessonProgress> | Repository<UserWordProgress>,
+    ids: string[],
+    condition: string,
+  ): Promise<Map<string, number>> {
+    if (ids.length === 0) return new Map();
+    const rows = await repo
+      .createQueryBuilder('p')
+      .select('p.userId', 'userId')
+      .addSelect('COUNT(*)::int', 'count')
+      .where('p.userId IN (:...ids)', { ids })
+      .andWhere(condition)
+      .groupBy('p.userId')
+      .getRawMany<{ userId: string; count: number }>();
+    return new Map(rows.map((r) => [r.userId, r.count]));
   }
 }

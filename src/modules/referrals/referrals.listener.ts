@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Referral } from '../../database/entities';
 import { AppEvent, type StreakUpdatedPayload } from '../../events/events';
 import { StreakService } from '../gamification/streak/streak.service';
 
@@ -16,7 +18,8 @@ export class ReferralsListener {
   private readonly logger = new Logger(ReferralsListener.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(Referral)
+    private readonly referrals: Repository<Referral>,
     private readonly streak: StreakService,
   ) {}
 
@@ -25,8 +28,8 @@ export class ReferralsListener {
     if (p.currentStreak !== 1 || p.longestStreak !== 1) return;
 
     try {
-      const referral = await this.prisma.referral.findUnique({
-        where: { referredId: p.userId },
+      const referral = await this.referrals.findOneBy({
+        referredId: p.userId,
       });
       if (!referral || referral.rewardedAt) return;
 
@@ -34,10 +37,7 @@ export class ReferralsListener {
         this.streak.grantFreeze(referral.referrerId),
         this.streak.grantFreeze(referral.referredId),
       ]);
-      await this.prisma.referral.update({
-        where: { id: referral.id },
-        data: { rewardedAt: new Date() },
-      });
+      await this.referrals.update(referral.id, { rewardedAt: new Date() });
     } catch (err) {
       this.logger.error(`onStreakUpdated: ${(err as Error).message}`);
     }

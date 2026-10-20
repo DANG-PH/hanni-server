@@ -1,5 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, Repository } from 'typeorm';
+import {
+  Achievement,
+  UserAchievement,
+  UserSettings,
+} from '../../database/entities';
 import { TITLE_CATALOG, type Title } from './title-catalog';
 
 export interface TitleCatalogItem extends Title {
@@ -12,18 +18,25 @@ export interface TitleCatalogItem extends Title {
 /** Danh hiệu mở theo huy hiệu đã đạt (xem `title-catalog.ts`). */
 @Injectable()
 export class TitleService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(Achievement)
+    private readonly achievements: Repository<Achievement>,
+    @InjectRepository(UserAchievement)
+    private readonly userAchievements: Repository<UserAchievement>,
+    @InjectRepository(UserSettings)
+    private readonly settings: Repository<UserSettings>,
+  ) {}
 
   async getCatalog(userId: string): Promise<{ titles: TitleCatalogItem[] }> {
     const [unlocked, achievements, settings] = await Promise.all([
       this.unlockedCodes(userId),
-      this.prisma.achievement.findMany({
-        where: { code: { in: TITLE_CATALOG.map((t) => t.achievementCode) } },
-        select: { code: true, descriptionVi: true },
+      this.achievements.find({
+        where: { code: In(TITLE_CATALOG.map((t) => t.achievementCode)) },
+        select: { id: true, code: true, descriptionVi: true },
       }),
-      this.prisma.userSettings.findUnique({
+      this.settings.findOne({
         where: { userId },
-        select: { equippedTitle: true },
+        select: { userId: true, equippedTitle: true },
       }),
     ]);
     const conditionOf = new Map(
@@ -52,16 +65,14 @@ export class TitleService {
         );
       }
     }
-    await this.prisma.userSettings.update({
-      where: { userId },
-      data: { equippedTitle: titleKey },
-    });
+    await this.settings.update({ userId }, { equippedTitle: titleKey });
   }
 
   private async unlockedCodes(userId: string): Promise<Set<string>> {
-    const rows = await this.prisma.userAchievement.findMany({
+    const rows = await this.userAchievements.find({
       where: { userId },
-      select: { achievement: { select: { code: true } } },
+      relations: { achievement: true },
+      select: { id: true, achievement: { id: true, code: true } },
     });
     return new Set(rows.map((r) => r.achievement.code));
   }

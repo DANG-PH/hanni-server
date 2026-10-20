@@ -1,4 +1,4 @@
-import { OnboardingGoal } from '@prisma/client';
+import { OnboardingGoal } from '../../../database/enums';
 import {
   IsBoolean,
   IsEnum,

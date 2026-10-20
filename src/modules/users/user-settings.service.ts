@@ -1,19 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import type { UserSettings } from '@prisma/client';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { UserSettings } from '../../database/entities';
+import { findOrCreate } from '../../database/repository.util';
 import type { UpdateSettingsDto } from './dto/users.dto';
 
 @Injectable()
 export class UserSettingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(UserSettings)
+    private readonly settings: Repository<UserSettings>,
+  ) {}
 
   async get(userId: string): Promise<UserSettings> {
-    // upsert phòng khi user cũ chưa có row settings
-    return this.prisma.userSettings.upsert({
-      where: { userId },
-      create: { userId },
-      update: {},
-    });
+    // Tạo dòng mặc định phòng khi user cũ chưa có.
+    return findOrCreate(this.settings, { userId });
   }
 
   async update(userId: string, dto: UpdateSettingsDto): Promise<UserSettings> {
@@ -21,10 +22,7 @@ export class UserSettingsService {
     if (dto.srsScheduler && !['sm2', 'fsrs'].includes(dto.srsScheduler)) {
       delete data.srsScheduler;
     }
-    return this.prisma.userSettings.upsert({
-      where: { userId },
-      create: { userId, ...data },
-      update: data,
-    });
+    await this.settings.upsert({ userId, ...data }, ['userId']);
+    return this.settings.findOneByOrFail({ userId });
   }
 }

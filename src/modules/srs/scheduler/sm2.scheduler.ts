@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ReviewRating, SrsState } from '@prisma/client';
+import { ReviewRating, SrsState } from '../../../database/enums';
 import { endOfLocalDay } from '../../../common/time.util';
 import type {
   Scheduler,

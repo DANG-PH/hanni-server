@@ -8,12 +8,14 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from '@google/genai';
-import { Prisma, type Word } from '@prisma/client';
+import { InjectRepository } from '@nestjs/typeorm';
 import { createHash } from 'node:crypto';
 import { pinyin as toPinyin } from 'pinyin-pro';
+import { IsNull, Repository } from 'typeorm';
 import { localStudyDate } from '../../common/time.util';
 import type { Env } from '../../config/env.validation';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { isUniqueViolation } from '../../database/db-errors';
+import { Lesson, LessonReading, User, Word } from '../../database/entities';
 import { RedisService } from '../../infra/redis/redis.service';
 import { CHAT_MODELS } from '../assistant/gemini-models';
 import { isPremiumActive } from '../premium/premium-plans';
@@ -89,7 +91,11 @@ export class AiToolsService {
 
   constructor(
     config: ConfigService<Env, true>,
-    private readonly prisma: PrismaService,
+    @InjectRepository(Word) private readonly wordRepo: Repository<Word>,
+    @InjectRepository(Lesson) private readonly lessons: Repository<Lesson>,
+    @InjectRepository(LessonReading)
+    private readonly readings: Repository<LessonReading>,
+    @InjectRepository(User) private readonly users: Repository<User>,
     private readonly redis: RedisService,
     private readonly words: WordsService,
   ) {
@@ -112,7 +118,7 @@ export class AiToolsService {
   /** Mẹo nhớ theo âm Hán Việt — tạo 1 lần cho mỗi từ rồi lưu `Word.mnemonicVi`,
    * ai mở trang từ cũng thấy (không tốn thêm lượt nào). */
   async mnemonic(userId: string, wordId: string) {
-    const word = await this.prisma.word.findUnique({ where: { id: wordId } });
+    const word = await this.wordRepo.findOneBy({ id: wordId });
     if (!word) throw new NotFoundException('Không tìm thấy từ');
     if (word.mnemonicVi) return { mnemonicVi: word.mnemonicVi, cached: true };
     const facts = await this.factsOf(word);
@@ -129,13 +135,13 @@ export class AiToolsService {
       );
     }
     // Ai đó vừa tạo xong cùng lúc thì giữ bản đã lưu, không ghi đè.
-    await this.prisma.word.updateMany({
-      where: { id: wordId, mnemonicVi: null },
-      data: { mnemonicVi: text },
-    });
-    const saved = await this.prisma.word.findUnique({
+    await this.wordRepo.update(
+      { id: wordId, mnemonicVi: IsNull() },
+      { mnemonicVi: text },
+    );
+    const saved = await this.wordRepo.findOne({
       where: { id: wordId },
-      select: { mnemonicVi: true },
+      select: { id: true, mnemonicVi: true },
     });
     return { mnemonicVi: saved?.mnemonicVi ?? text, cached: false, usage };
   }
@@ -145,7 +151,7 @@ export class AiToolsService {
     const sentence = normalizeText(raw);
     if (!hasHan(sentence))
       throw new BadRequestException('Câu cần viết bằng chữ Hán');
-    const word = await this.prisma.word.findUnique({ where: { id: wordId } });
+    const word = await this.wordRepo.findOneBy({ id: wordId });
     if (!word) throw new NotFoundException('Không tìm thấy từ');
     const key = `aitools:check:v${PROMPT_VERSION}:${wordId}:${hash(sentence)}`;
     const cached = await this.redis
@@ -225,33 +231,30 @@ export class AiToolsService {
 
   /** Bài đọc của 1 bài học (đã có thì ai cũng đọc được) + từ của bài để tô sáng. */
   async reading(lessonId: string) {
-    const lesson = await this.prisma.lesson.findUnique({
+    const info = await this.lessons.findOne({
       where: { id: lessonId },
-      select: {
-        id: true,
-        title: true,
-        hskLevel: true,
-        orderIndex: true,
-        reading: { select: { title: true, sentences: true, createdAt: true } },
-        words: {
-          orderBy: { lessonOrder: 'asc' },
-          select: {
-            id: true,
-            simplified: true,
-            pinyin: true,
-            hanViet: true,
-            meaningVi: true,
-            audioUrl: true,
-          },
-        },
-      },
+      select: { id: true, title: true, hskLevel: true, orderIndex: true },
     });
-    if (!lesson) throw new NotFoundException('Không tìm thấy bài học');
-    const { reading, words, ...info } = lesson;
+    if (!info) throw new NotFoundException('Không tìm thấy bài học');
+    const [reading, words] = await Promise.all([
+      this.readings.findOneBy({ lessonId }),
+      this.wordRepo.find({
+        where: { lessonId },
+        order: { lessonOrder: 'ASC' },
+        select: {
+          id: true,
+          simplified: true,
+          pinyin: true,
+          hanViet: true,
+          meaningVi: true,
+          audioUrl: true,
+        },
+      }),
+    ]);
     // Bài lưu trước khi bỏ tiền tố "A:" trong câu dịch cũng hiện sạch.
     const sentences = reading
       ? (
-          reading.sentences as unknown as (ReadingSentence & {
+          reading.sentences as (ReadingSentence & {
             pinyin: string;
           })[]
         ).map((s) => ({ ...s, vi: stripSpeaker(s.vi) }))
@@ -291,20 +294,10 @@ export class AiToolsService {
       pinyin: examplePinyin(s.zh, overrides),
     }));
     try {
-      await this.prisma.lessonReading.create({
-        data: {
-          lessonId,
-          title: draft.title,
-          sentences: sentences,
-        },
-      });
+      await this.readings.insert({ lessonId, title: draft.title, sentences });
     } catch (err) {
       // Người khác vừa tạo xong cùng lúc thì giữ bản đã lưu.
-      if (!(
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === 'P2002'
-      ))
-        throw err;
+      if (!isUniqueViolation(err)) throw err;
     }
     return { ...(await this.reading(lessonId)), cached: false, usage };
   }
@@ -346,12 +339,12 @@ export class AiToolsService {
   private async vocab() {
     if (this.vocabCache && Date.now() - this.vocabCache.at < 3_600_000)
       return this.vocabCache;
-    const rows = await this.prisma.word.findMany({
-      select: { simplified: true, pinyin: true, hskLevel: true },
-      orderBy: [
-        { hskLevel: 'asc' },
-        { frequencyRank: { sort: 'asc', nulls: 'last' } },
-      ],
+    const rows = await this.wordRepo.find({
+      select: { id: true, simplified: true, pinyin: true, hskLevel: true },
+      order: {
+        hskLevel: 'ASC',
+        frequencyRank: { direction: 'ASC', nulls: 'LAST' },
+      },
     });
     const chars = new Map<number, Set<string>>();
     const words = new Map<number, string[]>();
@@ -448,9 +441,9 @@ export class AiToolsService {
   }
 
   private async quotaOf(userId: string) {
-    const user = await this.prisma.user.findUniqueOrThrow({
+    const user = await this.users.findOneOrFail({
       where: { id: userId },
-      select: { premiumUntil: true, timezone: true },
+      select: { id: true, premiumUntil: true, timezone: true },
     });
     const premium = isPremiumActive(user.premiumUntil);
     const day = localStudyDate(new Date(), user.timezone, this.cutoffHour);
@@ -465,7 +458,7 @@ export class AiToolsService {
    * ưu tiên khi trùng; chữ đồng tự giữ dòng cấp thấp, thông dụng hơn. */
   private async wordIndex(): Promise<Map<string, IndexWord>> {
     if (this.index && Date.now() - this.indexAt < 3_600_000) return this.index;
-    const rows = await this.prisma.word.findMany({
+    const rows = await this.wordRepo.find({
       select: {
         id: true,
         simplified: true,
@@ -475,10 +468,10 @@ export class AiToolsService {
         meaningVi: true,
         hskLevel: true,
       },
-      orderBy: [
-        { hskLevel: 'asc' },
-        { frequencyRank: { sort: 'asc', nulls: 'last' } },
-      ],
+      order: {
+        hskLevel: 'ASC',
+        frequencyRank: { direction: 'ASC', nulls: 'LAST' },
+      },
     });
     const index = new Map<string, IndexWord>();
     for (const w of rows)

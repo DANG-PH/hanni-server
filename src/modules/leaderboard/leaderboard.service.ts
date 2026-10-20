@@ -1,18 +1,18 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { SrsState } from '@prisma/client';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, Repository } from 'typeorm';
+import { notTestAccount } from '../../common/test-accounts';
+import {
+  Follow,
+  User,
+  UserLessonProgress,
+  UserStreak,
+  UserWordProgress,
+} from '../../database/entities';
+import { SrsState } from '../../database/enums';
 import { TITLE_CATALOG } from '../shop/title-catalog';
-import { NOT_TEST_ACCOUNT } from '../../common/test-accounts';
 
 const LEARNED_INTERVAL_DAYS = 21;
-
-/** Điều kiện "đã thuộc" — khớp với ProgressService. */
-const LEARNED_WHERE = {
-  OR: [
-    { learnedAt: { not: null } },
-    { state: SrsState.REVIEW, intervalDays: { gte: LEARNED_INTERVAL_DAYS } },
-  ],
-};
 
 export type LeaderboardMetric = 'learned' | 'streak' | 'longest' | 'lessons';
 
@@ -38,7 +38,16 @@ export interface LeaderboardRow {
 
 @Injectable()
 export class LeaderboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Follow) private readonly follows: Repository<Follow>,
+    @InjectRepository(UserStreak)
+    private readonly streaks: Repository<UserStreak>,
+    @InjectRepository(UserWordProgress)
+    private readonly wordProgress: Repository<UserWordProgress>,
+    @InjectRepository(UserLessonProgress)
+    private readonly lessonProgress: Repository<UserLessonProgress>,
+  ) {}
 
   metrics() {
     return (Object.keys(METRICS) as LeaderboardMetric[]).map((key) => ({
@@ -63,9 +72,9 @@ export class LeaderboardService {
 
     let ranked = await this.rankedPairs(metric);
     if (scope === 'friends' && userId) {
-      const follows = await this.prisma.follow.findMany({
+      const follows = await this.follows.find({
         where: { followerId: userId },
-        select: { followingId: true },
+        select: { id: true, followingId: true },
       });
       const friendIds = new Set([userId, ...follows.map((f) => f.followingId)]);
       ranked = ranked.filter((r) => friendIds.has(r.userId));
@@ -80,25 +89,26 @@ export class LeaderboardService {
     const top = ranked.slice(0, limit);
     const ids = top.map((r) => r.userId);
     const [users, streaks, myFollows] = await Promise.all([
-      this.prisma.user.findMany({
-        where: { id: { in: ids } },
+      this.users.find({
+        where: { id: In(ids) },
+        relations: { settings: true },
         select: {
           id: true,
           displayName: true,
           avatarUrl: true,
-          settings: { select: { equippedTitle: true } },
+          settings: { userId: true, equippedTitle: true },
         },
       }),
-      this.prisma.userStreak.findMany({
-        where: { userId: { in: ids } },
+      this.streaks.find({
+        where: { userId: In(ids) },
         select: { userId: true, currentStreak: true },
       }),
       userId
-        ? this.prisma.follow.findMany({
-            where: { followerId: userId, followingId: { in: ids } },
-            select: { followingId: true },
+        ? this.follows.find({
+            where: { followerId: userId, followingId: In(ids) },
+            select: { id: true, followingId: true },
           })
-        : ([] as { followingId: string }[]),
+        : Promise.resolve([] as Follow[]),
     ]);
     const uMap = new Map(users.map((u) => [u.id, u]));
     const sMap = new Map(streaks.map((s) => [s.userId, s.currentStreak]));
@@ -129,35 +139,45 @@ export class LeaderboardService {
     metric: LeaderboardMetric,
   ): Promise<{ userId: string; value: number }[]> {
     if (metric === 'learned') {
-      const grouped = await this.prisma.userWordProgress.groupBy({
-        by: ['userId'],
-        where: { ...LEARNED_WHERE, user: NOT_TEST_ACCOUNT },
-        _count: true,
-        orderBy: { _count: { userId: 'desc' } },
-      });
-      return grouped.map((g) => ({ userId: g.userId, value: g._count }));
+      // Số từ "đã thuộc" mỗi người — cùng định nghĩa với ProgressService.
+      return this.wordProgress
+        .createQueryBuilder('p')
+        .innerJoin('p.user', 'u')
+        .select('p.userId', 'userId')
+        .addSelect('COUNT(*)::int', 'value')
+        .where(
+          '(p.learnedAt IS NOT NULL OR (p.state = :review AND p.intervalDays >= :days))',
+          { review: SrsState.REVIEW, days: LEARNED_INTERVAL_DAYS },
+        )
+        .andWhere(notTestAccount('u'))
+        .groupBy('p.userId')
+        .orderBy('COUNT(*)', 'DESC')
+        .getRawMany<{ userId: string; value: number }>();
     }
 
     if (metric === 'lessons') {
-      const grouped = await this.prisma.userLessonProgress.groupBy({
-        by: ['userId'],
-        where: { completedAt: { not: null }, user: NOT_TEST_ACCOUNT },
-        _count: true,
-        orderBy: { _count: { userId: 'desc' } },
-      });
-      return grouped.map((g) => ({ userId: g.userId, value: g._count }));
+      return this.lessonProgress
+        .createQueryBuilder('p')
+        .innerJoin('p.user', 'u')
+        .select('p.userId', 'userId')
+        .addSelect('COUNT(*)::int', 'value')
+        .where('p.completedAt IS NOT NULL')
+        .andWhere(notTestAccount('u'))
+        .groupBy('p.userId')
+        .orderBy('COUNT(*)', 'DESC')
+        .getRawMany<{ userId: string; value: number }>();
     }
 
     // streak / longest
     const field = metric === 'streak' ? 'currentStreak' : 'longestStreak';
-    const streaks = await this.prisma.userStreak.findMany({
-      where: { [field]: { gt: 0 }, user: NOT_TEST_ACCOUNT },
-      select: { userId: true, currentStreak: true, longestStreak: true },
-      orderBy: { [field]: 'desc' },
-    });
-    return streaks.map((s) => ({
-      userId: s.userId,
-      value: metric === 'streak' ? s.currentStreak : s.longestStreak,
-    }));
+    return this.streaks
+      .createQueryBuilder('s')
+      .innerJoin('s.user', 'u')
+      .select('s.userId', 'userId')
+      .addSelect(`s.${field}`, 'value')
+      .where(`s.${field} > 0`)
+      .andWhere(notTestAccount('u'))
+      .orderBy(`s.${field}`, 'DESC')
+      .getRawMany<{ userId: string; value: number }>();
   }
 }

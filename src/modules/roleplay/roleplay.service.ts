@@ -8,11 +8,18 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from '@google/genai';
 import type { Content } from '@google/genai';
-import { ChatRole } from '@prisma/client';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, MoreThanOrEqual, Repository } from 'typeorm';
+import {
+  RoleplayMessage,
+  RoleplaySession,
+  User,
+} from '../../database/entities';
+import { ChatRole } from '../../database/enums';
+import { insertAndReturn } from '../../database/repository.util';
 import { pinyin } from 'pinyin-pro';
 import { startOfLocalDayInstant } from '../../common/time.util';
 import type { Env } from '../../config/env.validation';
-import { PrismaService } from '../../infra/prisma/prisma.service';
 import { CHAT_MODELS } from '../assistant/gemini-models';
 import { isPremiumActive } from '../premium/premium-plans';
 import {
@@ -40,7 +47,11 @@ export class RoleplayService {
 
   constructor(
     private readonly config: ConfigService<Env, true>,
-    private readonly prisma: PrismaService,
+    @InjectRepository(RoleplaySession)
+    private readonly sessions: Repository<RoleplaySession>,
+    @InjectRepository(RoleplayMessage)
+    private readonly messages: Repository<RoleplayMessage>,
+    @InjectRepository(User) private readonly users: Repository<User>,
   ) {
     const apiKey = this.config.get('GEMINI_API_KEY', { infer: true });
     this.genAI = apiKey ? new GoogleGenAI({ apiKey }) : null;
@@ -63,12 +74,22 @@ export class RoleplayService {
   }
 
   async listSessions(userId: string) {
-    const sessions = await this.prisma.roleplaySession.findMany({
+    const sessions = await this.sessions.find({
       where: { userId },
-      orderBy: { updatedAt: 'desc' },
+      order: { updatedAt: 'DESC' },
       take: 30,
-      include: { messages: { orderBy: { createdAt: 'desc' }, take: 1 } },
     });
+    // Tin nhắn cuối của mỗi hội thoại (DISTINCT ON: 1 dòng mới nhất mỗi sessionId).
+    const lastMessages = sessions.length
+      ? await this.messages
+          .createQueryBuilder('m')
+          .distinctOn(['m.sessionId'])
+          .where({ sessionId: In(sessions.map((s) => s.id)) })
+          .orderBy('m.sessionId')
+          .addOrderBy('m.createdAt', 'DESC')
+          .getMany()
+      : [];
+    const lastText = new Map(lastMessages.map((m) => [m.sessionId, m.text]));
     return sessions.map((s) => {
       const scenario = ROLEPLAY_SCENARIOS.find(
         (sc) => sc.key === s.scenarioKey,
@@ -79,39 +100,35 @@ export class RoleplayService {
         titleVi: scenario?.titleVi ?? s.scenarioKey,
         persona: scenario?.persona ?? '',
         updatedAt: s.updatedAt,
-        lastMessage: s.messages[0]?.text ?? null,
+        lastMessage: lastText.get(s.id) ?? null,
       };
     });
   }
 
   async getMessages(userId: string, sessionId: string) {
     await this.requireOwnSession(userId, sessionId);
-    return this.prisma.roleplayMessage.findMany({
+    return this.messages.find({
       where: { sessionId },
-      orderBy: { createdAt: 'asc' },
+      order: { createdAt: 'ASC' },
     });
   }
 
   async startSession(userId: string, scenarioKey: string) {
     const scenario = this.scenarioOf(scenarioKey);
-    const session = await this.prisma.roleplaySession.create({
-      data: { userId, scenarioKey },
+    const { identifiers } = await this.sessions.insert({ userId, scenarioKey });
+    const sessionId = identifiers[0].id as string;
+    // Câu mở đầu cố định của tình huống — vào là có câu chào ngay, không cần gọi AI.
+    const message = await insertAndReturn(this.messages, {
+      sessionId,
+      role: ChatRole.MODEL,
+      text: scenario.openingLineZh,
+      pinyin: this.pinyinOf(scenario.openingLineZh),
     });
-    const message = await this.prisma.roleplayMessage.create({
-      data: {
-        sessionId: session.id,
-        role: ChatRole.MODEL,
-        text: scenario.openingLineZh,
-        pinyin: this.pinyinOf(scenario.openingLineZh),
-      },
-    });
-    return { sessionId: session.id, message };
+    return { sessionId, message };
   }
 
   async deleteSession(userId: string, sessionId: string): Promise<void> {
-    await this.prisma.roleplaySession.deleteMany({
-      where: { id: sessionId, userId },
-    });
+    await this.sessions.delete({ id: sessionId, userId });
   }
 
   async reply(userId: string, sessionId: string, text: string) {
@@ -125,16 +142,14 @@ export class RoleplayService {
       );
     }
 
-    const history = await this.prisma.roleplayMessage.findMany({
+    const history = await this.messages.find({
       where: { sessionId },
-      orderBy: { createdAt: 'desc' },
+      order: { createdAt: 'DESC' },
       take: HISTORY_LIMIT,
     });
     history.reverse();
 
-    await this.prisma.roleplayMessage.create({
-      data: { sessionId, role: ChatRole.USER, text },
-    });
+    await this.messages.insert({ sessionId, role: ChatRole.USER, text });
 
     const contents: Content[] = [
       ...history.map((h) => ({
@@ -145,18 +160,13 @@ export class RoleplayService {
     ];
 
     const replyText = await this.generateReply(contents, scenario);
-    const saved = await this.prisma.roleplayMessage.create({
-      data: {
-        sessionId,
-        role: ChatRole.MODEL,
-        text: replyText,
-        pinyin: this.pinyinOf(replyText),
-      },
+    const saved = await insertAndReturn(this.messages, {
+      sessionId,
+      role: ChatRole.MODEL,
+      text: replyText,
+      pinyin: this.pinyinOf(replyText),
     });
-    await this.prisma.roleplaySession.update({
-      where: { id: sessionId },
-      data: { updatedAt: new Date() },
-    });
+    await this.sessions.update(sessionId, { updatedAt: new Date() });
     return saved;
   }
 
@@ -176,9 +186,9 @@ export class RoleplayService {
       );
     }
 
-    const history = await this.prisma.roleplayMessage.findMany({
+    const history = await this.messages.find({
       where: { sessionId },
-      orderBy: { createdAt: 'desc' },
+      order: { createdAt: 'DESC' },
       take: HISTORY_LIMIT,
     });
     history.reverse();
@@ -221,9 +231,9 @@ export class RoleplayService {
     const session = await this.requireOwnSession(userId, sessionId);
     const scenario = this.scenarioOf(session.scenarioKey);
 
-    const history = await this.prisma.roleplayMessage.findMany({
+    const history = await this.messages.find({
       where: { sessionId },
-      orderBy: { createdAt: 'asc' },
+      order: { createdAt: 'ASC' },
       take: FEEDBACK_HISTORY_LIMIT,
     });
     const userTurns = history.filter((h) => h.role === ChatRole.USER).length;
@@ -327,9 +337,7 @@ export class RoleplayService {
   }
 
   private async requireOwnSession(userId: string, sessionId: string) {
-    const session = await this.prisma.roleplaySession.findUnique({
-      where: { id: sessionId },
-    });
+    const session = await this.sessions.findOneBy({ id: sessionId });
     if (!session || session.userId !== userId) {
       throw new NotFoundException('Không tìm thấy cuộc hội thoại này');
     }
@@ -339,9 +347,9 @@ export class RoleplayService {
   /** Y hệt `AssistantService.checkDailyAskQuota()` — đếm theo "ngày học"
    * (timezone user + STREAK_DAY_CUTOFF_HOUR), Premium bỏ qua hoàn toàn. */
   private async checkDailyQuota(userId: string): Promise<void> {
-    const user = await this.prisma.user.findUniqueOrThrow({
+    const user = await this.users.findOneOrFail({
       where: { id: userId },
-      select: { premiumUntil: true, timezone: true },
+      select: { id: true, premiumUntil: true, timezone: true },
     });
     if (isPremiumActive(user.premiumUntil)) return;
 
@@ -349,10 +357,10 @@ export class RoleplayService {
       infer: true,
     });
     const since = startOfLocalDayInstant(new Date(), user.timezone, cutoffHour);
-    const usedToday = await this.prisma.roleplayMessage.count({
+    const usedToday = await this.messages.count({
       where: {
         role: ChatRole.USER,
-        createdAt: { gte: since },
+        createdAt: MoreThanOrEqual(since),
         session: { userId },
       },
     });

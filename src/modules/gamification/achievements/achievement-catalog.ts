@@ -1,4 +1,4 @@
-import { AchievementCategory } from '@prisma/client';
+import { AchievementCategory } from '../../../database/enums';
 
 export interface AchievementSeed {
   code: string;

@@ -8,8 +8,8 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { join } from 'node:path';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { validateEnv } from './config/env.validation';
+import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
-import { PrismaModule } from './infra/prisma/prisma.module';
 import { RedisModule } from './infra/redis/redis.module';
 import { AssistantModule } from './modules/assistant/assistant.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -77,7 +77,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
       }),
     }),
 
-    PrismaModule,
+    DatabaseModule,
     RedisModule,
     MailModule,
 

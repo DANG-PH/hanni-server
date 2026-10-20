@@ -4,14 +4,41 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AuthProvider, Prisma, SrsState, type User } from '@prisma/client';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import {
+  DataSource,
+  ILike,
+  In,
+  IsNull,
+  MoreThanOrEqual,
+  Not,
+  Repository,
+} from 'typeorm';
 import type { Env } from '../../config/env.validation';
+import {
+  Account,
+  Follow,
+  User,
+  UserAchievement,
+  UserLessonProgress,
+  UserSettings,
+  UserStreak,
+  UserWordProgress,
+} from '../../database/entities';
+import { AuthProvider, SrsState } from '../../database/enums';
+import { insertIfAbsent, likeEscape } from '../../database/repository.util';
 import { PasswordService } from '../auth/password.service';
-import { PrismaService } from '../../infra/prisma/prisma.service';
 import { TITLE_CATALOG } from '../shop/title-catalog';
 import { isPremiumActive } from '../premium/premium-plans';
+
+/** Người dùng khác hiện trong danh sách: chỉ tên + ảnh (không lộ email…). */
+const person = (u: User) => ({
+  id: u.id,
+  displayName: u.displayName,
+  avatarUrl: u.avatarUrl,
+});
 
 interface CreateUserInput {
   email: string;
@@ -25,7 +52,18 @@ interface CreateUserInput {
 @Injectable()
 export class UsersService {
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectDataSource() private readonly dataSource: DataSource,
+    @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Account) private readonly accounts: Repository<Account>,
+    @InjectRepository(UserStreak)
+    private readonly streaks: Repository<UserStreak>,
+    @InjectRepository(UserWordProgress)
+    private readonly wordProgress: Repository<UserWordProgress>,
+    @InjectRepository(UserLessonProgress)
+    private readonly lessonProgress: Repository<UserLessonProgress>,
+    @InjectRepository(UserAchievement)
+    private readonly userAchievements: Repository<UserAchievement>,
+    @InjectRepository(Follow) private readonly follows: Repository<Follow>,
     private readonly config: ConfigService<Env, true>,
     private readonly password: PasswordService,
   ) {}
@@ -36,7 +74,7 @@ export class UsersService {
     currentPassword: string | undefined,
     newPassword: string,
   ): Promise<{ ok: true }> {
-    const user = await this.prisma.user.findUnique({ where: { id } });
+    const user = await this.users.findOneBy({ id });
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
     if (user.passwordHash) {
       const ok = await this.password.verify(
@@ -46,35 +84,31 @@ export class UsersService {
       if (!ok) throw new BadRequestException('Mật khẩu hiện tại không đúng');
     }
     const hash = await this.password.hash(newPassword);
-    await this.prisma.user.update({
-      where: { id },
-      data: { passwordHash: hash },
-    });
+    await this.users.update(id, { passwordHash: hash });
     return { ok: true };
   }
 
   findByEmail(email: string): Promise<User | null> {
-    return this.prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-    });
+    return this.users.findOneBy({ email: email.toLowerCase() });
   }
 
   findById(id: string): Promise<User | null> {
-    return this.prisma.user.findUnique({ where: { id } });
+    return this.users.findOneBy({ id });
   }
 
   async getProfile(id: string) {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.users.findOne({
       where: { id },
-      include: {
-        settings: true,
-        streak: true,
-        accounts: { select: { provider: true } },
-      },
+      relations: { settings: true, streak: true, accounts: true },
     });
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
-    const { passwordHash, ...safe } = user;
-    return { ...safe, hasPassword: Boolean(passwordHash) };
+    const { passwordHash, accounts, ...safe } = user;
+    return {
+      ...safe,
+      // Chỉ cho biết đã liên kết nhà cung cấp nào (không trả token OAuth).
+      accounts: accounts.map((a) => ({ provider: a.provider })),
+      hasPassword: Boolean(passwordHash),
+    };
   }
 
   /** Hồ sơ công khai xem được bởi người khác — CHỈ trả field an toàn để lộ
@@ -94,64 +128,53 @@ export class UsersService {
       followers,
       following,
     ] = await Promise.all([
-      this.prisma.user.findUnique({
+      this.users.findOne({
         where: { id: targetId },
+        relations: { settings: true },
         select: {
           id: true,
           displayName: true,
           avatarUrl: true,
           createdAt: true,
           premiumUntil: true,
-          settings: { select: { equippedTitle: true } },
+          settings: { userId: true, equippedTitle: true },
         },
       }),
-      this.prisma.userStreak.findUnique({ where: { userId: targetId } }),
-      this.prisma.userWordProgress.count({
-        where: {
-          userId: targetId,
-          OR: [
-            { learnedAt: { not: null } },
-            { state: SrsState.REVIEW, intervalDays: { gte: 21 } },
-          ],
-        },
-      }),
-      this.prisma.userLessonProgress.count({
-        where: { userId: targetId, completedAt: { not: null } },
-      }),
-      this.prisma.userAchievement.findMany({
-        where: { userId: targetId },
-        include: { achievement: true },
-        orderBy: { unlockedAt: 'desc' },
-      }),
-      this.prisma.follow.count({ where: { followingId: targetId } }),
-      this.prisma.follow.count({ where: { followerId: targetId } }),
-      this.prisma.follow.findUnique({
-        where: {
-          followerId_followingId: {
-            followerId: viewerId,
-            followingId: targetId,
+      this.streaks.findOneBy({ userId: targetId }),
+      // Từ "đã thuộc" — cùng định nghĩa với bảng xếp hạng.
+      this.wordProgress.count({
+        where: [
+          { userId: targetId, learnedAt: Not(IsNull()) },
+          {
+            userId: targetId,
+            state: SrsState.REVIEW,
+            intervalDays: MoreThanOrEqual(21),
           },
-        },
+        ],
       }),
-      this.prisma.follow.findMany({
+      this.lessonProgress.countBy({
+        userId: targetId,
+        completedAt: Not(IsNull()),
+      }),
+      this.userAchievements.find({
+        where: { userId: targetId },
+        relations: { achievement: true },
+        order: { unlockedAt: 'DESC' },
+      }),
+      this.follows.countBy({ followingId: targetId }),
+      this.follows.countBy({ followerId: targetId }),
+      this.follows.existsBy({ followerId: viewerId, followingId: targetId }),
+      this.follows.find({
         where: { followingId: targetId },
         take: 30,
-        orderBy: { createdAt: 'desc' },
-        select: {
-          follower: {
-            select: { id: true, displayName: true, avatarUrl: true },
-          },
-        },
+        order: { createdAt: 'DESC' },
+        relations: { follower: true },
       }),
-      this.prisma.follow.findMany({
+      this.follows.find({
         where: { followerId: targetId },
         take: 30,
-        orderBy: { createdAt: 'desc' },
-        select: {
-          following: {
-            select: { id: true, displayName: true, avatarUrl: true },
-          },
-        },
+        order: { createdAt: 'DESC' },
+        relations: { following: true },
       }),
     ]);
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
@@ -178,10 +201,10 @@ export class UsersService {
       })),
       followerCount,
       followingCount,
-      isFollowing: Boolean(isFollowing),
+      isFollowing,
       isMe: targetId === viewerId,
-      followers: followers.map((f) => f.follower),
-      following: following.map((f) => f.following),
+      followers: followers.map((f) => person(f.follower)),
+      following: following.map((f) => person(f.following)),
     };
   }
 
@@ -197,30 +220,30 @@ export class UsersService {
         query,
       );
 
-    const users = await this.prisma.user.findMany({
-      where: {
-        AND: [
-          { id: { not: viewerId } },
-          isUuid
-            ? { id: query }
-            : { displayName: { contains: query, mode: 'insensitive' } },
-        ],
-      },
+    if (isUuid && query === viewerId) return [];
+
+    const users = await this.users.find({
+      where: isUuid
+        ? { id: query }
+        : {
+            id: Not(viewerId),
+            displayName: ILike(`%${likeEscape(query)}%`),
+          },
       select: { id: true, displayName: true, avatarUrl: true },
-      orderBy: { displayName: 'asc' },
+      order: { displayName: 'ASC' },
       take: 20,
     });
     if (users.length === 0) return [];
 
     const ids = users.map((u) => u.id);
     const [streaks, myFollows] = await Promise.all([
-      this.prisma.userStreak.findMany({
-        where: { userId: { in: ids } },
+      this.streaks.find({
+        where: { userId: In(ids) },
         select: { userId: true, currentStreak: true },
       }),
-      this.prisma.follow.findMany({
-        where: { followerId: viewerId, followingId: { in: ids } },
-        select: { followingId: true },
+      this.follows.find({
+        where: { followerId: viewerId, followingId: In(ids) },
+        select: { id: true, followingId: true },
       }),
     ]);
     const streakMap = new Map(streaks.map((s) => [s.userId, s.currentStreak]));
@@ -246,23 +269,24 @@ export class UsersService {
     });
     const scheduler = this.config.get('SRS_SCHEDULER', { infer: true });
 
-    return this.prisma.user.create({
-      data: {
+    return this.dataSource.transaction(async (db) => {
+      const { identifiers } = await db.insert(User, {
         email: input.email.toLowerCase(),
         displayName: input.displayName,
         passwordHash: input.passwordHash ?? null,
         avatarUrl: input.avatarUrl ?? null,
         timezone: input.timezone ?? defaultTz,
         emailVerifiedAt: input.emailVerified ? new Date() : null,
-        settings: {
-          create: {
-            newCardsPerDay: newPerDay,
-            targetRetention: retention,
-            srsScheduler: scheduler,
-          },
-        },
-        streak: { create: {} },
-      },
+      });
+      const userId = identifiers[0].id as string;
+      await db.insert(UserSettings, {
+        userId,
+        newCardsPerDay: newPerDay,
+        targetRetention: retention,
+        srsScheduler: scheduler,
+      });
+      await db.insert(UserStreak, { userId });
+      return db.findOneByOrFail(User, { id: userId });
     });
   }
 
@@ -286,39 +310,27 @@ export class UsersService {
       scope: data.scope ?? null,
       idToken: data.idToken ?? null,
       tokenType: data.tokenType ?? null,
-    } satisfies Prisma.AccountUpdateInput;
+    };
+    const key = { provider, providerAccountId: data.providerAccountId };
 
-    await this.prisma.account.upsert({
-      where: {
-        provider_providerAccountId: {
-          provider,
-          providerAccountId: data.providerAccountId,
-        },
-      },
-      create: {
-        userId,
-        provider,
-        providerAccountId: data.providerAccountId,
-        ...payload,
-      },
-      update: payload,
+    // Chưa liên kết thì tạo; đã có thì chỉ làm mới token (không đổi chủ tài khoản).
+    const created = await insertIfAbsent(this.accounts, {
+      userId,
+      ...key,
+      ...payload,
     });
+    if (!created) await this.accounts.update(key, payload);
   }
 
   findAccount(provider: AuthProvider, providerAccountId: string) {
-    return this.prisma.account.findUnique({
-      where: {
-        provider_providerAccountId: { provider, providerAccountId },
-      },
-      include: { user: true },
+    return this.accounts.findOne({
+      where: { provider, providerAccountId },
+      relations: { user: true },
     });
   }
 
   async touchLastActive(id: string): Promise<void> {
-    await this.prisma.user.update({
-      where: { id },
-      data: { lastActiveAt: new Date() },
-    });
+    await this.users.update(id, { lastActiveAt: new Date() });
   }
 
   async updateProfile(
@@ -330,7 +342,8 @@ export class UsersService {
       locale?: string;
     },
   ) {
-    const user = await this.prisma.user.update({ where: { id }, data });
+    await this.users.update(id, data);
+    const user = await this.users.findOneByOrFail({ id });
     // eslint-disable-next-line @typescript-eslint/no-unused-vars -- huỷ passwordHash khỏi kết quả trả về
     const { passwordHash, ...safe } = user;
     return safe;
@@ -371,14 +384,14 @@ export class UsersService {
   }
 
   async setPassword(id: string, passwordHash: string): Promise<void> {
-    await this.prisma.user.update({ where: { id }, data: { passwordHash } });
+    await this.users.update(id, { passwordHash });
   }
 
   /** Xoá tài khoản vĩnh viễn — dữ liệu CÁ NHÂN (tiến độ, bình luận, tin
    * nhắn, cài đặt...) bị xoá theo Cascade có sẵn trong schema. Yêu cầu đúng mật khẩu nếu tài khoản có đặt mật khẩu (đăng nhập
    * Google thuần thì bỏ qua vì không có gì để xác minh thêm). */
   async deleteAccount(id: string, password?: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({ where: { id } });
+    const user = await this.users.findOneBy({ id });
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
     if (user.passwordHash) {
       const ok = await this.password.verify(password ?? '', user.passwordHash);
@@ -388,6 +401,7 @@ export class UsersService {
     for (const e of ['png', 'jpg', 'webp']) {
       await rm(join(dir, `${id}.${e}`), { force: true });
     }
-    await this.prisma.user.delete({ where: { id } });
+    // Dữ liệu cá nhân (tiến độ, bình luận, tin nhắn, cài đặt...) xoá theo khoá ngoại ON DELETE CASCADE.
+    await this.users.delete(id);
   }
 }

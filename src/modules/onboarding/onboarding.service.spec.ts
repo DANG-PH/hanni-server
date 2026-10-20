@@ -1,32 +1,41 @@
-import type { PrismaService } from '../../infra/prisma/prisma.service';
+import type { FindOperator, Repository } from 'typeorm';
+import type {
+  Lesson,
+  OnboardingProfile,
+  UserSettings,
+} from '../../database/entities';
 import type { SubmitOnboardingDto } from './dto/onboarding.dto';
 import { OnboardingService } from './onboarding.service';
 
 /** Bài học giả: cấp 1–3, mỗi bài 10 từ (đủ để kiểm tra phép đếm theo khoảng cấp). */
 const LESSONS_PER_LEVEL: Record<number, number> = { 1: 27, 2: 19, 3: 43 };
 
-function fakePrisma() {
-  return {
-    lesson: {
-      findFirst: jest.fn(({ where }: { where: { hskLevel: number } }) =>
-        Promise.resolve({
-          id: `l${where.hskLevel}`,
-          title: `Bài đầu HSK ${where.hskLevel}`,
-        }),
-      ),
-      aggregate: jest.fn(
-        ({ where }: { where: { hskLevel: { gte: number; lte: number } } }) => {
-          let count = 0;
-          for (let lv = where.hskLevel.gte; lv <= where.hskLevel.lte; lv++)
-            count += LESSONS_PER_LEVEL[lv] ?? 0;
-          return Promise.resolve({
-            _count: count,
-            _sum: { wordCount: count * 10 },
-          });
-        },
-      ),
+/** Repository bài học giả: bài đầu của cấp + đếm bài/từ trong khoảng cấp (`Between`). */
+function fakeLessons() {
+  let range: [number, number] = [0, 0];
+  const qb = {
+    select: () => qb,
+    addSelect: () => qb,
+    where: (w: { hskLevel: FindOperator<number> }) => {
+      range = w.hskLevel.value as unknown as [number, number];
+      return qb;
     },
-  } as unknown as PrismaService;
+    getRawOne: () => {
+      let count = 0;
+      for (let lv = range[0]; lv <= range[1]; lv++)
+        count += LESSONS_PER_LEVEL[lv] ?? 0;
+      return Promise.resolve({ lessons: count, words: count * 10 });
+    },
+  };
+  return {
+    findOne: jest.fn(({ where }: { where: { hskLevel: number } }) =>
+      Promise.resolve({
+        id: `l${where.hskLevel}`,
+        title: `Bài đầu HSK ${where.hskLevel}`,
+      }),
+    ),
+    createQueryBuilder: () => qb,
+  } as unknown as Repository<Lesson>;
 }
 
 const base: SubmitOnboardingDto = {
@@ -36,7 +45,11 @@ const base: SubmitOnboardingDto = {
 };
 
 describe('OnboardingService.preview', () => {
-  const service = new OnboardingService(fakePrisma());
+  const service = new OnboardingService(
+    {} as Repository<OnboardingProfile>,
+    {} as Repository<UserSettings>,
+    fakeLessons(),
+  );
 
   it('chưa học → bắt đầu bài 1 HSK 1, không có kế hoạch thi', async () => {
     const { plan, recommendedLevel } = await service.preview({

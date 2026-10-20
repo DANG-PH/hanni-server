@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { convert } from 'pinyin-pro';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { Repository } from 'typeorm';
+import { Word } from '../../database/entities';
 import {
   PREDICTED_TONE,
   TONE_RULE_KEYS,
@@ -51,7 +53,9 @@ const SINGLE = /^([a-zü]+)([1-4])$/;
 export class PinyinService {
   private cache?: Promise<PinyinOverview>;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(Word) private readonly words: Repository<Word>,
+  ) {}
 
   overview() {
     this.cache ??= this.build().catch((err: unknown) => {
@@ -62,8 +66,9 @@ export class PinyinService {
   }
 
   private async build(): Promise<PinyinOverview> {
-    const words = await this.prisma.word.findMany({
+    const words = await this.words.find({
       select: {
+        id: true,
         simplified: true,
         pinyinNumeric: true,
         hanViet: true,
@@ -71,7 +76,7 @@ export class PinyinService {
         hskLevel: true,
         frequencyRank: true,
       },
-      orderBy: [{ hskLevel: 'asc' }, { frequencyRank: 'asc' }],
+      order: { hskLevel: 'ASC', frequencyRank: 'ASC' },
     });
 
     const readings = new Map<string, Set<string>>();

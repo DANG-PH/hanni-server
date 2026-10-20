@@ -18,7 +18,9 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { PrismaClient } from '@prisma/client';
+import { Word } from '../src/database/entities';
+import type { WordPos } from '../src/database/enums';
+import { connect } from './db';
 
 interface SeedWord {
   simplified: string;
@@ -37,12 +39,16 @@ interface SeedWord {
 
 async function main() {
   const apply = process.argv.includes('--apply');
-  const prisma = new PrismaClient();
+  const db = await connect();
+  const wordRepo = db.getRepository(Word);
   const seed = JSON.parse(
-    readFileSync(join(__dirname, '..', 'data', 'processed', 'words.seed.json'), 'utf8'),
+    readFileSync(
+      join(__dirname, '..', 'data', 'processed', 'words.seed.json'),
+      'utf8',
+    ),
   ) as SeedWord[];
 
-  const rows = await prisma.word.findMany({
+  const rows = await wordRepo.find({
     select: {
       id: true,
       simplified: true,
@@ -52,7 +58,9 @@ async function main() {
       meaningVi: true,
     },
   });
-  const byKey = new Map(rows.map((r) => [`${r.simplified}|${r.pinyinNumeric}`, r]));
+  const byKey = new Map(
+    rows.map((r) => [`${r.simplified}|${r.pinyinNumeric}`, r]),
+  );
   const byLevel = new Map<string, typeof rows>();
   for (const r of rows) {
     const k = `${r.simplified}|${r.hskLevel}`;
@@ -79,7 +87,11 @@ async function main() {
     );
     if (cand) {
       used.add(cand.id);
-      fixes.push({ id: cand.id, s: w, old: `${cand.pinyin} (${cand.pinyinNumeric})` });
+      fixes.push({
+        id: cand.id,
+        s: w,
+        old: `${cand.pinyin} (${cand.pinyinNumeric})`,
+      });
     } else {
       inserts.push(w);
     }
@@ -91,31 +103,32 @@ async function main() {
   console.log(`  không đụng tới:       ${rows.length - fixes.length}`);
   console.log('\n--- 12 ca sửa đầu tiên ---');
   for (const f of fixes.slice(0, 12))
-    console.log(`  ${f.s.simplified} HSK${f.s.hskLevel}: ${f.old} -> ${f.s.pinyin} (${f.s.pinyinNumeric})`);
+    console.log(
+      `  ${f.s.simplified} HSK${f.s.hskLevel}: ${f.old} -> ${f.s.pinyin} (${f.s.pinyinNumeric})`,
+    );
   console.log('\n--- 12 từ thêm mới đầu tiên ---');
   for (const i of inserts.slice(0, 12))
-    console.log(`  ${i.simplified} ${i.pinyin} HSK${i.hskLevel}: ${(i.meaningVi ?? '').slice(0, 34)}`);
+    console.log(
+      `  ${i.simplified} ${i.pinyin} HSK${i.hskLevel}: ${(i.meaningVi ?? '').slice(0, 34)}`,
+    );
 
   if (!apply) {
     console.log('\n(chạy thử — thêm --apply để ghi thật)');
-    await prisma.$disconnect();
+    await db.destroy();
     return;
   }
 
   let fixed = 0;
   for (const f of fixes) {
-    // Bắt lỗi TỪNG DÒNG: `@@unique([simplified, pinyinNumeric])` có thể đụng
+    // Bắt lỗi TỪNG DÒNG: unique (simplified, pinyinNumeric) có thể đụng
     // nếu ghép nhầm cặp; hỏng 1 từ không được làm hỏng cả lượt chạy.
     try {
-      await prisma.word.update({
-        where: { id: f.id },
-        data: {
-          pinyin: f.s.pinyin,
-          pinyinNumeric: f.s.pinyinNumeric,
-          meaningVi: f.s.meaningVi ?? null,
-          meaningEn: f.s.meaningEn ?? null,
-          hanViet: f.s.hanViet ?? null,
-        },
+      await wordRepo.update(f.id, {
+        pinyin: f.s.pinyin,
+        pinyinNumeric: f.s.pinyinNumeric,
+        meaningVi: f.s.meaningVi ?? null,
+        meaningEn: f.s.meaningEn ?? null,
+        hanViet: f.s.hanViet ?? null,
       });
       fixed += 1;
     } catch (e) {
@@ -126,26 +139,33 @@ async function main() {
   }
   let added = 0;
   for (const w of inserts) {
-    await prisma.word.create({
-      data: {
+    await wordRepo
+      .insert({
         simplified: w.simplified,
         traditional: w.traditional ?? null,
         pinyin: w.pinyin,
         pinyinNumeric: w.pinyinNumeric,
         hskLevel: w.hskLevel,
-        pos: (w.pos ?? []) as never,
+        pos: (w.pos ?? []) as WordPos[],
         meaningVi: w.meaningVi ?? null,
         meaningEn: w.meaningEn ?? null,
         hanViet: w.hanViet ?? null,
         audioUrl: w.audioUrl ?? null,
         frequencyRank: w.frequencyRank ?? null,
-      },
-    }).then(() => { added += 1; }).catch((e: Error) => {
-      console.log(`  ! không thêm được ${w.simplified} ${w.pinyin}: ${e.message.split('\n')[0]}`);
-    });
+      })
+      .then(() => {
+        added += 1;
+      })
+      .catch((e: Error) => {
+        console.log(
+          `  ! không thêm được ${w.simplified} ${w.pinyin}: ${e.message.split('\n')[0]}`,
+        );
+      });
   }
-  console.log(`\nĐã ghi: ${fixed}/${fixes.length} sửa, ${added}/${inserts.length} thêm mới`);
-  await prisma.$disconnect();
+  console.log(
+    `\nĐã ghi: ${fixed}/${fixes.length} sửa, ${added}/${inserts.length} thêm mới`,
+  );
+  await db.destroy();
 }
 
 main().catch((err) => {

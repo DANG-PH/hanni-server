@@ -6,11 +6,14 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PaymentOrderStatus } from '@prisma/client';
+import { InjectRepository } from '@nestjs/typeorm';
 import { PayOS } from '@payos/node';
 import type { Webhook } from '@payos/node/lib/resources/webhooks/webhook';
+import { Repository } from 'typeorm';
 import type { Env } from '../../config/env.validation';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { PaymentOrder, User } from '../../database/entities';
+import { PaymentOrderStatus } from '../../database/enums';
+import { insertAndReturn } from '../../database/repository.util';
 import { WalletService } from '../wallet/wallet.service';
 import { extendPremiumUntil, PREMIUM_PLANS } from '../premium/premium-plans';
 
@@ -45,7 +48,9 @@ export class PaymentsService {
   private client: PayOS | null = null;
 
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(PaymentOrder)
+    private readonly orders: Repository<PaymentOrder>,
+    @InjectRepository(User) private readonly users: Repository<User>,
     private readonly wallet: WalletService,
     private readonly config: ConfigService<Env, true>,
   ) {}
@@ -81,8 +86,10 @@ export class PaymentsService {
     const client = this.getClient();
     const xuAmount = amountVnd * VND_PER_XU;
 
-    const order = await this.prisma.paymentOrder.create({
-      data: { userId, amountVnd, xuAmount },
+    const order = await insertAndReturn(this.orders, {
+      userId,
+      amountVnd,
+      xuAmount,
     });
 
     const frontendUrl = this.config.get('FRONTEND_URL', { infer: true });
@@ -95,9 +102,8 @@ export class PaymentsService {
         cancelUrl: `${frontendUrl}/account?topup=${order.orderCode}&cancelled=1`,
       });
 
-      await this.prisma.paymentOrder.update({
-        where: { id: order.id },
-        data: { payosPaymentLinkId: link.paymentLinkId },
+      await this.orders.update(order.id, {
+        payosPaymentLinkId: link.paymentLinkId,
       });
 
       return {
@@ -108,9 +114,8 @@ export class PaymentsService {
     } catch (err) {
       // Tạo link thất bại — không để lại đơn PENDING mồ côi không bao giờ
       // được xử lý (người dùng không có cách nào thanh toán cho đơn này).
-      await this.prisma.paymentOrder.update({
-        where: { id: order.id },
-        data: { status: PaymentOrderStatus.CANCELLED },
+      await this.orders.update(order.id, {
+        status: PaymentOrderStatus.CANCELLED,
       });
       this.logger.error(`Tạo payment link payOS thất bại: ${err}`);
       throw new BadRequestException(
@@ -131,14 +136,12 @@ export class PaymentsService {
     if (!plan) throw new BadRequestException('Không tìm thấy gói Premium này');
     const client = this.getClient();
 
-    const order = await this.prisma.paymentOrder.create({
-      data: {
-        userId,
-        amountVnd: plan.priceVnd,
-        xuAmount: 0,
-        kind: 'PREMIUM',
-        premiumPlanKey: planKey,
-      },
+    const order = await insertAndReturn(this.orders, {
+      userId,
+      amountVnd: plan.priceVnd,
+      xuAmount: 0,
+      kind: 'PREMIUM',
+      premiumPlanKey: planKey,
     });
 
     const frontendUrl = this.config.get('FRONTEND_URL', { infer: true });
@@ -151,9 +154,8 @@ export class PaymentsService {
         cancelUrl: `${frontendUrl}/account?premium=${order.orderCode}&cancelled=1`,
       });
 
-      await this.prisma.paymentOrder.update({
-        where: { id: order.id },
-        data: { payosPaymentLinkId: link.paymentLinkId },
+      await this.orders.update(order.id, {
+        payosPaymentLinkId: link.paymentLinkId,
       });
 
       return {
@@ -162,9 +164,8 @@ export class PaymentsService {
         orderCode: order.orderCode,
       };
     } catch (err) {
-      await this.prisma.paymentOrder.update({
-        where: { id: order.id },
-        data: { status: PaymentOrderStatus.CANCELLED },
+      await this.orders.update(order.id, {
+        status: PaymentOrderStatus.CANCELLED,
       });
       this.logger.error(`Tạo payment link payOS (Premium) thất bại: ${err}`);
       throw new BadRequestException(
@@ -178,9 +179,7 @@ export class PaymentsService {
    * thay vì gọi lại API payOS — nhanh hơn, và tránh phụ thuộc thêm 1 lượt
    * gọi mạng ra ngoài chỉ để hiện trạng thái cho FE. */
   async getOrderStatus(userId: string, orderCode: number) {
-    const order = await this.prisma.paymentOrder.findUnique({
-      where: { orderCode },
-    });
+    const order = await this.orders.findOneBy({ orderCode });
     if (!order || order.userId !== userId) {
       throw new NotFoundException('Không tìm thấy đơn nạp');
     }
@@ -195,9 +194,9 @@ export class PaymentsService {
   }
 
   async getHistory(userId: string) {
-    const orders = await this.prisma.paymentOrder.findMany({
+    const orders = await this.orders.find({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
+      order: { createdAt: 'DESC' },
       take: 20,
     });
     return orders.map((o) => ({
@@ -226,8 +225,8 @@ export class PaymentsService {
       return;
     }
 
-    const order = await this.prisma.paymentOrder.findUnique({
-      where: { orderCode: verified.orderCode },
+    const order = await this.orders.findOneBy({
+      orderCode: verified.orderCode,
     });
     if (!order) {
       this.logger.warn(
@@ -246,34 +245,31 @@ export class PaymentsService {
       return;
     }
 
-    // Chuyển PENDING -> PAID bằng updateMany có ĐIỀU KIỆN status: PENDING
+    // Chuyển PENDING -> PAID bằng UPDATE có ĐIỀU KIỆN status = PENDING
     // (atomic ở tầng DB) thay vì đọc-rồi-ghi — payOS xác nhận có gọi lại
     // webhook nhiều lần cho cùng giao dịch, 2 lượt gọi trùng nhau chạy gần
     // như đồng thời đều có thể đọc thấy PENDING trước khi bên nào commit
     // xong PAID (lỗi thật, cộng xu/gia hạn Premium 2 lần cho 1 giao dịch).
-    // `updateMany` với where lọc theo status CHỈ 1 request thắng được điều
-    // kiện này dù chạy song song, `count === 0` nghĩa là request khác đã
+    // UPDATE với where lọc theo status CHỈ 1 request thắng được điều
+    // kiện này dù chạy song song, `affected === 0` nghĩa là request khác đã
     // xử lý xong (hoặc đang xử lý) — bỏ qua an toàn.
-    const claimed = await this.prisma.paymentOrder.updateMany({
-      where: { id: order.id, status: PaymentOrderStatus.PENDING },
-      data: { status: PaymentOrderStatus.PAID, paidAt: new Date() },
-    });
-    if (claimed.count === 0) return;
+    const claimed = await this.orders.update(
+      { id: order.id, status: PaymentOrderStatus.PENDING },
+      { status: PaymentOrderStatus.PAID, paidAt: new Date() },
+    );
+    if (!claimed.affected) return;
 
     try {
       if (order.kind === 'PREMIUM') {
-        const user = await this.prisma.user.findUniqueOrThrow({
+        const user = await this.users.findOneOrFail({
           where: { id: order.userId },
-          select: { premiumUntil: true },
+          select: { id: true, premiumUntil: true },
         });
         const newUntil = extendPremiumUntil(
           user.premiumUntil,
           order.premiumPlanKey!,
         );
-        await this.prisma.user.update({
-          where: { id: order.userId },
-          data: { premiumUntil: newUntil },
-        });
+        await this.users.update(order.userId, { premiumUntil: newUntil });
       } else {
         await this.wallet.credit(order.userId, order.xuAmount, 'topup');
       }

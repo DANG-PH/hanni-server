@@ -1,4 +1,4 @@
-import { WordPos } from '@prisma/client';
+import { WordPos } from '../../../src/database/enums';
 
 /**
  * Mã từ loại tiếng Trung trong đại cương HSK 3.0 → enum WordPos.

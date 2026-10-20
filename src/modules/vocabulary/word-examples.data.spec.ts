@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
- * Soát câu ví dụ Hanni tự soạn (`prisma/seed/data/word-examples-hsk{N}.json`): câu chứa
+ * Soát câu ví dụ Hanni tự soạn (`src/database/seed/data/word-examples-hsk{N}.json`): câu chứa
  * đúng từ cần minh hoạ, mọi chữ Hán nằm trong từ vựng HSK ≤ N (người học cấp N đọc được
  * cả câu — cùng cách soát đề thi thử), phủ đủ từ của cấp, dấu câu đầy đủ.
  * HSK 1 soạn trước khi có luật chữ theo cấp (dùng cả 每, 等, 咖啡…) nên chỉ soát khoá.
@@ -43,7 +43,7 @@ describe.each([1, 2, 3])('câu ví dụ HSK %i', (level) => {
   try {
     entries = JSON.parse(
       readFileSync(
-        join(root, `prisma/seed/data/word-examples-hsk${level}.json`),
+        join(root, `src/database/seed/data/word-examples-hsk${level}.json`),
         'utf8',
       ),
     ) as Entry[];

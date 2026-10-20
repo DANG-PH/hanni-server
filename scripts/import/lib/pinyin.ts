@@ -9,7 +9,7 @@ const VOWELS: Record<string, string[]> = {
   i: ['i', 'ī', 'í', 'ǐ', 'ì', 'i'],
   o: ['o', 'ō', 'ó', 'ǒ', 'ò', 'o'],
   u: ['u', 'ū', 'ú', 'ǔ', 'ù', 'u'],
-  'ü': ['ü', 'ǖ', 'ǘ', 'ǚ', 'ǜ', 'ü'],
+  ü: ['ü', 'ǖ', 'ǘ', 'ǚ', 'ǜ', 'ü'],
 };
 
 /** Vị trí đặt dấu thanh trong 1 âm tiết (quy tắc a>o>e; iu/ui đặt vào chữ sau). */
@@ -40,11 +40,7 @@ function markSyllable(syl: string): string {
 
 /** "ni3 hao3" → "nǐ hǎo" */
 export function numericToDiacritic(numeric: string): string {
-  return numeric
-    .trim()
-    .split(/\s+/)
-    .map(markSyllable)
-    .join(' ');
+  return numeric.trim().split(/\s+/).map(markSyllable).join(' ');
 }
 
 /** Khoá join: chữ thường, thanh nhẹ chuẩn hoá về "5", bỏ khoảng trắng thừa, u: → ü. */

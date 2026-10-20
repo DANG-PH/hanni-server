@@ -1,15 +1,21 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { ArrayContains, ILike, Like, Not, Repository } from 'typeorm';
+import { GrammarPoint } from '../../database/entities';
+import { likeEscape } from '../../database/repository.util';
 
 @Injectable()
 export class GrammarService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(GrammarPoint)
+    private readonly points: Repository<GrammarPoint>,
+  ) {}
 
   /** Danh sách điểm ngữ pháp, lọc theo cấp HSK nếu có. */
   async list(level?: number) {
-    const points = await this.prisma.grammarPoint.findMany({
-      where: level ? { hskLevel: level } : undefined,
-      orderBy: [{ hskLevel: 'asc' }, { orderIndex: 'asc' }],
+    const points = await this.points.find({
+      where: level ? { hskLevel: level } : {},
+      order: { hskLevel: 'ASC', orderIndex: 'ASC' },
       select: {
         slug: true,
         hskLevel: true,
@@ -28,12 +34,13 @@ export class GrammarService {
 
   /** Các cấp HSK đang có điểm ngữ pháp + số lượng mỗi cấp. */
   async levels() {
-    const rows = await this.prisma.grammarPoint.groupBy({
-      by: ['hskLevel'],
-      _count: { _all: true },
-      orderBy: { hskLevel: 'asc' },
-    });
-    return rows.map((r) => ({ level: r.hskLevel, count: r._count._all }));
+    return this.points
+      .createQueryBuilder('point')
+      .select('point.hskLevel', 'level')
+      .addSelect('COUNT(*)::int', 'count')
+      .groupBy('point.hskLevel')
+      .orderBy('point.hskLevel', 'ASC')
+      .getRawMany<{ level: number; count: number }>();
   }
 
   /** Tab "Ngữ pháp" của ô tra từ điển: điểm CÓ giải thích thật mà tên, chữ Hán hay mẫu câu chứa từ
@@ -41,17 +48,17 @@ export class GrammarService {
   async search(raw: string) {
     const q = raw.trim().slice(0, 40);
     if (!q) return [];
-    return this.prisma.grammarPoint.findMany({
-      where: {
-        explanationVi: { not: '' },
-        OR: [
-          { titleZh: { contains: q } },
-          { titleVi: { contains: q, mode: 'insensitive' } },
-          { summaryVi: { contains: q, mode: 'insensitive' } },
-          { patterns: { has: q } },
-        ],
-      },
-      orderBy: [{ hskLevel: 'asc' }, { orderIndex: 'asc' }],
+    const like = `%${likeEscape(q)}%`;
+    const explained = { explanationVi: Not('') };
+    return this.points.find({
+      // Mảng where = HOẶC: khớp tên chữ Hán, tên tiếng Việt, tóm tắt hoặc một mẫu câu.
+      where: [
+        { ...explained, titleZh: Like(like) },
+        { ...explained, titleVi: ILike(like) },
+        { ...explained, summaryVi: ILike(like) },
+        { ...explained, patterns: ArrayContains([q]) },
+      ],
+      order: { hskLevel: 'ASC', orderIndex: 'ASC' },
       select: {
         slug: true,
         hskLevel: true,
@@ -64,9 +71,7 @@ export class GrammarService {
   }
 
   async get(slug: string) {
-    const point = await this.prisma.grammarPoint.findUnique({
-      where: { slug },
-    });
+    const point = await this.points.findOneBy({ slug });
     if (!point) throw new NotFoundException('Không tìm thấy điểm ngữ pháp');
     return point;
   }

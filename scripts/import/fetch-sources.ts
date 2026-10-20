@@ -33,13 +33,36 @@ function main(): void {
   mkdirSync(TMP, { recursive: true });
 
   console.log('↓ clone krmanik/HSK-3.0 …');
-  git('clone', '--depth', '1', 'https://github.com/krmanik/HSK-3.0.git', join(TMP, 'k'));
+  git(
+    'clone',
+    '--depth',
+    '1',
+    'https://github.com/krmanik/HSK-3.0.git',
+    join(TMP, 'k'),
+  );
   const kroot = join(TMP, 'k');
-  cpSync(join(kroot, 'Scripts and data', '新版HSK考试大纲-词汇_cleaned.txt'), join(KRM, 'syllabus.tsv'));
-  cpSync(join(kroot, 'Scripts and data', 'all_cedict.json'), join(KRM, 'all_cedict.json'));
+  cpSync(
+    join(kroot, 'Scripts and data', '新版HSK考试大纲-词汇_cleaned.txt'),
+    join(KRM, 'syllabus.tsv'),
+  );
+  cpSync(
+    join(kroot, 'Scripts and data', 'all_cedict.json'),
+    join(KRM, 'all_cedict.json'),
+  );
   for (const lvl of ['1', '2', '3', '4', '5', '6', '7-9']) {
-    cpSync(join(kroot, 'Scripts and data', 'tsv', `HSK ${lvl}.tsv`), join(KRM, 'words', `HSK_${lvl}.tsv`));
-    cpSync(join(kroot, 'Scripts and data', 'with frequency', `Final-Merged-${lvl}.txt`), join(KRM, 'freq', `Final-Merged-${lvl}.txt`));
+    cpSync(
+      join(kroot, 'Scripts and data', 'tsv', `HSK ${lvl}.tsv`),
+      join(KRM, 'words', `HSK_${lvl}.tsv`),
+    );
+    cpSync(
+      join(
+        kroot,
+        'Scripts and data',
+        'with frequency',
+        `Final-Merged-${lvl}.txt`,
+      ),
+      join(KRM, 'freq', `Final-Merged-${lvl}.txt`),
+    );
   }
   // audio: copy vào assets/audio + ghi manifest
   const audioSrc = join(kroot, 'New HSK (2025)', 'Audio');
@@ -53,7 +76,13 @@ function main(): void {
   console.log(`  ✓ ${words.length} file audio → assets/audio/`);
 
   console.log('↓ clone ph0ngp/CVDICT …');
-  git('clone', '--depth', '1', 'https://github.com/ph0ngp/CVDICT.git', join(TMP, 'c'));
+  git(
+    'clone',
+    '--depth',
+    '1',
+    'https://github.com/ph0ngp/CVDICT.git',
+    join(TMP, 'c'),
+  );
   cpSync(join(TMP, 'c', 'CVDICT.u8'), join(CVD, 'CVDICT.u8'));
 
   // Âm Hán Việt (kVietnamese) — Unihan Database, Unicode Consortium, giấy

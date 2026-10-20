@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, IsNull, Not, Repository } from 'typeorm';
+import { Lesson, Word } from '../../database/entities';
 import { buildChoiceStep, type ChoicePrompt } from './lesson-session.util';
 
 /** Số câu mỗi cấp; client coi là "qua cấp" khi đúng >= PASS_PER_LEVEL. */
@@ -28,19 +30,27 @@ function sample<T>(items: T[], n: number): T[] {
  */
 @Injectable()
 export class PlacementService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(Lesson) private readonly lessons: Repository<Lesson>,
+    @InjectRepository(Word) private readonly words: Repository<Word>,
+  ) {}
 
   async questions() {
-    const levels = await this.prisma.lesson.groupBy({
-      by: ['hskLevel'],
-      orderBy: { hskLevel: 'asc' },
-    });
+    // Các cấp có bài học.
+    const levels = await this.lessons
+      .createQueryBuilder('lesson')
+      .select('lesson.hskLevel', 'hskLevel')
+      .groupBy('lesson.hskLevel')
+      .orderBy('lesson.hskLevel', 'ASC')
+      .getRawMany<{ hskLevel: number }>();
     // Chữ có nhiều mục (đa âm: 好 hǎo HSK1 / hào HSK5) không đưa vào đề: hỏi
     // "好" ở HSK5 mà đáp án là "thích" thì người biết 好 = tốt bị chấm sai.
-    const polyphones = await this.prisma.word.groupBy({
-      by: ['simplified'],
-      having: { simplified: { _count: { gt: 1 } } },
-    });
+    const polyphones = await this.words
+      .createQueryBuilder('word')
+      .select('word.simplified', 'simplified')
+      .groupBy('word.simplified')
+      .having('COUNT(*) > 1')
+      .getRawMany<{ simplified: string }>();
     const excluded = polyphones.map((p) => p.simplified);
     const words: {
       id: string;
@@ -55,15 +65,15 @@ export class PlacementService {
     }[] = [];
 
     for (const { hskLevel } of levels) {
-      const top = await this.prisma.word.findMany({
+      const top = await this.words.find({
         where: {
           hskLevel,
-          simplified: { notIn: excluded },
-          meaningVi: { not: null },
-          audioUrl: { not: null },
-          frequencyRank: { not: null },
+          simplified: Not(In(excluded)),
+          meaningVi: Not(IsNull()),
+          audioUrl: Not(IsNull()),
+          frequencyRank: Not(IsNull()),
         },
-        orderBy: { frequencyRank: 'asc' },
+        order: { frequencyRank: 'ASC' },
         take: TOP_PER_LEVEL,
         select: {
           id: true,

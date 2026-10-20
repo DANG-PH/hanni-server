@@ -6,12 +6,17 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
+import { EntityNotFoundError } from 'typeorm';
+import {
+  isForeignKeyViolation,
+  isInvalidInput,
+  isUniqueViolation,
+} from '../../database/db-errors';
 
 /**
  * Chuẩn hoá mọi lỗi thành JSON `{ statusCode, message, error, path, timestamp }`.
- * Map lỗi Prisma phổ biến (P2002 trùng unique, P2025 không tìm thấy) sang HTTP.
+ * Map lỗi DB phổ biến sang HTTP: trùng unique → 409, không tìm thấy → 404, sai khoá ngoại/dữ liệu → 400.
  */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -36,20 +41,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
         message = (b.message as string | string[]) ?? exception.message;
         error = (b.error as string) ?? exception.name;
       }
-    } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
-      if (exception.code === 'P2002') {
-        status = HttpStatus.CONFLICT;
-        message = 'Dữ liệu đã tồn tại';
-        error = 'Conflict';
-      } else if (exception.code === 'P2025') {
-        status = HttpStatus.NOT_FOUND;
-        message = 'Không tìm thấy dữ liệu';
-        error = 'NotFound';
-      } else {
-        status = HttpStatus.BAD_REQUEST;
-        message = 'Yêu cầu không hợp lệ';
-        error = 'BadRequest';
-      }
+    } else if (isUniqueViolation(exception)) {
+      status = HttpStatus.CONFLICT;
+      message = 'Dữ liệu đã tồn tại';
+      error = 'Conflict';
+    } else if (exception instanceof EntityNotFoundError) {
+      status = HttpStatus.NOT_FOUND;
+      message = 'Không tìm thấy dữ liệu';
+      error = 'NotFound';
+    } else if (isForeignKeyViolation(exception) || isInvalidInput(exception)) {
+      status = HttpStatus.BAD_REQUEST;
+      message = 'Yêu cầu không hợp lệ';
+      error = 'BadRequest';
     }
 
     if (status >= 500) {

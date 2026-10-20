@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { GoalType, OnboardingGoal } from '@prisma/client';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Between, Repository } from 'typeorm';
+import {
+  Lesson,
+  OnboardingProfile,
+  UserSettings,
+} from '../../database/entities';
+import { GoalType, OnboardingGoal } from '../../database/enums';
 import type { SubmitOnboardingDto } from './dto/onboarding.dto';
 
 const GOAL_VI: Record<OnboardingGoal, string> = {
@@ -58,14 +64,20 @@ function startLevelOf(input: PlanInput): number | null {
 
 @Injectable()
 export class OnboardingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(OnboardingProfile)
+    private readonly profiles: Repository<OnboardingProfile>,
+    @InjectRepository(UserSettings)
+    private readonly settings: Repository<UserSettings>,
+    @InjectRepository(Lesson) private readonly lessons: Repository<Lesson>,
+  ) {}
 
   async get(userId: string) {
     const [profile, settings] = await Promise.all([
-      this.prisma.onboardingProfile.findUnique({ where: { userId } }),
-      this.prisma.userSettings.findUnique({
+      this.profiles.findOneBy({ userId }),
+      this.settings.findOne({
         where: { userId },
-        select: { dailyGoalType: true, dailyGoalValue: true },
+        select: { userId: true, dailyGoalType: true, dailyGoalValue: true },
       }),
     ]);
     if (!profile) return null;
@@ -112,11 +124,10 @@ export class OnboardingService {
           }
         : {}),
     };
-    const settings = await this.prisma.userSettings.upsert({
+    await this.settings.upsert({ userId, ...settingsData }, ['userId']);
+    const settings = await this.settings.findOneOrFail({
       where: { userId },
-      create: { userId, ...settingsData },
-      update: settingsData,
-      select: { courseLevel: true },
+      select: { userId: true, courseLevel: true },
     });
 
     const data = {
@@ -129,11 +140,11 @@ export class OnboardingService {
       recommendedLevel: plan.startLevel ?? settings.courseLevel ?? 1,
       recommendationVi: this.buildRecommendation(dto, plan),
     };
-    const profile = await this.prisma.onboardingProfile.upsert({
-      where: { userId },
-      create: { userId, ...data },
-      update: { ...data, completedAt: new Date() },
-    });
+    // Làm lại khảo sát thì ghi đè câu trả lời cũ.
+    await this.profiles.upsert({ userId, ...data, completedAt: new Date() }, [
+      'userId',
+    ]);
+    const profile = await this.profiles.findOneByOrFail({ userId });
     return { ...profile, plan };
   }
 
@@ -148,23 +159,25 @@ export class OnboardingService {
     const examTo = examLevel ? Math.min(examLevel, MAX_COURSE_LEVEL) : null;
     const range =
       startLevel && examTo && examTo >= startLevel
-        ? { gte: startLevel, lte: examTo }
+        ? { from: startLevel, to: examTo }
         : null;
 
     const [firstLesson, totals] = await Promise.all([
       startLevel
-        ? this.prisma.lesson.findFirst({
+        ? this.lessons.findOne({
             where: { hskLevel: startLevel },
-            orderBy: { orderIndex: 'asc' },
+            order: { orderIndex: 'ASC' },
             select: { id: true, title: true },
           })
         : null,
+      // Tổng số bài + số từ từ cấp bắt đầu tới cấp thi.
       range
-        ? this.prisma.lesson.aggregate({
-            where: { hskLevel: range },
-            _count: true,
-            _sum: { wordCount: true },
-          })
+        ? this.lessons
+            .createQueryBuilder('lesson')
+            .select('COUNT(*)::int', 'lessons')
+            .addSelect('SUM(lesson.wordCount)::int', 'words')
+            .where({ hskLevel: Between(range.from, range.to) })
+            .getRawOne<{ lessons: number; words: number | null }>()
         : null,
     ]);
 
@@ -175,8 +188,8 @@ export class OnboardingService {
       exam: examLevel
         ? {
             level: examLevel,
-            lessons: startLevel ? (totals?._count ?? 0) : null,
-            words: startLevel ? (totals?._sum.wordCount ?? 0) : null,
+            lessons: startLevel ? (totals?.lessons ?? 0) : null,
+            words: startLevel ? (totals?.words ?? 0) : null,
             weeksLeft: input.targetDate
               ? Math.max(
                   0,

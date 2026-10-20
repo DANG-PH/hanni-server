@@ -9,13 +9,13 @@
  *
  * Chạy: npx tsx scripts/backfill-hanviet.ts
  */
-import { PrismaClient } from '@prisma/client';
-import { loadWordSeed } from '../prisma/seed/words';
+import { loadWordSeed } from '../src/database/seed/words';
+import { connect } from './db';
 
 const CHUNK = 500;
 
 async function main() {
-  const prisma = new PrismaClient();
+  const db = await connect();
   const all = loadWordSeed();
   if (!all) throw new Error('Không đọc được data/processed/words.seed.json');
 
@@ -36,20 +36,21 @@ async function main() {
       w.pinyinNumeric.toLowerCase(),
       w.hanViet,
     ]);
-    const res: number = await prisma.$executeRawUnsafe(
+    // pg trả [rows, số dòng bị ảnh hưởng] cho câu UPDATE.
+    const [, affected] = await db.query<[unknown[], number]>(
       `UPDATE "Word" AS w SET "hanViet" = v.han_viet
        FROM (VALUES ${values}) AS v(simplified, pinyin_numeric, han_viet)
        WHERE w.simplified = v.simplified AND w."pinyinNumeric" = v.pinyin_numeric`,
-      ...params,
+      params,
     );
-    updated += res;
+    updated += affected;
     console.log(
       `  ... ${Math.min(i + CHUNK, withHanViet.length)}/${withHanViet.length}`,
     );
   }
   console.log(`✓ đã cập nhật hanViet cho ${updated} dòng Word`);
 
-  await prisma.$disconnect();
+  await db.destroy();
 }
 
 main().catch((e) => {

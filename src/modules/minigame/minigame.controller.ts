@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { GameMode } from '@prisma/client';
+import { GameMode } from '../../database/enums';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { OptionalAuth, Public } from '../../common/decorators/public.decorator';
 import type { AuthUser } from '../../common/types';

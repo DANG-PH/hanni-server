@@ -6,11 +6,13 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
 import { GoogleGenAI } from '@google/genai';
 import { pinyin } from 'pinyin-pro';
+import { In, Repository } from 'typeorm';
 import { localStudyDate } from '../../common/time.util';
 import type { Env } from '../../config/env.validation';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { User, UserWordProgress, Word } from '../../database/entities';
 import { RedisService } from '../../infra/redis/redis.service';
 import { CHAT_MODELS } from '../assistant/gemini-models';
 import { isPremiumActive } from '../premium/premium-plans';
@@ -57,7 +59,10 @@ export class ScanService {
 
   constructor(
     config: ConfigService<Env, true>,
-    private readonly prisma: PrismaService,
+    @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Word) private readonly words: Repository<Word>,
+    @InjectRepository(UserWordProgress)
+    private readonly progress: Repository<UserWordProgress>,
     private readonly redis: RedisService,
   ) {
     const apiKey = config.get('GEMINI_API_KEY', { infer: true });
@@ -134,9 +139,9 @@ export class ScanService {
     const saved = new Set(
       ids.length
         ? (
-            await this.prisma.userWordProgress.findMany({
-              where: { userId, wordId: { in: ids } },
-              select: { wordId: true },
+            await this.progress.find({
+              where: { userId, wordId: In(ids) },
+              select: { id: true, wordId: true },
             })
           ).map((p) => p.wordId)
         : [],
@@ -183,9 +188,9 @@ export class ScanService {
   }
 
   private async quotaOf(userId: string) {
-    const user = await this.prisma.user.findUniqueOrThrow({
+    const user = await this.users.findOneOrFail({
       where: { id: userId },
-      select: { premiumUntil: true, timezone: true },
+      select: { id: true, premiumUntil: true, timezone: true },
     });
     const premium = isPremiumActive(user.premiumUntil);
     const day = localStudyDate(new Date(), user.timezone, this.cutoffHour);
@@ -202,7 +207,7 @@ export class ScanService {
    * thấp, thông dụng hơn. */
   private async wordIndex(): Promise<Map<string, ScanWord>> {
     if (this.index && Date.now() - this.indexAt < 3_600_000) return this.index;
-    const words = await this.prisma.word.findMany({
+    const words = await this.words.find({
       select: {
         id: true,
         simplified: true,
@@ -213,10 +218,10 @@ export class ScanService {
         hskLevel: true,
         audioUrl: true,
       },
-      orderBy: [
-        { hskLevel: 'asc' },
-        { frequencyRank: { sort: 'asc', nulls: 'last' } },
-      ],
+      order: {
+        hskLevel: 'ASC',
+        frequencyRank: { direction: 'ASC', nulls: 'LAST' },
+      },
     });
     const index = new Map<string, ScanWord>();
     for (const w of words)

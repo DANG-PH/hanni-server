@@ -20,9 +20,8 @@ jobs:
           cache: "npm"
 
       - run: npm ci
-      # Không có postinstall sinh Prisma Client — phải gọi tay trước khi build.
-      - run: npx prisma generate
       - run: npm run lint
+      - run: npm test
       - run: npm run build
 
       # Giữ lại kết quả build để job deploy dùng luôn, KHÔNG build lại trên VPS.
@@ -105,8 +104,9 @@ jobs:
               echo "package-lock không đổi — bỏ qua cài đặt"
             fi
 
-            npx prisma generate
-            npx prisma migrate deploy
+            # Migration TypeORM (src/database/migrations) từ bản build vừa chép — chạy
+            # TRƯỚC khi khởi động lại; lỗi thì dừng, app cũ vẫn chạy.
+            node dist/src/database/migrate.js
             # `pm2 restart all` sẽ restart cả app của dịch vụ KHÁC trên cùng
             # VPS — chỉ restart đúng app của mình.
             pm2 restart hanni-server --update-env

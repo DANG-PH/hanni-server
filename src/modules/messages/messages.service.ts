@@ -5,20 +5,45 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { pinyin } from 'pinyin-pro';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import {
+  DataSource,
+  In,
+  IsNull,
+  MoreThanOrEqual,
+  Not,
+  Repository,
+} from 'typeorm';
+import {
+  Conversation,
+  DirectMessage,
+  Follow,
+  User,
+} from '../../database/entities';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { PushService } from '../push/push.service';
 import { translateLinesToVi, translateSimple } from '../videos/translate.util';
 
-const USER_SELECT = { id: true, displayName: true, avatarUrl: true } as const;
+/** Người trong hội thoại: chỉ tên + ảnh (không lộ email…). */
+const person = (u: User) => ({
+  id: u.id,
+  displayName: u.displayName,
+  avatarUrl: u.avatarUrl,
+});
 
 @Injectable()
 export class MessagesService {
   private readonly logger = new Logger(MessagesService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectDataSource() private readonly dataSource: DataSource,
+    @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Follow) private readonly follows: Repository<Follow>,
+    @InjectRepository(Conversation)
+    private readonly conversations: Repository<Conversation>,
+    @InjectRepository(DirectMessage)
+    private readonly messages: Repository<DirectMessage>,
     private readonly gateway: NotificationsGateway,
     private readonly push: PushService,
   ) {}
@@ -38,94 +63,102 @@ export class MessagesService {
     if (userId === otherUserId) {
       throw new ForbiddenException('Không thể tự nhắn tin cho chính mình');
     }
-    const other = await this.prisma.user.findUnique({
-      where: { id: otherUserId },
-      select: { id: true },
-    });
-    if (!other) throw new NotFoundException('Không tìm thấy người dùng');
+    if (!(await this.users.existsBy({ id: otherUserId })))
+      throw new NotFoundException('Không tìm thấy người dùng');
 
     const [userAId, userBId] = this.pairIds(userId, otherUserId);
-    const existing = await this.prisma.conversation.findUnique({
-      where: { userAId_userBId: { userAId, userBId } },
-      include: {
-        userA: { select: USER_SELECT },
-        userB: { select: USER_SELECT },
-      },
+    const existing = await this.conversations.findOne({
+      where: { userAId, userBId },
+      relations: { userA: true, userB: true },
     });
     if (existing) return this.toSummary(existing, userId);
 
-    const connected = await this.prisma.follow.findFirst({
-      where: {
-        OR: [
-          { followerId: userId, followingId: otherUserId },
-          { followerId: otherUserId, followingId: userId },
-        ],
-      },
-    });
+    // Theo dõi nhau 1 trong 2 chiều là đủ "kết nối".
+    const connected = await this.follows.existsBy([
+      { followerId: userId, followingId: otherUserId },
+      { followerId: otherUserId, followingId: userId },
+    ]);
     if (!connected) {
       throw new ForbiddenException(
         'Cần theo dõi nhau trước khi bắt đầu nhắn tin',
       );
     }
 
-    const conversation = await this.prisma.conversation.create({
-      data: { userAId, userBId },
-      include: {
-        userA: { select: USER_SELECT },
-        userB: { select: USER_SELECT },
-      },
+    const { identifiers } = await this.conversations.insert({
+      userAId,
+      userBId,
+    });
+    const conversation = await this.conversations.findOneOrFail({
+      where: { id: identifiers[0].id as string },
+      relations: { userA: true, userB: true },
     });
     return this.toSummary(conversation, userId);
   }
 
   /** Danh sách hội thoại — kèm tin nhắn cuối + số chưa đọc, mới nhất trước. */
   async listConversations(userId: string) {
-    const rows = await this.prisma.conversation.findMany({
-      where: { OR: [{ userAId: userId }, { userBId: userId }] },
-      orderBy: { updatedAt: 'desc' },
-      include: {
-        userA: { select: USER_SELECT },
-        userB: { select: USER_SELECT },
-        messages: { orderBy: { createdAt: 'desc' }, take: 1 },
-      },
+    const rows = await this.conversations.find({
+      where: [{ userAId: userId }, { userBId: userId }],
+      order: { updatedAt: 'DESC' },
+      relations: { userA: true, userB: true },
     });
-    const unreadCounts = await this.prisma.directMessage.groupBy({
-      by: ['conversationId'],
-      where: {
-        conversation: { OR: [{ userAId: userId }, { userBId: userId }] },
-        senderId: { not: userId },
-        readAt: null,
-      },
-      _count: { _all: true },
-    });
+    const ids = rows.map((c) => c.id);
+    const [lastMessages, unreadCounts] = ids.length
+      ? await Promise.all([
+          // Tin nhắn cuối của mỗi hội thoại (DISTINCT ON: 1 dòng mới nhất mỗi hội thoại).
+          this.messages
+            .createQueryBuilder('m')
+            .distinctOn(['m.conversationId'])
+            .where({ conversationId: In(ids) })
+            .orderBy('m.conversationId')
+            .addOrderBy('m.createdAt', 'DESC')
+            .getMany(),
+          // Số tin CHƯA ĐỌC người kia gửi, theo từng hội thoại.
+          this.messages
+            .createQueryBuilder('m')
+            .select('m.conversationId', 'conversationId')
+            .addSelect('COUNT(*)::int', 'count')
+            .where({
+              conversationId: In(ids),
+              senderId: Not(userId),
+              readAt: IsNull(),
+            })
+            .groupBy('m.conversationId')
+            .getRawMany<{ conversationId: string; count: number }>(),
+        ])
+      : [[], []];
+    const lastBy = new Map(lastMessages.map((m) => [m.conversationId, m]));
     const unreadMap = new Map(
-      unreadCounts.map((u) => [u.conversationId, u._count._all]),
+      unreadCounts.map((u) => [u.conversationId, u.count]),
     );
 
-    return rows.map((c) => ({
-      ...this.toSummary(c, userId),
-      lastMessage: c.messages[0]
-        ? {
-            content: c.messages[0].content,
-            createdAt: c.messages[0].createdAt,
-            mine: c.messages[0].senderId === userId,
-          }
-        : null,
-      unreadCount: unreadMap.get(c.id) ?? 0,
-    }));
+    return rows.map((c) => {
+      const last = lastBy.get(c.id);
+      return {
+        ...this.toSummary(c, userId),
+        lastMessage: last
+          ? {
+              content: last.content,
+              createdAt: last.createdAt,
+              mine: last.senderId === userId,
+            }
+          : null,
+        unreadCount: unreadMap.get(c.id) ?? 0,
+      };
+    });
   }
 
   async getMessages(userId: string, conversationId: string, page = 1) {
     await this.requireMember(userId, conversationId);
     const pageSize = 30;
     const [items, total] = await Promise.all([
-      this.prisma.directMessage.findMany({
+      this.messages.find({
         where: { conversationId },
-        orderBy: { createdAt: 'desc' },
+        order: { createdAt: 'DESC' },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-      this.prisma.directMessage.count({ where: { conversationId } }),
+      this.messages.countBy({ conversationId }),
     ]);
     return {
       items: items.reverse(),
@@ -143,15 +176,18 @@ export class MessagesService {
         ? conversation.userBId
         : conversation.userAId;
 
-    const [message] = await this.prisma.$transaction([
-      this.prisma.directMessage.create({
-        data: { conversationId, senderId: userId, content },
-      }),
-      this.prisma.conversation.update({
-        where: { id: conversationId },
-        data: { updatedAt: new Date() },
-      }),
-    ]);
+    // Lưu tin + đẩy hội thoại lên đầu danh sách, trong 1 transaction.
+    const message = await this.dataSource.transaction(async (db) => {
+      const { identifiers } = await db.insert(DirectMessage, {
+        conversationId,
+        senderId: userId,
+        content,
+      });
+      await db.update(Conversation, conversationId, { updatedAt: new Date() });
+      return db.findOneByOrFail(DirectMessage, {
+        id: identifiers[0].id as string,
+      });
+    });
 
     this.gateway.emitToUser(otherUserId, 'message:new', {
       conversationId,
@@ -173,9 +209,9 @@ export class MessagesService {
     content: string,
   ): Promise<void> {
     try {
-      const sender = await this.prisma.user.findUnique({
+      const sender = await this.users.findOne({
         where: { id: senderId },
-        select: { displayName: true },
+        select: { id: true, displayName: true },
       });
       const preview =
         content.length > 80 ? `${content.slice(0, 80)}…` : content;
@@ -196,13 +232,13 @@ export class MessagesService {
     conversationId: string,
   ): Promise<{ ok: true }> {
     const conversation = await this.requireMember(userId, conversationId);
-    const { count } = await this.prisma.directMessage.updateMany({
-      where: { conversationId, senderId: { not: userId }, readAt: null },
-      data: { readAt: new Date() },
-    });
+    const { affected } = await this.messages.update(
+      { conversationId, senderId: Not(userId), readAt: IsNull() },
+      { readAt: new Date() },
+    );
     // Chỉ báo cho người gửi khi thực sự có tin MỚI vừa được đánh dấu đã
     // xem — tránh bắn sự kiện thừa mỗi lần mở lại hội thoại cũ.
-    if (count > 0) {
+    if (affected) {
       const otherUserId =
         conversation.userAId === userId
           ? conversation.userBId
@@ -254,12 +290,13 @@ export class MessagesService {
   }
 
   async unreadCount(userId: string): Promise<{ count: number }> {
-    const count = await this.prisma.directMessage.count({
-      where: {
-        conversation: { OR: [{ userAId: userId }, { userBId: userId }] },
-        senderId: { not: userId },
-        readAt: null,
-      },
+    // Tin người khác gửi cho mình, chưa đọc, ở mọi hội thoại mình tham gia.
+    const unread = { senderId: Not(userId), readAt: IsNull() };
+    const count = await this.messages.count({
+      where: [
+        { ...unread, conversation: { userAId: userId } },
+        { ...unread, conversation: { userBId: userId } },
+      ],
     });
     return { count };
   }
@@ -278,21 +315,18 @@ export class MessagesService {
       messages7d,
       conversationsWithReplies,
     ] = await Promise.all([
-      this.prisma.conversation.count(),
-      this.prisma.directMessage.count(),
-      this.prisma.conversation.count({
-        where: { createdAt: { gte: since7d } },
-      }),
-      this.prisma.directMessage.count({
-        where: { createdAt: { gte: since7d } },
-      }),
-      this.prisma.$queryRaw<{ count: bigint }[]>`
-        SELECT COUNT(*) as count FROM (
+      this.conversations.count(),
+      this.messages.count(),
+      this.conversations.countBy({ createdAt: MoreThanOrEqual(since7d) }),
+      this.messages.countBy({ createdAt: MoreThanOrEqual(since7d) }),
+      // Hội thoại có ít nhất 2 người thật sự nhắn qua lại.
+      this.dataSource.query<{ count: string }[]>(`
+        SELECT COUNT(*) AS count FROM (
           SELECT "conversationId" FROM "DirectMessage"
           GROUP BY "conversationId"
           HAVING COUNT(DISTINCT "senderId") >= 2
         ) t
-      `,
+      `),
     ]);
     return {
       totalConversations,
@@ -304,8 +338,8 @@ export class MessagesService {
   }
 
   private async requireMember(userId: string, conversationId: string) {
-    const conversation = await this.prisma.conversation.findUnique({
-      where: { id: conversationId },
+    const conversation = await this.conversations.findOneBy({
+      id: conversationId,
     });
     if (!conversation) throw new NotFoundException('Không tìm thấy hội thoại');
     if (conversation.userAId !== userId && conversation.userBId !== userId) {
@@ -314,18 +348,8 @@ export class MessagesService {
     return conversation;
   }
 
-  private toSummary(
-    c: {
-      id: string;
-      userAId: string;
-      userBId: string;
-      updatedAt: Date;
-      userA: { id: string; displayName: string; avatarUrl: string | null };
-      userB: { id: string; displayName: string; avatarUrl: string | null };
-    },
-    viewerId: string,
-  ) {
+  private toSummary(c: Conversation, viewerId: string) {
     const other = c.userAId === viewerId ? c.userB : c.userA;
-    return { id: c.id, updatedAt: c.updatedAt, otherUser: other };
+    return { id: c.id, updatedAt: c.updatedAt, otherUser: person(other) };
   }
 }

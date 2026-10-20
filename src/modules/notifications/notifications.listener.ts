@@ -1,13 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { NotificationType } from '@prisma/client';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { VideoComment } from '../../database/entities';
+import { NotificationType } from '../../database/enums';
 import {
   AppEvent,
   type AchievementUnlockedPayload,
   type CommentCreatedPayload,
   type UserFollowedPayload,
 } from '../../events/events';
-import { PrismaService } from '../../infra/prisma/prisma.service';
 import { NotificationsService } from './notifications.service';
 
 @Injectable()
@@ -15,7 +17,8 @@ export class NotificationsListener {
   private readonly logger = new Logger(NotificationsListener.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(VideoComment)
+    private readonly comments: Repository<VideoComment>,
     private readonly notifications: NotificationsService,
   ) {}
 
@@ -23,9 +26,9 @@ export class NotificationsListener {
   async onCommentCreated(p: CommentCreatedPayload): Promise<void> {
     try {
       if (p.parentId) {
-        const parent = await this.prisma.videoComment.findUnique({
+        const parent = await this.comments.findOne({
           where: { id: p.parentId },
-          select: { userId: true },
+          select: { id: true, userId: true },
         });
         if (parent) {
           await this.notifications.create({

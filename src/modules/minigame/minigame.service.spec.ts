@@ -1,5 +1,11 @@
-import { GameMode } from '@prisma/client';
-import type { PrismaService } from '../../infra/prisma/prisma.service';
+import type { Repository } from 'typeorm';
+import type {
+  MinigameSession,
+  User,
+  UserWordProgress,
+  Word,
+} from '../../database/entities';
+import { GameMode } from '../../database/enums';
 import type { RedisService } from '../../infra/redis/redis.service';
 import type { WalletService } from '../wallet/wallet.service';
 import { MinigameService } from './minigame.service';
@@ -14,10 +20,10 @@ const WORDS = Array.from({ length: 12 }, (_, i) => ({
 
 function setup() {
   const store = new Map<string, unknown>();
-  const prisma = {
-    userWordProgress: { findMany: jest.fn() },
-    word: { findMany: jest.fn(() => Promise.resolve(WORDS)) },
-    minigameSession: { create: jest.fn() },
+  const repos = {
+    progress: { find: jest.fn() },
+    words: { find: jest.fn(() => Promise.resolve(WORDS)) },
+    sessions: { insert: jest.fn() },
   };
   const redis = {
     setJson: jest.fn((key: string, value: unknown) => {
@@ -32,19 +38,22 @@ function setup() {
   };
   const wallet = { credit: jest.fn() };
   const service = new MinigameService(
-    prisma as unknown as PrismaService,
+    repos.sessions as unknown as Repository<MinigameSession>,
+    repos.words as unknown as Repository<Word>,
+    repos.progress as unknown as Repository<UserWordProgress>,
+    {} as Repository<User>,
     wallet as unknown as WalletService,
     redis as unknown as RedisService,
   );
-  return { service, prisma, redis, wallet, store };
+  return { service, repos, redis, wallet, store };
 }
 
 describe('MinigameService — khách chơi không cần tài khoản', () => {
   it('bắt đầu + nộp bài: chấm theo đáp án đã lưu, không xu, không ghi DB', async () => {
-    const { service, prisma, wallet, store } = setup();
+    const { service, repos, wallet, store } = setup();
     const started = await service.start(null, GameMode.TRANSLATE);
-    expect(prisma.userWordProgress.findMany).not.toHaveBeenCalled();
-    expect(prisma.minigameSession.create).not.toHaveBeenCalled();
+    expect(repos.progress.find).not.toHaveBeenCalled();
+    expect(repos.sessions.insert).not.toHaveBeenCalled();
     expect(store.size).toBe(1);
     if (!('questions' in started)) throw new Error('phải là trắc nghiệm');
     // Không lộ đáp án ra client.

@@ -1,12 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { MoreThanOrEqual, Repository } from 'typeorm';
 import type { Env } from '../../config/env.validation';
+import {
+  DailyQuestClaim,
+  PracticeAttempt,
+  QuizAttempt,
+  ReviewLog,
+  User,
+} from '../../database/entities';
 import {
   isoDateToUtcDate,
   localStudyDate,
   startOfLocalDayInstant,
 } from '../../common/time.util';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { insertIfAbsent } from '../../database/repository.util';
 import { applyPremiumMultiplier } from '../premium/premium-plans';
 import { WalletService } from '../wallet/wallet.service';
 import {
@@ -43,15 +52,23 @@ export interface TodayQuests {
 @Injectable()
 export class QuestsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(DailyQuestClaim)
+    private readonly claims: Repository<DailyQuestClaim>,
+    @InjectRepository(ReviewLog)
+    private readonly reviewLogs: Repository<ReviewLog>,
+    @InjectRepository(QuizAttempt)
+    private readonly quizAttempts: Repository<QuizAttempt>,
+    @InjectRepository(PracticeAttempt)
+    private readonly practiceAttempts: Repository<PracticeAttempt>,
     private readonly wallet: WalletService,
     private readonly config: ConfigService<Env, true>,
   ) {}
 
   async getToday(userId: string): Promise<TodayQuests> {
-    const user = await this.prisma.user.findUniqueOrThrow({
+    const user = await this.users.findOneOrFail({
       where: { id: userId },
-      select: { timezone: true, premiumUntil: true },
+      select: { id: true, timezone: true, premiumUntil: true },
     });
     const cutoffHour = this.config.get('STREAK_DAY_CUTOFF_HOUR', {
       infer: true,
@@ -67,9 +84,9 @@ export class QuestsService {
       templates.map((t) => t.key),
       dayStart,
     );
-    const claims = await this.prisma.dailyQuestClaim.findMany({
+    const claims = await this.claims.find({
       where: { userId, localDate },
-      select: { questKey: true },
+      select: { id: true, questKey: true },
     });
     const claimedKeys = new Set(claims.map((c) => c.questKey));
 
@@ -135,21 +152,21 @@ export class QuestsService {
   }
 
   /** Ghi nhận đã nhận thưởng TRƯỚC khi cộng xu — nếu 2 request cùng lúc thì
-   * ràng buộc `@@unique([userId, localDate, questKey])` sẽ chặn request thứ
-   * 2 (bắt lỗi P2002), tránh cộng xu 2 lần. */
+   * ràng buộc unique (userId, localDate, questKey) sẽ chặn request thứ 2
+   * (lỗi trùng khoá), tránh cộng xu 2 lần. */
   private async tryClaim(
     userId: string,
     localDate: Date,
     questKey: string,
     xu: number,
   ): Promise<boolean> {
-    try {
-      await this.prisma.dailyQuestClaim.create({
-        data: { userId, localDate, questKey, xu },
-      });
-    } catch {
-      return false; // đã tồn tại (race condition) -> không cộng xu nữa
-    }
+    const claimed = await insertIfAbsent(this.claims, {
+      userId,
+      localDate,
+      questKey,
+      xu,
+    });
+    if (!claimed) return false; // đã nhận rồi (2 request cùng lúc) -> không cộng xu nữa
     await this.wallet.credit(userId, xu, `daily_quest:${questKey}`);
     return true;
   }
@@ -173,27 +190,24 @@ export class QuestsService {
     key: QuestKey,
     since: Date,
   ): Promise<number> {
+    const fromToday = MoreThanOrEqual(since);
     switch (key) {
       case 'review_words':
-        return this.prisma.reviewLog.count({
-          where: { userId, reviewedAt: { gte: since } },
-        });
+        return this.reviewLogs.countBy({ userId, reviewedAt: fromToday });
       case 'new_words':
-        return this.prisma.reviewLog.count({
-          where: { userId, reviewedAt: { gte: since }, reviewType: 'LEARN' },
+        return this.reviewLogs.countBy({
+          userId,
+          reviewedAt: fromToday,
+          reviewType: 'LEARN',
         });
       case 'complete_quiz':
-        return this.prisma.quizAttempt.count({
-          where: { userId, completedAt: { gte: since } },
-        });
+        return this.quizAttempts.countBy({ userId, completedAt: fromToday });
       case 'listening_practice':
-        return this.prisma.practiceAttempt.count({
-          where: {
-            userId,
-            skill: 'LISTENING',
-            isCorrect: true,
-            createdAt: { gte: since },
-          },
+        return this.practiceAttempts.countBy({
+          userId,
+          skill: 'LISTENING',
+          isCorrect: true,
+          createdAt: fromToday,
         });
       case 'pronunciation_practice':
         // KHÔNG lọc isCorrect: true như listening — ghi âm chỉ tự chấm được
@@ -202,12 +216,10 @@ export class QuestsService {
         // luyện phát âm) — lọc theo đúng/sai sẽ khiến nhiệm vụ KHÔNG BAO GIỜ
         // hoàn thành được trên trình duyệt không hỗ trợ, tính theo lượt LUYỆN
         // (đã cố gắng nói ra từ) là đủ công bằng cho 1 nhiệm vụ hàng ngày.
-        return this.prisma.practiceAttempt.count({
-          where: {
-            userId,
-            skill: 'PRONUNCIATION',
-            createdAt: { gte: since },
-          },
+        return this.practiceAttempts.countBy({
+          userId,
+          skill: 'PRONUNCIATION',
+          createdAt: fromToday,
         });
     }
   }

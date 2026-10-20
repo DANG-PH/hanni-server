@@ -1,14 +1,15 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { Public } from '../common/decorators/public.decorator';
-import { PrismaService } from '../infra/prisma/prisma.service';
 import { RedisService } from '../infra/redis/redis.service';
 
 @ApiTags('health')
 @Controller('health')
 export class HealthController {
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectDataSource() private readonly db: DataSource,
     private readonly redis: RedisService,
   ) {}
 
@@ -16,7 +17,10 @@ export class HealthController {
   @Get()
   async check() {
     const [db, cache] = await Promise.all([
-      this.prisma.$queryRaw`SELECT 1`.then(() => 'up').catch(() => 'down'),
+      this.db
+        .query('SELECT 1')
+        .then(() => 'up')
+        .catch(() => 'down'),
       this.redis.client
         .ping()
         .then(() => 'up')

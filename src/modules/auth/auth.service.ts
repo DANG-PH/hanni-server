@@ -4,9 +4,11 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AuthProvider, VerificationTokenType } from '@prisma/client';
+import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomBytes } from 'node:crypto';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { IsNull, Repository } from 'typeorm';
+import { Referral, User, VerificationToken } from '../../database/entities';
+import { AuthProvider, VerificationTokenType } from '../../database/enums';
 import { MailService } from '../mail/mail.service';
 import { UsersService } from '../users/users.service';
 import type { RegisterDto } from './dto/auth.dto';
@@ -31,7 +33,11 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(User) private readonly userRepo: Repository<User>,
+    @InjectRepository(Referral)
+    private readonly referrals: Repository<Referral>,
+    @InjectRepository(VerificationToken)
+    private readonly verificationTokens: Repository<VerificationToken>,
     private readonly users: UsersService,
     private readonly passwords: PasswordService,
     private readonly tokens: TokenService,
@@ -56,8 +62,8 @@ export class AuthService {
     if (dto.ref && dto.ref !== user.id) {
       // Best-effort: người giới thiệu không tồn tại (link cũ/giả) không nên
       // chặn đăng ký — chỉ log, không throw.
-      await this.prisma.referral
-        .create({ data: { referrerId: dto.ref, referredId: user.id } })
+      await this.referrals
+        .insert({ referrerId: dto.ref, referredId: user.id })
         .catch((err: Error) =>
           this.logger.warn(`Ghi referral thất bại: ${err.message}`),
         );
@@ -96,13 +102,11 @@ export class AuthService {
 
   private async createAndSendVerification(email: string): Promise<void> {
     const raw = randomBytes(32).toString('base64url');
-    await this.prisma.verificationToken.create({
-      data: {
-        identifier: email.toLowerCase(),
-        tokenHash: sha256(raw),
-        type: VerificationTokenType.EMAIL_VERIFY,
-        expiresAt: new Date(Date.now() + VERIFY_TTL_MS),
-      },
+    await this.verificationTokens.insert({
+      identifier: email.toLowerCase(),
+      tokenHash: sha256(raw),
+      type: VerificationTokenType.EMAIL_VERIFY,
+      expiresAt: new Date(Date.now() + VERIFY_TTL_MS),
     });
     await this.mail.sendVerifyEmail(email, raw);
   }
@@ -112,10 +116,10 @@ export class AuthService {
       rawToken,
       VerificationTokenType.EMAIL_VERIFY,
     );
-    await this.prisma.user.updateMany({
-      where: { email: row.identifier, emailVerifiedAt: null },
-      data: { emailVerifiedAt: new Date() },
-    });
+    await this.userRepo.update(
+      { email: row.identifier, emailVerifiedAt: IsNull() },
+      { emailVerifiedAt: new Date() },
+    );
   }
 
   async forgotPassword(email: string): Promise<void> {
@@ -123,13 +127,11 @@ export class AuthService {
     // luôn trả về như nhau để không lộ email nào tồn tại
     if (!user) return;
     const raw = randomBytes(32).toString('base64url');
-    await this.prisma.verificationToken.create({
-      data: {
-        identifier: user.email,
-        tokenHash: sha256(raw),
-        type: VerificationTokenType.PASSWORD_RESET,
-        expiresAt: new Date(Date.now() + RESET_TTL_MS),
-      },
+    await this.verificationTokens.insert({
+      identifier: user.email,
+      tokenHash: sha256(raw),
+      type: VerificationTokenType.PASSWORD_RESET,
+      expiresAt: new Date(Date.now() + RESET_TTL_MS),
     });
     await this.mail.sendPasswordReset(user.email, raw);
   }
@@ -148,8 +150,8 @@ export class AuthService {
   }
 
   private async consumeToken(rawToken: string, type: VerificationTokenType) {
-    const row = await this.prisma.verificationToken.findUnique({
-      where: { tokenHash: sha256(rawToken) },
+    const row = await this.verificationTokens.findOneBy({
+      tokenHash: sha256(rawToken),
     });
     if (!row || row.type !== type || row.consumedAt) {
       throw new BadRequestException('Token không hợp lệ hoặc đã dùng');
@@ -157,10 +159,7 @@ export class AuthService {
     if (row.expiresAt.getTime() < Date.now()) {
       throw new BadRequestException('Token đã hết hạn');
     }
-    await this.prisma.verificationToken.update({
-      where: { id: row.id },
-      data: { consumedAt: new Date() },
-    });
+    await this.verificationTokens.update(row.id, { consumedAt: new Date() });
     return row;
   }
 
@@ -209,7 +208,7 @@ export class AuthService {
       providerAccountId: profile.sub,
     });
 
-    let user = await this.users.findById(userId);
+    const user = await this.users.findById(userId);
     if (!user) throw new UnauthorizedException();
 
     // Đồng bộ ảnh đại diện từ Google — trừ khi user đã tự tải ảnh riêng.
@@ -220,10 +219,8 @@ export class AuthService {
       !hasCustomAvatar &&
       user.avatarUrl !== profile.picture
     ) {
-      user = await this.prisma.user.update({
-        where: { id: userId },
-        data: { avatarUrl: profile.picture },
-      });
+      await this.userRepo.update(userId, { avatarUrl: profile.picture });
+      user.avatarUrl = profile.picture;
     }
 
     const tokens = await this.tokens.issueForUser(user, ctx);

@@ -1,8 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { AchievementCategory } from '@prisma/client';
+import { InjectRepository } from '@nestjs/typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
+import {
+  Achievement,
+  ReviewLog,
+  UserAchievement,
+  UserLevelProgress,
+  UserStreak,
+  UserWordProgress,
+  Word,
+} from '../../../database/entities';
+import { AchievementCategory } from '../../../database/enums';
+import { insertIfAbsent } from '../../../database/repository.util';
 import { AppEvent } from '../../../events/events';
-import { PrismaService } from '../../../infra/prisma/prisma.service';
 import { ACHIEVEMENT_CATALOG } from './achievement-catalog';
 
 @Injectable()
@@ -10,7 +21,19 @@ export class AchievementsService {
   private readonly logger = new Logger(AchievementsService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(Achievement)
+    private readonly achievements: Repository<Achievement>,
+    @InjectRepository(UserAchievement)
+    private readonly userAchievements: Repository<UserAchievement>,
+    @InjectRepository(UserStreak)
+    private readonly streaks: Repository<UserStreak>,
+    @InjectRepository(UserWordProgress)
+    private readonly wordProgress: Repository<UserWordProgress>,
+    @InjectRepository(UserLevelProgress)
+    private readonly levelProgress: Repository<UserLevelProgress>,
+    @InjectRepository(Word) private readonly words: Repository<Word>,
+    @InjectRepository(ReviewLog)
+    private readonly reviewLogs: Repository<ReviewLog>,
     private readonly events: EventEmitter2,
   ) {}
 
@@ -34,23 +57,32 @@ export class AchievementsService {
       totalByLevel,
       reviewCount,
     ] = await Promise.all([
-      this.prisma.achievement.findMany({ orderBy: { threshold: 'asc' } }),
-      this.prisma.userAchievement.findMany({ where: { userId } }),
-      this.prisma.userStreak.findUnique({ where: { userId } }),
-      this.prisma.userWordProgress.count({
-        where: { userId, learnedAt: { not: null } },
-      }),
-      this.prisma.userLevelProgress.findMany({
+      this.achievements.find({ order: { threshold: 'ASC' } }),
+      this.userAchievements.findBy({ userId }),
+      this.streaks.findOneBy({ userId }),
+      this.wordProgress.countBy({ userId, learnedAt: Not(IsNull()) }),
+      this.levelProgress.find({
         where: { userId },
-        select: { hskLevel: true, learnedWords: true, totalWords: true },
+        select: {
+          id: true,
+          hskLevel: true,
+          learnedWords: true,
+          totalWords: true,
+        },
       }),
-      this.prisma.word.groupBy({ by: ['hskLevel'], _count: { _all: true } }),
-      this.prisma.reviewLog.count({ where: { userId } }),
+      // Số từ mỗi cấp HSK.
+      this.words
+        .createQueryBuilder('word')
+        .select('word.hskLevel', 'hskLevel')
+        .addSelect('COUNT(*)::int', 'count')
+        .groupBy('word.hskLevel')
+        .getRawMany<{ hskLevel: number; count: number }>(),
+      this.reviewLogs.countBy({ userId }),
     ]);
     const unlocked = new Map(mine.map((m) => [m.achievementId, m]));
     const levelMap = new Map(levelProgress.map((l) => [l.hskLevel, l]));
     const totalWordsMap = new Map(
-      totalByLevel.map((g) => [g.hskLevel, g._count._all]),
+      totalByLevel.map((g) => [g.hskLevel, g.count]),
     );
 
     return catalog.map((a) => {
@@ -84,23 +116,20 @@ export class AchievementsService {
     code: string,
     progressValue = 0,
   ): Promise<boolean> {
-    const achievement = await this.prisma.achievement.findUnique({
-      where: { code },
-    });
+    const achievement = await this.achievements.findOneBy({ code });
     if (!achievement) return false;
-    try {
-      await this.prisma.userAchievement.create({
-        data: { userId, achievementId: achievement.id, progressValue },
-      });
-      this.logger.log(`User ${userId} mở khoá huy hiệu ${code}`);
-      this.events.emit(AppEvent.AchievementUnlocked, {
-        userId,
-        achievementId: achievement.id,
-      });
-      return true;
-    } catch {
-      return false; // đã có rồi (unique)
-    }
+    const unlocked = await insertIfAbsent(this.userAchievements, {
+      userId,
+      achievementId: achievement.id,
+      progressValue,
+    });
+    if (!unlocked) return false; // đã có rồi
+    this.logger.log(`User ${userId} mở khoá huy hiệu ${code}`);
+    this.events.emit(AppEvent.AchievementUnlocked, {
+      userId,
+      achievementId: achievement.id,
+    });
+    return true;
   }
 
   /** Ngưỡng lấy THẲNG từ ACHIEVEMENT_CATALOG thay vì chép tay — trước đây
@@ -132,10 +161,8 @@ export class AchievementsService {
    * `learnedAt` (cần interval >= 21 ngày) nên luôn trễ hàng tuần. */
   async onWordReviewed(userId: string): Promise<void> {
     const [learned, reviews] = await Promise.all([
-      this.prisma.userWordProgress.count({
-        where: { userId, learnedAt: { not: null } },
-      }),
-      this.prisma.reviewLog.count({ where: { userId } }),
+      this.wordProgress.countBy({ userId, learnedAt: Not(IsNull()) }),
+      this.reviewLogs.countBy({ userId }),
     ]);
     for (const t of this.thresholdsOf(AchievementCategory.VOLUME)) {
       if (learned >= t) await this.unlock(userId, `WORDS_${t}`, learned);

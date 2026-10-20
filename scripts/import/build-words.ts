@@ -1,5 +1,5 @@
 /**
- * ETL: gộp nguồn mở → data/processed/words.seed.json (dùng cho `prisma db seed`).
+ * ETL: gộp nguồn mở → data/processed/words.seed.json (dùng cho `npm run db:seed`).
  * KHÔNG chạm database. Chạy: npm run data:build-words
  *
  * Nguồn (đều CC BY-SA 4.0 — xem data/NOTICES.md):

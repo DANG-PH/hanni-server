@@ -1,16 +1,31 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import {
-  Prisma,
-  ReviewType,
-  SrsState,
-  type UserWordProgress,
-} from '@prisma/client';
+  And,
+  DataSource,
+  type FindOptionsWhere,
+  In,
+  IsNull,
+  LessThanOrEqual,
+  MoreThan,
+  MoreThanOrEqual,
+  Not,
+  Repository,
+} from 'typeorm';
 import { startOfLocalDayInstant } from '../../common/time.util';
 import type { Env } from '../../config/env.validation';
+import {
+  ReviewLog,
+  StudySession,
+  User,
+  UserWordProgress,
+  Word,
+} from '../../database/entities';
+import { ReviewType, SrsState } from '../../database/enums';
+import { insertIfAbsent } from '../../database/repository.util';
 import { AppEvent, type WordReviewedPayload } from '../../events/events';
-import { PrismaService } from '../../infra/prisma/prisma.service';
 import type { QueueQueryDto, ReviewDto } from './dto/srs.dto';
 import { LEECH_LAPSES } from './scheduler/sm2.scheduler';
 import { SchedulerRegistry } from './scheduler/scheduler.registry';
@@ -26,7 +41,13 @@ const ACTIVE_STATES: SrsState[] = [
 @Injectable()
 export class ReviewService {
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectDataSource() private readonly dataSource: DataSource,
+    @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Word) private readonly words: Repository<Word>,
+    @InjectRepository(UserWordProgress)
+    private readonly progress: Repository<UserWordProgress>,
+    @InjectRepository(ReviewLog)
+    private readonly reviewLogs: Repository<ReviewLog>,
     private readonly registry: SchedulerRegistry,
     private readonly events: EventEmitter2,
     private readonly config: ConfigService<Env, true>,
@@ -40,11 +61,8 @@ export class ReviewService {
 
   async review(userId: string, dto: ReviewDto) {
     const [user, word] = await Promise.all([
-      this.prisma.user.findUnique({
-        where: { id: userId },
-        include: { settings: true },
-      }),
-      this.prisma.word.findUnique({ where: { id: dto.wordId } }),
+      this.userWithSettings(userId),
+      this.words.findOneBy({ id: dto.wordId }),
     ]);
     if (!user) throw new NotFoundException('Người dùng không tồn tại');
     if (!word) throw new NotFoundException('Không tìm thấy từ');
@@ -54,8 +72,9 @@ export class ReviewService {
     const targetRetention = settings?.targetRetention ?? 0.9;
     const now = new Date();
 
-    const existing = await this.prisma.userWordProgress.findUnique({
-      where: { userId_wordId: { userId, wordId: dto.wordId } },
+    const existing = await this.progress.findOneBy({
+      userId,
+      wordId: dto.wordId,
     });
 
     const before = existing ?? {
@@ -122,55 +141,59 @@ export class ReviewService {
       difficulty: out.difficulty,
     };
 
-    const progress = await this.prisma.$transaction(async (tx) => {
-      const saved = await tx.userWordProgress.upsert({
-        where: { userId_wordId: { userId, wordId: dto.wordId } },
-        create: {
+    // Lưu tiến độ mới + 1 dòng nhật ký ôn (+ cộng vào buổi học) trong cùng 1 transaction.
+    const progress = await this.dataSource.transaction(async (db) => {
+      await db.upsert(
+        UserWordProgress,
+        {
           userId,
           wordId: dto.wordId,
           ...progressData,
-          learnedAt: nowLearned ? now : null,
+          // Mốc "đã thuộc" ghi 1 lần: lần đầu đạt chu kỳ của từ đã thuộc.
+          learnedAt: existing?.learnedAt ?? (nowLearned ? now : null),
         },
-        update: {
-          ...progressData,
-          ...(nowLearned && !existing?.learnedAt ? { learnedAt: now } : {}),
-        },
+        ['userId', 'wordId'],
+      );
+      const saved = await db.findOneByOrFail(UserWordProgress, {
+        userId,
+        wordId: dto.wordId,
       });
 
-      await tx.reviewLog.create({
-        data: {
-          userId,
-          wordId: dto.wordId,
-          progressId: saved.id,
-          studySessionId: dto.studySessionId ?? null,
-          rating: dto.rating,
-          reviewType,
-          reviewedAt: now,
-          stateBefore: before.state,
-          stateAfter: out.state,
-          intervalBefore: before.intervalDays,
-          intervalAfter: out.intervalDays,
-          easeBefore: before.easeFactor,
-          easeAfter: out.easeFactor,
-          stabilityBefore: before.stability,
-          stabilityAfter: out.stability,
-          difficultyBefore: before.difficulty,
-          difficultyAfter: out.difficulty,
-          elapsedDays,
-          scheduledDays: out.intervalDays,
-          durationMs: dto.durationMs ?? null,
-        },
+      await db.insert(ReviewLog, {
+        userId,
+        wordId: dto.wordId,
+        progressId: saved.id,
+        studySessionId: dto.studySessionId ?? null,
+        rating: dto.rating,
+        reviewType,
+        reviewedAt: now,
+        stateBefore: before.state,
+        stateAfter: out.state,
+        intervalBefore: before.intervalDays,
+        intervalAfter: out.intervalDays,
+        easeBefore: before.easeFactor,
+        easeAfter: out.easeFactor,
+        stabilityBefore: before.stability,
+        stabilityAfter: out.stability,
+        difficultyBefore: before.difficulty,
+        difficultyAfter: out.difficulty,
+        elapsedDays,
+        scheduledDays: out.intervalDays,
+        durationMs: dto.durationMs ?? null,
       });
 
       if (dto.studySessionId) {
-        await tx.studySession.updateMany({
-          where: { id: dto.studySessionId, userId, endedAt: null },
-          data: {
-            cardsReviewed: { increment: 1 },
-            cardsCorrect: { increment: out.isCorrect ? 1 : 0 },
-            newCards: { increment: reviewType === ReviewType.LEARN ? 1 : 0 },
-          },
-        });
+        await db
+          .createQueryBuilder()
+          .update(StudySession)
+          .set({
+            cardsReviewed: () => '"cardsReviewed" + 1',
+            cardsCorrect: () => `"cardsCorrect" + ${out.isCorrect ? 1 : 0}`,
+            newCards: () =>
+              `"newCards" + ${reviewType === ReviewType.LEARN ? 1 : 0}`,
+          })
+          .where({ id: dto.studySessionId, userId, endedAt: IsNull() })
+          .execute();
       }
 
       return saved;
@@ -211,28 +234,24 @@ export class ReviewService {
    * đã có.
    */
   async addWord(userId: string, wordId: string) {
-    const word = await this.prisma.word.findUnique({ where: { id: wordId } });
+    const word = await this.words.findOneBy({ id: wordId });
     if (!word) throw new NotFoundException('Không tìm thấy từ');
 
-    const existing = await this.prisma.userWordProgress.findUnique({
-      where: { userId_wordId: { userId, wordId } },
-    });
-    if (existing) return { added: false };
+    if (await this.progress.existsBy({ userId, wordId }))
+      return { added: false };
 
-    await this.prisma.userWordProgress.create({
-      data: {
-        userId,
-        wordId,
-        hskLevel: word.hskLevel,
-        state: SrsState.LEARNING,
-        dueAt: new Date(),
-        reps: 0,
-        lapses: 0,
-        easeFactor: 2.5,
-        intervalDays: 0,
-        stability: null,
-        difficulty: null,
-      },
+    await this.progress.insert({
+      userId,
+      wordId,
+      hskLevel: word.hskLevel,
+      state: SrsState.LEARNING,
+      dueAt: new Date(),
+      reps: 0,
+      lapses: 0,
+      easeFactor: 2.5,
+      intervalDays: 0,
+      stability: null,
+      difficulty: null,
     });
     return { added: true };
   }
@@ -240,10 +259,7 @@ export class ReviewService {
   // ---------- hàng đợi ôn ----------
 
   async getQueue(userId: string, query: QueueQueryDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { settings: true },
-    });
+    const user = await this.userWithSettings(userId);
     if (!user) throw new NotFoundException('Người dùng không tồn tại');
 
     const now = new Date();
@@ -262,22 +278,25 @@ export class ReviewService {
     const wordScope = query.lessonId
       ? { word: { lessonId: query.lessonId } }
       : levelFilter;
-    const dueWhere: Prisma.UserWordProgressWhereInput = {
+    const dueWhere: FindOptionsWhere<UserWordProgress> = {
       userId,
       isSuspended: false,
-      state: { in: ACTIVE_STATES },
-      dueAt: { lte: now },
+      state: In(ACTIVE_STATES),
+      dueAt: LessThanOrEqual(now),
       ...wordScope,
     };
 
     const [newDoneToday, reviewsDoneToday, dueCount] = await Promise.all([
-      this.prisma.reviewLog.count({
-        where: { userId, reviewType: 'LEARN', reviewedAt: { gte: dayStart } },
+      this.reviewLogs.countBy({
+        userId,
+        reviewType: 'LEARN',
+        reviewedAt: MoreThanOrEqual(dayStart),
       }),
-      this.prisma.reviewLog.count({
-        where: { userId, reviewedAt: { gte: dayStart } },
+      this.reviewLogs.countBy({
+        userId,
+        reviewedAt: MoreThanOrEqual(dayStart),
       }),
-      this.prisma.userWordProgress.count({ where: dueWhere }),
+      this.progress.count({ where: dueWhere }),
     ]);
 
     // maxReviewsPerDay chặn số lượt ôn (không tính từ mới) lấy ra trong 1
@@ -289,10 +308,10 @@ export class ReviewService {
         : limit;
     const dueRows =
       dueTake > 0
-        ? await this.prisma.userWordProgress.findMany({
+        ? await this.progress.find({
             where: dueWhere,
-            include: { word: true },
-            orderBy: [{ dueAt: 'asc' }, { easeFactor: 'asc' }],
+            relations: { word: true },
+            order: { dueAt: 'ASC', easeFactor: 'ASC' },
             take: dueTake,
           })
         : [];
@@ -307,17 +326,7 @@ export class ReviewService {
         ? Math.max(0, newPerDay - newDoneToday)
         : 0;
     const newRows =
-      newRemaining > 0
-        ? await this.prisma.word.findMany({
-            where: query.lessonId
-              ? { lessonId: query.lessonId, progress: { none: { userId } } }
-              : { ...levelFilter, progress: { none: { userId } } },
-            orderBy: query.lessonId
-              ? [{ lessonOrder: 'asc' }]
-              : [{ frequencyRank: 'asc' }, { simplified: 'asc' }],
-            take: newRemaining,
-          })
-        : [];
+      newRemaining > 0 ? await this.newWords(userId, query, newRemaining) : [];
 
     return {
       due: dueRows.map((r) => ({
@@ -338,11 +347,37 @@ export class ReviewService {
     };
   }
 
-  async getStats(userId: string) {
-    const user = await this.prisma.user.findUnique({
+  /** Từ MỚI (người này chưa có dòng tiến độ nào) của 1 bài hoặc 1 cấp. */
+  private newWords(userId: string, query: QueueQueryDto, take: number) {
+    const qb = this.words
+      .createQueryBuilder('word')
+      .where(
+        'NOT EXISTS (SELECT 1 FROM "UserWordProgress" p WHERE p."wordId" = word.id AND p."userId" = :userId)',
+        { userId },
+      )
+      .take(take);
+    if (query.lessonId)
+      return qb
+        .andWhere('word.lessonId = :lessonId', { lessonId: query.lessonId })
+        .orderBy('word.lessonOrder', 'ASC')
+        .getMany();
+    if (query.level)
+      qb.andWhere('word.hskLevel = :level', { level: query.level });
+    return qb
+      .orderBy('word.frequencyRank', 'ASC')
+      .addOrderBy('word.simplified', 'ASC')
+      .getMany();
+  }
+
+  private userWithSettings(userId: string) {
+    return this.users.findOne({
       where: { id: userId },
-      include: { settings: true },
+      relations: { settings: true },
     });
+  }
+
+  async getStats(userId: string) {
+    const user = await this.userWithSettings(userId);
     if (!user) throw new NotFoundException('Người dùng không tồn tại');
     const now = new Date();
     const dayStart = startOfLocalDayInstant(
@@ -366,43 +401,34 @@ export class ReviewService {
       leechCount,
       suspendedCount,
     ] = await Promise.all([
-      this.prisma.userWordProgress.count({
-        where: {
-          userId,
-          isSuspended: false,
-          state: { in: ACTIVE_STATES },
-          dueAt: { lte: now },
-        },
+      this.progress.countBy({
+        userId,
+        isSuspended: false,
+        state: In(ACTIVE_STATES),
+        dueAt: LessThanOrEqual(now),
       }),
-      this.prisma.userWordProgress.count({
-        where: {
-          userId,
-          isSuspended: false,
-          state: { in: ACTIVE_STATES },
-          dueAt: { gt: now, lte: soon },
-        },
+      this.progress.countBy({
+        userId,
+        isSuspended: false,
+        state: In(ACTIVE_STATES),
+        dueAt: And(MoreThan(now), LessThanOrEqual(soon)),
       }),
-      this.prisma.userWordProgress.count({
-        where: { userId, learnedAt: { not: null } },
-      }),
+      this.progress.countBy({ userId, learnedAt: Not(IsNull()) }),
       // Từ đang ẩn KHÔNG tính vào "vốn từ đang học": ẩn 1 từ chưa từng học
       // cũng tạo ra 1 dòng tiến độ (xem setSuspended), không trừ ra thì con
       // số này tăng mà người dùng chẳng học thêm gì.
-      this.prisma.userWordProgress.count({
-        where: { userId, isSuspended: false },
+      this.progress.countBy({ userId, isSuspended: false }),
+      this.reviewLogs.countBy({
+        userId,
+        reviewedAt: MoreThanOrEqual(dayStart),
       }),
-      this.prisma.reviewLog.count({
-        where: { userId, reviewedAt: { gte: dayStart } },
+      this.reviewLogs.countBy({
+        userId,
+        reviewType: 'LEARN',
+        reviewedAt: MoreThanOrEqual(dayStart),
       }),
-      this.prisma.reviewLog.count({
-        where: { userId, reviewType: 'LEARN', reviewedAt: { gte: dayStart } },
-      }),
-      this.prisma.userWordProgress.count({
-        where: { userId, isLeech: true },
-      }),
-      this.prisma.userWordProgress.count({
-        where: { userId, isSuspended: true },
-      }),
+      this.progress.countBy({ userId, isLeech: true }),
+      this.progress.countBy({ userId, isSuspended: true }),
     ]);
 
     return {
@@ -439,8 +465,8 @@ export class ReviewService {
    * qua âm Hán Việt (chính Hanni có hẳn trang `/tu-da-biet` liệt kê 773 từ
    * như vậy) — bắt họ ôn đi ôn lại những từ đó là lý do bỏ app rất thật.
    *
-   * Từ CHƯA từng học thì tạo sẵn một dòng tiến độ đang ẩn: `getQueue()` lấy
-   * từ mới bằng `progress: { none: { userId } }` nên chỉ cần TỒN TẠI dòng là
+   * Từ CHƯA từng học thì tạo sẵn một dòng tiến độ đang ẩn: `getQueue()` chỉ lấy
+   * từ mới CHƯA có dòng tiến độ nào (`newWords`), nên chỉ cần TỒN TẠI dòng là
    * từ đó không vào hàng đợi nữa.
    *
    * CỐ Ý KHÔNG đánh dấu `learnedAt` cho từ bị ẩn dù người dùng nói "đã biết":
@@ -448,40 +474,43 @@ export class ReviewService {
    * gian lận. Ẩn chỉ có nghĩa "đừng hỏi tôi nữa", không phải "tôi đã thuộc".
    */
   async setSuspended(userId: string, wordId: string, suspended: boolean) {
-    const word = await this.prisma.word.findUnique({ where: { id: wordId } });
+    const word = await this.words.findOneBy({ id: wordId });
     if (!word) throw new NotFoundException('Không tìm thấy từ');
 
-    await this.prisma.userWordProgress.upsert({
-      where: { userId_wordId: { userId, wordId } },
-      update: { isSuspended: suspended },
-      create: {
-        userId,
-        wordId,
-        hskLevel: word.hskLevel,
-        state: SrsState.NEW,
-        isSuspended: suspended,
-        dueAt: null,
-      },
+    // Chưa có tiến độ thì tạo dòng mới (đang ẩn), có rồi thì chỉ đổi cờ ẩn.
+    const created = await insertIfAbsent(this.progress, {
+      userId,
+      wordId,
+      hskLevel: word.hskLevel,
+      state: SrsState.NEW,
+      isSuspended: suspended,
+      dueAt: null,
     });
+    if (!created)
+      await this.progress.update(
+        { userId, wordId },
+        { isSuspended: suspended },
+      );
     return { wordId, suspended };
   }
 
   /** Danh sách từ đang ẩn — để người dùng bỏ ẩn khi đổi ý. */
   async getSuspended(userId: string) {
-    const rows = await this.prisma.userWordProgress.findMany({
+    const rows = await this.progress.find({
       where: { userId, isSuspended: true },
-      orderBy: { updatedAt: 'desc' },
-      include: {
+      order: { updatedAt: 'DESC' },
+      relations: { word: true },
+      select: {
+        id: true,
+        updatedAt: true,
         word: {
-          select: {
-            id: true,
-            simplified: true,
-            pinyin: true,
-            meaningVi: true,
-            hanViet: true,
-            hskLevel: true,
-            audioUrl: true,
-          },
+          id: true,
+          simplified: true,
+          pinyin: true,
+          meaningVi: true,
+          hanViet: true,
+          hskLevel: true,
+          audioUrl: true,
         },
       },
     });
@@ -492,10 +521,10 @@ export class ReviewService {
     // Trả NGUYÊN `word` (không `select` bớt như trước): danh sách này giờ
     // còn dùng để mở thẳng một buổi ôn riêng từ khó ở `/study?leeches=1`,
     // mà thẻ flashcard cần đủ field (`pos`, ví dụ...) giống hàng đợi thường.
-    const rows = await this.prisma.userWordProgress.findMany({
+    const rows = await this.progress.find({
       where: { userId, isLeech: true },
-      orderBy: { lapses: 'desc' },
-      include: { word: { include: { examples: { orderBy: { orderIndex: 'asc' } } } } },
+      relations: { word: { examples: true } },
+      order: { lapses: 'DESC', word: { examples: { orderIndex: 'ASC' } } },
     });
     return rows.map((r) => ({
       word: r.word,

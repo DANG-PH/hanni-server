@@ -1,12 +1,27 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { type FindOptionsWhere, Repository } from 'typeorm';
+import {
+  UserVideoProgress,
+  Video,
+  VideoComment,
+  VideoLike,
+  Word,
+} from '../../database/entities';
 import type { VideoProgressDto, VideoQueryDto } from './dto/videos.dto';
 import { buildWordIndex, segmentLine, type WordMatch } from './word-match.util';
 
 @Injectable()
 export class VideosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(Video) private readonly videos: Repository<Video>,
+    @InjectRepository(UserVideoProgress)
+    private readonly progress: Repository<UserVideoProgress>,
+    @InjectRepository(VideoLike) private readonly likes: Repository<VideoLike>,
+    @InjectRepository(VideoComment)
+    private readonly comments: Repository<VideoComment>,
+    @InjectRepository(Word) private readonly words: Repository<Word>,
+  ) {}
 
   /** Cache trong tiến trình — bảng từ ít khi đổi, không cần build lại mỗi
    * request. Tự build lại nếu rỗng (khởi động lại server) hoặc sau 1 giờ. */
@@ -16,7 +31,7 @@ export class VideosService {
     if (this.wordIndex && Date.now() - this.wordIndexAt < 3_600_000) {
       return this.wordIndex;
     }
-    const words = await this.prisma.word.findMany({
+    const words = await this.words.find({
       select: {
         id: true,
         simplified: true,
@@ -33,14 +48,14 @@ export class VideosService {
 
   /** `userId` null = khách: xem được danh sách, không có tiến độ/lượt thích của riêng mình. */
   async list(userId: string | null, q: VideoQueryDto) {
-    const where: Prisma.VideoWhereInput = {};
+    const where: FindOptionsWhere<Video> = {};
     if (q.level) where.hskLevel = q.level;
     if (q.kind) where.kind = q.kind;
 
     const [videos, progress, likeCounts, myLikes] = await Promise.all([
-      this.prisma.video.findMany({
+      this.videos.find({
         where,
-        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
+        order: { sortOrder: 'ASC', createdAt: 'DESC' },
         select: {
           id: true,
           youtubeId: true,
@@ -56,30 +71,32 @@ export class VideosService {
         },
       }),
       userId
-        ? this.prisma.userVideoProgress.findMany({
+        ? this.progress.find({
             where: { userId },
-            select: { videoId: true, linesRead: true, completedAt: true },
+            select: {
+              id: true,
+              videoId: true,
+              linesRead: true,
+              completedAt: true,
+            },
           })
-        : ([] as {
-            videoId: string;
-            linesRead: number;
-            completedAt: Date | null;
-          }[]),
-      this.prisma.videoLike.groupBy({
-        by: ['videoId'],
-        _count: { videoId: true },
-      }),
+        : Promise.resolve([] as UserVideoProgress[]),
+      // Số lượt thích mỗi video.
+      this.likes
+        .createQueryBuilder('like')
+        .select('like.videoId', 'videoId')
+        .addSelect('COUNT(*)::int', 'count')
+        .groupBy('like.videoId')
+        .getRawMany<{ videoId: string; count: number }>(),
       userId
-        ? this.prisma.videoLike.findMany({
+        ? this.likes.find({
             where: { userId },
-            select: { videoId: true },
+            select: { id: true, videoId: true },
           })
-        : ([] as { videoId: string }[]),
+        : Promise.resolve([] as VideoLike[]),
     ]);
-    const pBy = new Map(progress.map((p) => [p.videoId, p]));
-    const likeBy = new Map(
-      likeCounts.map((l) => [l.videoId, l._count.videoId]),
-    );
+    const pBy = new Map(progress.map((p) => [p.videoId, p] as const));
+    const likeBy = new Map(likeCounts.map((l) => [l.videoId, l.count]));
     const likedSet = new Set(myLikes.map((l) => l.videoId));
     return videos.map((v) => ({
       ...v,
@@ -93,25 +110,18 @@ export class VideosService {
   }
 
   async get(userId: string | null, id: string) {
-    const video = await this.prisma.video.findUnique({
+    const video = await this.videos.findOne({
       where: { id },
-      include: { lines: { orderBy: { index: 'asc' } } },
+      relations: { lines: true },
+      order: { lines: { index: 'ASC' } },
     });
     if (!video) throw new NotFoundException('Không tìm thấy video');
     const [progress, likeCount, myLike, commentCount, wordIndex] =
       await Promise.all([
-        userId
-          ? this.prisma.userVideoProgress.findUnique({
-              where: { userId_videoId: { userId, videoId: id } },
-            })
-          : null,
-        this.prisma.videoLike.count({ where: { videoId: id } }),
-        userId
-          ? this.prisma.videoLike.findUnique({
-              where: { userId_videoId: { userId, videoId: id } },
-            })
-          : null,
-        this.prisma.videoComment.count({ where: { videoId: id } }),
+        userId ? this.progress.findOneBy({ userId, videoId: id }) : null,
+        this.likes.countBy({ videoId: id }),
+        userId ? this.likes.existsBy({ userId, videoId: id }) : false,
+        this.comments.countBy({ videoId: id }),
         this.getWordIndex(),
       ]);
     const { lines, ...safe } = video;
@@ -122,7 +132,7 @@ export class VideosService {
         tokens: segmentLine(line.zh, wordIndex),
       })),
       likeCount,
-      likedByMe: Boolean(myLike),
+      likedByMe: myLike,
       commentCount,
       progress: progress
         ? {
@@ -135,9 +145,9 @@ export class VideosService {
   }
 
   async updateProgress(userId: string, id: string, dto: VideoProgressDto) {
-    const video = await this.prisma.video.findUnique({
+    const video = await this.videos.findOne({
       where: { id },
-      select: { sentenceCount: true },
+      select: { id: true, sentenceCount: true },
     });
     if (!video) throw new NotFoundException('Không tìm thấy video');
     const linesRead = Math.min(
@@ -146,21 +156,16 @@ export class VideosService {
     );
     const completed =
       video.sentenceCount > 0 && linesRead >= video.sentenceCount;
-    await this.prisma.userVideoProgress.upsert({
-      where: { userId_videoId: { userId, videoId: id } },
-      create: {
+    await this.progress.upsert(
+      {
         userId,
         videoId: id,
         lastLineIndex: dto.lastLineIndex,
         linesRead,
         completedAt: completed ? new Date() : null,
       },
-      update: {
-        lastLineIndex: dto.lastLineIndex,
-        linesRead: { set: linesRead },
-        completedAt: completed ? new Date() : null,
-      },
-    });
+      ['userId', 'videoId'],
+    );
     return { ok: true, completed };
   }
 }

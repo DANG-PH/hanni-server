@@ -4,7 +4,8 @@ API học tiếng Trung theo chuẩn **HSK 3.0** (9 cấp). Xem `README.md` cho 
 
 ## Stack
 - NestJS 11 + TypeScript (CommonJS, `module: nodenext`)
-- PostgreSQL qua **Prisma 6** (`prisma/schema.prisma`)
+- PostgreSQL 16 qua **TypeORM 0.3** (`src/database/`) — chuyển từ Prisma 6 ngày 2026-10-20, xem mục
+  "TypeORM — quy tắc + bẫy đã gặp" bên dưới trước khi viết truy vấn mới
 - Redis (ioredis) — state OAuth, cache, và Redis adapter cho WebSocket (`RedisIoAdapter`,
   `src/infra/redis/redis-io.adapter.ts`) — sẵn sàng scale nhiều instance
 - `@nestjs/event-emitter` (in-process) cho luồng sự kiện; handler phải **idempotent**
@@ -16,7 +17,9 @@ API học tiếng Trung theo chuẩn **HSK 3.0** (9 cấp). Xem `README.md` cho 
 ```
 src/
 ├── config/        env.validation.ts — zod, chạy lúc khởi động
-├── infra/         prisma/  redis/   (đều @Global)
+├── database/      DatabaseModule (@Global) · entities/ (1 file = 1 bảng) · enums.ts · migrations/
+│                  · seed/ · repository.util.ts · db-errors.ts · migrate.ts
+├── infra/         redis/ (@Global)
 ├── common/        decorators (CurrentUser, Public, Roles), filters, time.util
 ├── events/        events.ts — hằng tên + kiểu payload
 ├── modules/<domain>/   auth · users (+ users/follows) · mail · vocabulary · srs · progress
@@ -25,7 +28,7 @@ src/
 │                        · practice (lưu kết quả luyện nghe/phát âm) · onboarding (khảo sát đầu vào)
 │                        · assistant (trợ lý AI RAG, Gemini)
 └── health/
-prisma/  schema.prisma + seed/ (hsk-levels, achievements, words)
+scripts/         script chạy tay (backfill, đồng bộ cách đọc, sinh migration dữ liệu) — `db.ts` mở kết nối
 scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 ```
 
@@ -45,7 +48,51 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 - Đọc token từ cookie `hanni_access` (fallback `Authorization: Bearer`).
 - Không hardcode connection string — đọc qua `ConfigService` (đã validate bằng zod).
 - Tên biến/hàm/log: tiếng Việt cho comment và message hướng người dùng; code identifier tiếng Anh.
-- Prisma: bắt `PrismaClientKnownRequestError` (P2002/P2025) — đã có `AllExceptionsFilter` map sẵn.
+- Lỗi DB: `AllExceptionsFilter` map sẵn trùng khoá (pg `23505`) → 409, `EntityNotFoundError` (`findOneByOrFail`)
+  → 404, khoá ngoại / giá trị sai kiểu (`23503`/`22P02`) → 400. Trùng khoá LƯỜNG TRƯỚC được (bấm 2 lần, 2 request
+  cùng lúc) thì dùng `insertIfAbsent()` thay vì bắt lỗi; cần phân biệt loại lỗi thì `isUniqueViolation()` (`db-errors.ts`).
+
+## TypeORM — quy tắc + bẫy đã gặp (chuyển từ Prisma 2026-10-20)
+User yêu cầu chuyển ("code dễ hiểu, dễ tìm") — TypeORM là lựa chọn phổ biến nhất trong hệ NestJS; mỗi bảng thành 1
+class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma` 1.500 dòng.
+- **Entity sinh từ chính DB production** (56 bảng): giữ nguyên tên bảng PascalCase, cột camelCase và TÊN RÀNG BUỘC
+  của Prisma (`Word_pkey`, `Word_lessonId_fkey`, `Word_simplified_pinyinNumeric_key`) nên DB đang chạy không phải
+  đổi tên gì. `npm run db:migration:generate` trên DB đã đồng bộ báo "No changes" — entity khớp DB 100%.
+- **Migration**: `InitialSchema` dựng toàn bộ bảng cho DB MỚI (bỏ qua nếu đã có bảng `User`); `TypeormConventions`
+  CHỈ chạy trên DB cũ của Prisma (có `_prisma_migrations`): Prisma tự sinh uuid/`updatedAt` ở phía client, TypeORM
+  cần DB làm → đặt DEFAULT `gen_random_uuid()` (48 cột id) và `now()` (62 cột thời gian), `Word.measureWords`
+  DEFAULT `'{}'`, đổi unique của `Referral.referredId` sang tên TypeORM. Bảng theo dõi: `typeorm_migrations`
+  (`_prisma_migrations` để nguyên làm lịch sử). Deploy chạy `node dist/src/database/migrate.js`.
+- **Thời gian**: cột `timestamp(3)` KHÔNG múi giờ, lưu giờ UTC (kiểu Prisma tạo). `database.config.ts` đọc chuỗi DB
+  là UTC, ghi Date dạng UTC, phiên đặt `TimeZone=UTC` — VPS chạy giờ Việt Nam, thiếu 1 trong 3 là lệch 7 tiếng.
+  Cột `date` (`UserDailyActivity.localDate`…) dùng transformer `dateOnly`; cột mảng có thể NULL dùng `arrayOrEmpty`.
+- **`where: { x: null }` = `IS NULL`** (cấu hình `invalidWhereValuesBehavior` — mặc định TypeORM BỎ QUA null tức
+  khớp MỌI dòng). **`undefined` vẫn bị bỏ qua** → service nhận `userId: string | null` phải bỏ hẳn truy vấn khi null.
+- **Bẫy đã gặp lúc chuyển** (đều đã sửa, đừng tái phạm):
+  1. `select` mà MỌI cột chọn đều NULL thì TypeORM coi như không có dòng (`findOne` trả null) — `premium/status`
+     từng 404 vì chỉ chọn `premiumUntil`. Luôn chọn kèm `id`.
+  2. `select` + `relations` + `take/skip` phải có khoá chính trong `select`.
+  3. Phân trang (`take`) + `order` theo cột của quan hệ 1-nhiều làm sai trang (TypeORM tách 2 truy vấn DISTINCT) —
+     sắp mảng con bằng JS (trả lời bình luận) hoặc lấy id trước rồi mới nạp chi tiết.
+  4. `save()` chỉ trả cột đã truyền + cột mặc định → trả nguyên dòng cho client thì dùng `insertAndReturn()`.
+  5. Nạp `relations` là kéo NGUYÊN dòng (cả email, mật khẩu băm) → luôn qua hàm dựng dữ liệu trả về
+     (`person()`, `notificationView`, `commentView`…), không trả thẳng entity có quan hệ `User`.
+  6. Sửa 1 phần dùng `update()`, KHÔNG `save()` entity vừa đọc (2 request song song ghi đè nhau).
+  7. `update()` với object rỗng ném lỗi ở bảng không có `updatedAt` (`Classroom`) — kiểm tra trước.
+  8. Trùng khoá lường trước → `insertIfAbsent()` (`ON CONFLICT DO NOTHING RETURNING *`, trả true nếu vừa chèn);
+     "lấy hoặc tạo" → `findOrCreate()`.
+  9. `In([])` sinh `0=1` (an toàn, không cần chặn trước).
+  10. Thống kê (`COUNT`, `SUM`, `GROUP BY`) qua QueryBuilder với `COUNT(*)::int` — pg trả bigint dạng chuỗi.
+  11. Khoảng thời gian: `And(MoreThanOrEqual(a), LessThan(b))`; `where` là MẢNG = OR.
+  12. `LIKE` từ chữ người dùng gõ phải `likeEscape()` (`%`, `_`).
+- **Cách đã kiểm chứng** (không chỉ chạy test): dựng Postgres thật + Redis cục bộ, seed y hệt, chạy CÙNG 304 bước gọi
+  API (khách + đã đăng nhập, ghi rồi đọc: học bài, ôn thẻ, thi thử, lớp học, ví xu, nhiệm vụ…) trên bản Prisma và bản
+  TypeORM, so từng response + toàn bộ bảng sau khi chạy → giống hệt (chỉ lệch chữ số cuối 1 số thực). Hai đường
+  migration (DB mới / DB kiểu production) ra cùng lược đồ, chạy lại không đổi gì; job nền (nhắc học, giải đấu, email
+  tuần) cho cùng kết quả; 133 unit test pass.
+- **Thêm cột/bảng**: sửa entity → `npm run db:migration:generate -- src/database/migrations/TenMoTa` → ĐỌC lại file
+  sinh ra → `npm run db:migrate`. Migration SỬA DỮ LIỆU production viết tay (vd `scripts/build-word-examples-migration.ts`
+  sinh file vào `src/database/migrations/`), chỉ ghi khi giá trị hiện tại đúng giá trị cũ.
 
 ## Điểm quan trọng
 - **Mail (`src/modules/mail`)**: `MailService` gửi SMTP thật qua `nodemailer` khi có
@@ -129,7 +176,7 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   thay vì 1 updateMany/từ — nhanh hơn nhiều qua tunnel SSH, xem cách làm cũ từng chậm ở
   `migrate-lesson-themes.ts`). Trả về tự nhiên trong `GET /words/:id`, `/words/of-the-day`,
   `GET /learn/lessons/:id`, `GET /study/queue` (không cần sửa code — các query này không có
-  `select` giới hạn field nên Prisma tự trả đủ scalar field mới); `GET /study/leeches` có
+  `select` giới hạn field nên ORM tự trả đủ cột mới); `GET /study/leeches` có
   `select` tường minh nên phải thêm field vào tay. Client: hiện ở mặt sau flashcard ôn tập
   (`components/flashcard.tsx`) và mỗi thẻ từ ở `/vocabulary`. **Tìm kiếm** `GET /words?q=`
   giờ khớp cả `hanViet` (vd gõ "học hiệu" ra 学校 dù `meaningVi` hiển thị "trường học", không
@@ -146,7 +193,7 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   "hốc"); 1 âm tiết không dấu thì nghĩa nguyên văn không lên bậc đầu (hoc = học/hốc/hóc). Trùng CẢ Hán Việt lẫn
   nét nghĩa đầu (bỏ chú thích ngoặc) đứng trước chỉ trùng 1 thứ: "thời gian" → 时间 rồi 时候. Cụm không trùng mục
   nào ("ăn cơm" — HSK 3.0 không có 吃饭) ra từng phần (吃, 饭) thay vì trang trống. Chỉ áp khi có `q` mà không lọc `lessonId`/`needsReview` (nhánh đó giữ
-  Prisma cũ). Dùng cho ô tra từ điển + gợi ý khi gõ ở client. Test: `word-search.util.spec.ts`.
+  truy vấn DB cũ). Dùng cho ô tra từ điển + gợi ý khi gõ ở client. Test: `word-search.util.spec.ts`.
 - **"Từ bạn đã biết sẵn" (`GET /words/familiar`, `@Public()`, từ 2026-09-22)** — hook thu hút
   nhóm khó tiếp cận nhất: người CHƯA từng học tiếng Trung. 739 từ (số ĐO LẠI 2026-09-22, tính live nên đổi theo dữ liệu) có âm Hán Việt trùng khớp
   LUÔN nghĩa tiếng Việt (电话 = "điện thoại", 世界 = "thế giới", 机会 = "cơ hội", 决定 = "quyết
@@ -265,7 +312,7 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   bộ thẻ học thử, VÀ (từ 2026-09-22) mặt sau flashcard ôn tập + danh sách từ ở `/learn/[lessonId]`
   — trước đó luồng học chính không render ảnh nên người dùng tưởng chưa cào được ảnh nào.
 - **Nghĩa tiếng Việt hỏng do nguồn CVDICT (sửa 2026-09-22, `data/curated/meaning-fixes.json`
-  + `scripts/apply-meaning-fixes.ts`)** — quét chất lượng dữ liệu sau khi từ điển thành trang
+  + `src/database/seed/meaning-fixes.ts` — nằm trong `db:seed`, production nạp bằng migration)** — quét chất lượng dữ liệu sau khi từ điển thành trang
   công khai (mỗi từ = 1 trang Google đọc được, nghĩa hỏng là hỏng ngay ngoài mặt tiền). Ba loại:
   (1) **Nghĩa VÒNG VO**: CVDICT dịch nguyên văn mục "variant of X" của CC-CEDICT → 歌 = "biến thể
   của 歌[ge1]", 玩 = "biến thể của 玩[wan2]", 花 = "biến thể của 花[hua1]". Đo: 156 từ dính, 30
@@ -280,9 +327,9 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   biến thể tục — thay vì cǎo), 压, 并, 扎, 挣, 恶, 嘛, 尽快.
   **Cách sửa**: 42 mục soạn tay (KHÔNG dịch máy, cùng cách làm câu ví dụ HSK1), đánh dấu
   `translationStatus = REVIEWED`; script chỉ sửa cột `pinyin` HIỂN THỊ, **KHÔNG đụng
-  `pinyinNumeric`** vì đó là khoá khớp của `seed-word-examples.ts`. `cleanDef()` trong ETL cũng
-  đã lọc chú thích lượng từ `(LT:...)` để bản seed dựng lại sau này sạch sẵn (22 từ, xem
-  `scripts/clean-meaning-annotations.ts`).
+  `pinyinNumeric`** vì đó là khoá khớp của câu ví dụ (`seed/word-examples.ts`). `cleanDef()` trong ETL cũng
+  đã lọc chú thích lượng từ `(LT:...)` để bản seed dựng lại sau này sạch sẵn (22 từ — script dọn
+  một lần cho DB cũ đã chạy xong, xoá khi chuyển TypeORM).
   **ĐÃ sửa tận gốc (cùng ngày)** — xem mục "Chọn cách đọc cho chữ đa âm" ngay dưới.
   **Mở rộng HSK4-9 (2026-09-25)**: sau khi làm từ điển công khai, quét lại toàn bộ (không chỉ
   HSK1-3) bằng regex bắt các mẫu "biến thể của X" / "xem X" / "viết tắt của X" — ra 145 từ,
@@ -315,8 +362,8 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   **Đưa vào DB đang chạy**: `npx tsx scripts/sync-word-readings.ts [--apply]` (mặc định chạy
   thử). KHÔNG dùng `db:seed` vì `UserWordProgress` trỏ vào `Word.id` — xoá/tạo lại là mất sạch
   tiến độ. Script sửa TẠI CHỖ cách đọc + nghĩa của từ đã có, thêm cách đọc thứ hai còn thiếu với
-  `lessonId = null` (không nhét từ mới vào giữa lộ trình của người đang học), KHÔNG xoá gì. Chạy
-  `apply-meaning-fixes.ts` SAU nó để khẳng định lại phần nghĩa soạn tay.
+  `lessonId = null` (không nhét từ mới vào giữa lộ trình của người đang học), KHÔNG xoá gì. Nghĩa
+  soạn tay áp lại SAU nó (`seedMeaningFixes`, `src/database/seed/meaning-fixes.ts`).
 - **SRS**: `SchedulerRegistry.get(name)` chọn `Sm2Scheduler` | `FsrsScheduler` theo
   `UserSettings.srsScheduler`. `UserWordProgress` có cả trường SM-2 (easeFactor/intervalDays)
   lẫn FSRS (stability/difficulty) → đổi thuật toán không cần migration.
@@ -355,7 +402,7 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   trước đây hardcode `[7,30,100]`/`[50,100,500,1000]` trong `onStreakUpdated`/`onWordReviewed`,
   thêm huy hiệu vào catalog mà quên sửa 2 mảng đó thì huy hiệu vĩnh viễn không mở khoá được mà
   KHÔNG báo lỗi gì. Huy hiệu mới `INSERT` qua **migration** (`20260921120000_add_early_achievements`,
-  `ON CONFLICT DO NOTHING`) chứ không chỉ qua seed — vì CI/CD chỉ chạy `prisma migrate deploy`,
+  `ON CONFLICT DO NOTHING`) chứ không chỉ qua seed — vì CI/CD chỉ chạy migration (`migrate.js`),
   KHÔNG chạy `db:seed`, nên sửa seed thôi sẽ không bao giờ lên tới production.
 - **Bài đang học dở (`GET /learn/current`, `LearnService.currentLesson()`, từ 2026-09-22)** —
   user phản ánh flashcard và các tính năng khác "không phân theo lộ trình, chưa phân chủ đề,
@@ -383,7 +430,7 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   khách không có hạng của mình/`isFollowing`, `scope=friends` bị bỏ qua), `POST /minigame/start` +
   `/:id/finish`; `@Public()` cho `GET /videos/:id/comments`, `GET /words/of-the-day`, `GET
   /minigame/leaderboard`. Service nhận `userId: string | null` và BỎ HẲN truy vấn riêng của người dùng
-  khi null — Prisma hiểu `where: { userId: undefined }` là KHỚP MỌI DÒNG. Mảng rỗng dự phòng trong
+  khi null — ORM hiểu `where: { userId: undefined }` là KHỚP MỌI DÒNG. Mảng rỗng dự phòng trong
   `Promise.all` phải ghi kiểu (`[] as {...}[]`), không thì TS/eslint suy ra `never[]`/`any`. Lượt chơi
   minigame của khách giữ trong Redis (`minigame:guest:<uuid>`, TTL 30 phút, `takeJson` nên nộp đúng 1
   lần) vì `MinigameSession.userId` bắt buộc; chấm bằng CHÍNH hàm của người đã đăng nhập
@@ -442,8 +489,8 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
     xuất cấp đó (xem `hanni-client/CLAUDE.md`).
   - `frequencyRank` giờ xếp theo CẤP trước, tần suất trong cấp sau (`build-words.ts` — số đếm
     krmanik tách file theo cấp, không so được giữa các cấp; 著名 từng hạng 1 trên cả 的). Thứ tự
-    từ TRONG bài vẫn theo số đếm gốc để không xáo bài người học đang theo. Nạp DB:
-    `npx tsx scripts/backfill-frequency-rank.ts`.
+    từ TRONG bài vẫn theo số đếm gốc để không xáo bài người học đang theo. DB cũ đã nạp bằng script
+    một lần (xoá khi chuyển TypeORM); DB mới lấy thẳng từ seed.
 - **Đề thi thử HSK (`src/modules/mock-exams`, 2026-10-06)** — doanh thu đã chọn là luyện thi,
   Hanbeego/HiHSK/XieHanzi đều có đề đúng cấu trúc, `/exams` cũ của Hanni chỉ là trắc nghiệm từ
   vựng. Bám cấu trúc đề HSK HIỆN HÀNH (kỳ thi HSK 1–6 thường kỳ 2026 vẫn dùng; đề HSK 3.0 mới thi
@@ -541,8 +588,8 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   cả mọi người; (3) trợ lý AI được dạy phải nhắc tên bài đang học dở nhưng không bao giờ có dữ
   liệu. `ProgressService.recomputeLessonCache()` chạy trong listener `WordReviewed` (nền, không
   làm chậm lượt ôn), định nghĩa "xong bài" lấy ĐÚNG như `LearnService.path()` để 2 nơi không nói
-  2 kiểu. Phần quá khứ dựng lại bằng `npx tsx scripts/backfill-lesson-progress.ts` (đã chạy trên
-  production: 46 dòng / 6 người dùng).
+  2 kiểu. Phần quá khứ đã dựng lại bằng script một lần (chạy trên production: 46 dòng / 6 người
+  dùng; xoá khi chuyển TypeORM).
 - **Refresh token trùng nhau làm ĐĂNG XUẤT OAN (sửa 2026-09-22)** — đo log production: **661
   lần** `Phát hiện dùng lại refresh token` với chỉ 6 người dùng thật, có lúc 3 lần trong CÙNG 1
   giây cùng 1 family. Không phải bị tấn công: một trang như dashboard bắn cả chục request song
@@ -690,7 +737,7 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   KHÔNG hoàn tiền, KHÔNG chuyển nhượng giữa user, KHÔNG quy đổi ngược lại tiền mặt, chỉ tiêu
   được trong chính các tính năng của Hanni (xem `FEATURES.md` mục đánh giá rủi ro). Mọi thay đổi
   số dư đi qua `WalletService.credit()`/`debit()` — LUÔN ghi kèm 1 dòng `CoinTransaction` để đối
-  soát; `debit()` dùng `prisma.userWallet.updateMany({where: {balance: {gte: amount}}})` (atomic,
+  soát; `debit()` dùng `wallets.decrement({ userId, balance: MoreThanOrEqual(amount) }, 'balance', amount)` (atomic,
   có điều kiện) thay vì đọc-rồi-ghi, tránh ví âm khi nhiều request cùng lúc. Nguồn thu: minigame
   (xem dưới) + **điểm danh hằng ngày** (`WalletListener` lắng ĐÚNG `AppEvent.StreakUpdated` — sự
   kiện này chỉ phát khi có hoạt động NGÀY MỚI, khớp nghĩa "điểm danh" mà không cần dựng hệ theo
@@ -773,8 +820,8 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   nếu đang trọn đời. (3) `handleWebhook()` đọc `order.status` rồi mới ghi PAID ở bước riêng
   (không atomic) — payOS xác nhận có gọi lại webhook nhiều lần cho cùng giao dịch, 2 lượt gọi
   trùng nhau chạy gần đồng thời đều có thể đọc thấy PENDING trước khi bên nào commit xong PAID,
-  cộng xu/gia hạn Premium 2 lần cho 1 giao dịch thật — sửa bằng `updateMany({where: {id, status:
-  PENDING}})` (atomic ở tầng DB, `count === 0` nghĩa là request khác đã xử lý, bỏ qua an toàn),
+  cộng xu/gia hạn Premium 2 lần cho 1 giao dịch thật — sửa bằng `update({ id, status:
+  PENDING }, …)` (atomic ở tầng DB, `affected === 0` nghĩa là request khác đã xử lý, bỏ qua an toàn),
   cộng thêm log ERROR rõ ràng nếu bước cộng thưởng thất bại SAU KHI đã chắc chắn PAID (không
   lùi lại PENDING vì payOS sẽ không gọi lại nữa — cần đối soát thủ công thay vì nuốt lỗi im
   lặng). **Còn 1 rủi ro hẹp CHƯA sửa (chấp nhận, không đáng công sức)**: 2 ĐƠN Premium khác
@@ -808,9 +855,9 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   Hoàng, API `/exams` cũ** — `DuelModule`/`ExamsModule` không còn nạp ở `app.module.ts`, `DuelService` bỏ khỏi
   `NotificationsModule`, gateway bỏ 3 sự kiện `duel:*` và hook kết nối/ngắt, bảng xếp hạng bỏ tiêu chí `elo`, shop
   chỉ còn danh hiệu (`GET/POST /shop/frames*` gỡ), hồ sơ công khai bỏ `equippedFrame`. DB GIỮ NGUYÊN (`UserRating`,
-  `DuelMatch`, `DuelSeason*`, `ExamAttempt`, `UserSettings.equippedFrame`). **Còn dở, chờ user**: (1) file trong
-  `src/modules/duel/`, `src/modules/exams/`, `shop/shop.service.ts`, `shop/frame-catalog.ts`, `shop/dto/equip-frame.dto.ts`
-  là code chết (không module nào nạp) — bộ phân loại auto mode chặn xoá file; (2) **nạp xu bằng tiền thật CHƯA gỡ**
+  `DuelMatch`, `DuelSeason*`, `ExamAttempt`, `UserSettings.equippedFrame`). File code chết của các phần này
+  (`src/modules/duel/`, `src/modules/exams/`, `shop/shop.service.ts`, `shop/frame-catalog.ts`, `shop/dto/equip-frame.dto.ts`)
+  đã XOÁ HẲN khi chuyển TypeORM (2026-10-20). **Còn dở, chờ user**: **nạp xu bằng tiền thật CHƯA gỡ**
   (`POST /payments/topup` còn, client tự ẩn vì payOS chưa bật) — bộ phân loại chặn sửa luồng thanh toán. Các mục cũ
   dưới đây giữ làm lịch sử.
 - **Đấu 1v1 + rank tier + mùa giải (`src/modules/duel`, model `UserRating` + `DuelMatch` +
@@ -1008,7 +1055,7 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   hiệu/hồ sơ dưới dạng tin nhắn cho 1 người bạn cụ thể).
 - **Xoá tài khoản (`DELETE /users/me`, `UsersService.deleteAccount()`)**: yêu cầu đúng mật khẩu
   nếu tài khoản có đặt mật khẩu (đăng nhập Google thuần thì bỏ qua), xoá file avatar trên đĩa,
-  rồi `prisma.user.delete()` — KHÔNG cần logic dọn dẹp thủ công vì schema đã thiết kế sẵn
+  rồi `users.delete({ id })` — KHÔNG cần logic dọn dẹp thủ công vì khoá ngoại đã thiết kế sẵn
   `onDelete` đúng ý nghĩa cho từng quan hệ: `Video.createdBy`/`Notification.actor` dùng
   `SetNull` (nội dung/thông báo liên quan tới người KHÁC vẫn giữ lại, chỉ mất gắn tác giả), còn
   lại (settings, tiến độ, bình luận, tin nhắn, follow...) dùng `Cascade` (dữ liệu CÁ NHÂN xoá
@@ -1241,7 +1288,7 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   pinyin (`pinyin-pro`). **Ảnh KHÔNG lưu** (chỉ trong RAM lúc gọi Gemini). Hạn mức theo "ngày
   học" bằng bộ đếm Redis `scan:{userId}:{ngày}` (INCR, TTL 48h): thường 3, Premium 100
   (`FREE_/PREMIUM_SCAN_DAILY_LIMIT`); đọc lỗi hoặc ảnh không có gì để học thì HOÀN lượt (DECR).
-  Đã chạy thử service thật (prisma giả từ seed, Gemini thật) trên thực đơn giản thể, thực đơn
+  Đã chạy thử service thật (DB giả từ seed, Gemini thật) trên thực đơn giản thể, thực đơn
   phồn thể mờ nghiêng, ảnh mâm cơm: ~5–9 giây/ảnh, ra đúng 雞蛋→鸡蛋, 油条, 米饭, 筷子...
   **Khoá Gemini đang ở gói MIỄN PHÍ: 20 lượt/ngày CHO MỖI model** (đo 2026-10-17 qua lỗi 429
   `GenerateRequestsPerDayPerProjectPerModel-FreeTier`, hết lượt sau ~20 lần thử lúc phát triển).
@@ -1253,7 +1300,7 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   biệt")** — 3 việc, chung 1 bộ đếm Redis `aitools:{userId}:{ngày học}` (thường 10, Premium 200/ngày; AI lỗi thì
   hoàn lượt), đều cần đăng nhập: (1) `POST /ai/mnemonic/:wordId` — MẸO NHỚ theo âm Hán Việt, prompt đưa sẵn âm Hán
   Việt + nghĩa từng chữ (`WordsService.breakDownCharacters`, nay public) để AI không tự bịa âm; tạo 1 LẦN rồi lưu
-  `Word.mnemonicVi` (migration `20261018200000_word_mnemonic`, `updateMany where mnemonicVi null` để 2 người bấm
+  `Word.mnemonicVi` (migration `20261018200000_word_mnemonic`, `update` có điều kiện `mnemonicVi IS NULL` để 2 người bấm
   cùng lúc không đè nhau) — `lookup()` và phiên học bài trả sẵn nên ai mở trang từ / thẻ giới thiệu cũng thấy, không
   tốn thêm lượt. (2) `POST /ai/sentence-check` `{wordId, sentence}` — chấm câu học viên tự đặt: điểm 0–100, câu đã
   sửa (giữ ý), pinyin, nghĩa, nhận xét tiếng Việt, mẹo dùng từ; (3) `POST /ai/analyze` `{text}` — câu có chữ Hán thì
@@ -1287,7 +1334,7 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   (`outOfLevelChars`, chữ của mọi từ HSK ≤ cấp): vượt cấp thì viết lại 1 lần kèm danh sách chữ cấm, vẫn vượt thì hoàn
   lượt + báo thử lại — người học cấp N phải đọc được cả bài (cùng luật câu ví dụ/đề thi thử). Pinyin do server sinh
   bằng `examplePinyin()` (không tin pinyin AI). Lưu 1 dòng/bài (`lessonId` là khoá chính, 2 người bấm cùng lúc thì
-  bản sau bắt P2002 rồi dùng bản đã lưu) — tạo 1 lần, ai cũng đọc, không tốn thêm lượt.
+  bản sau gặp lỗi trùng khoá (`isUniqueViolation`) rồi dùng bản đã lưu) — tạo 1 lần, ai cũng đọc, không tốn thêm lượt.
 - **Lớp học cho giáo viên / trung tâm (`src/modules/classrooms`, 2026-10-19)** — user: "chiến lược thu hút người
   dùng", "dễ chào mời đối tác". Tham khảo: Hanbeego `/partners` chỉ bán sỉ Premium + đưa tên lên trang, KHÔNG có
   công cụ lớp; Duolingo for Schools (miễn phí: lớp, giao bài, xem tiến độ) sẽ đóng cửa 31/07/2027. Một giáo viên kéo
@@ -1326,7 +1373,8 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   (bấm lại khi chưa học thêm thì trả bản cũ; kỳ này 1 ngày, kỳ trước 30 ngày).
 
 ## Lệnh
-`npm run start:dev` · `npm run build` · `npm run prisma:migrate` · `npm run db:seed` ·
+`npm run start:dev` · `npm run build` · `npm run db:migrate` · `npm run db:seed` ·
+`npm run db:migration:generate -- src/database/migrations/TenMoTa` ·
 `npm run data:build-words` · `npm test` (jest, `src/**/*.spec.ts` — cấu hình ở khối `jest` trong
 package.json) · `npm run test:e2e`
 
@@ -1345,8 +1393,8 @@ xem bên dưới — cần `GEMINI_API_KEY` mới bật), health, Swagger.
 Seed đầy đủ để deploy: 9 cấp HSK · huy hiệu · 10.9k từ (`data/processed/words.seed.json`) ·
 744 bài, TOÀN BỘ 9 cấp đều chia theo chủ đề thật (xem bên dưới) — không còn cấp nào chia đều
 15 từ/bài theo tần suất · 40 điểm ngữ pháp HSK 1–3 + 349 mục HSK 4–9 (đại cương,
-prisma/seed/data/grammar-syllabus.raw.json, 195/349 mục đã có giải thích thật) · ~42 video
-(`prisma/seed/vi-cache.json` cache bản dịch máy) · **`assets/audio/` ~58MB đã commit** (đừng
+src/database/seed/data/grammar-syllabus.raw.json, 195/349 mục đã có giải thích thật) · ~42 video
+(`src/database/seed/vi-cache.json` cache bản dịch máy) · **`assets/audio/` ~58MB đã commit** (đừng
 gitignore lại — deploy VPS cần).
 
 **Bài học theo chủ đề (`/learn`)**: cấp nào có file
@@ -1368,7 +1416,7 @@ chạy lâu (HSK7 ~5.5k từ từng bị rớt sau ~50 phút do tunnel) — scri
 đầu, nhưng nếu tiện hơn thì `git pull` + chạy thẳng trên VPS (kết nối `localhost:2222` nội bộ,
 không qua internet) sẽ nhanh hơn nhiều (vài giây thay vì hàng chục phút).
 
-**Học qua video**: chỉ còn video HỆ THỐNG nạp bằng `prisma/seed/videos.ts` (lấy phụ đề CC tiếng
+**Học qua video**: chỉ còn video HỆ THỐNG nạp bằng `src/database/seed/videos.ts` (lấy phụ đề CC tiếng
 Trung từ YouTube + dịch máy: `translate.util.ts` Google free → MyMemory, bảng thuật ngữ tu tiên,
 cache; `MYMEMORY_EMAIL` nâng hạn mức ngày). **Người dùng tự thêm video ĐÃ BỎ HOÀN TOÀN
 (2026-10-17, user yêu cầu bỏ cả giao diện, logic, dữ liệu)**: xoá `POST /videos`, `DELETE
@@ -1402,7 +1450,7 @@ state nào) thì bỏ qua, không ghi đè.
 
 **Ngữ pháp HSK 4–9**: 349 mục từ đại cương chính thức, chia 2 loại —
 (1) mẫu câu/cấu trúc thật (句子的类型/句子成分/固定格式/特殊表达法/语段) → đã soạn giải thích +
-ví dụ tay trong `prisma/seed/grammar-explained-hsk{4,5,6,7}.ts` (63+38+24+70 = 195 mục, khớp
+ví dụ tay trong `src/database/seed/grammar-explained-hsk{4,5,6,7}.ts` (63+38+24+70 = 195 mục, khớp
 `content` nguyên văn với raw.json — LUÔN chạy lại script verify key trước khi sửa, xem cách làm
 trong các file đó); (2) danh sách từ vựng theo từ loại (词类/短语) → giữ dạng rút gọn, không cần
 giải thích riêng từng mục. Field `flat` (tính trong grammar.service.ts) tự bật/tắt theo
@@ -1453,13 +1501,12 @@ cho tổng lượt luyện + số từ khác nhau + tỉ lệ đúng (cả LISTE
 2026-09-18 — xem mục "Rank tier/season..." hoặc CLAUDE.md gốc). Xem thêm ở mục "Bình luận +
 thích video + thông báo" phía trên.
 
-**Câu ví dụ cho từ vựng** (`WordExample`, `scripts/seed-word-examples.ts`): **HSK 1–3 (995/995 từ)**
+**Câu ví dụ cho từ vựng** (`WordExample`, `src/database/seed/word-examples.ts`): **HSK 1–3 (995/995 từ)**
 có câu ví dụ do Hanni tự soạn (không qua dịch máy, tránh phụ thuộc quỹ MyMemory) —
-`prisma/seed/data/word-examples-hsk{1,2,3}.json` (mảng `[simplified, pinyinNumeric, zh, vi, pinyin?]`).
-Script CHUẨN — khớp Word theo `(simplified, pinyinNumeric)`, xoá ví dụ cũ của đúng các từ trong file rồi
-tạo lại (idempotent, không đụng Word hay từ khác) — chạy tay `npx tsx
-scripts/seed-word-examples.ts`, KHÔNG nằm trong `db:seed` mặc định (giống
-`migrate-lesson-themes.ts`, phải chạy riêng sau khi seed Word lần đầu). Đã include ở
+`src/database/seed/data/word-examples-hsk{1,2,3}.json` (mảng `[simplified, pinyinNumeric, zh, vi, pinyin?]`).
+Khớp Word theo `(simplified, pinyinNumeric)`, xoá ví dụ cũ của đúng các từ trong file rồi tạo lại
+(idempotent, không đụng Word hay từ khác) — chạy trong `db:seed` sau bước từ vựng (trước khi chuyển
+TypeORM là script chạy tay riêng). Đã include ở
 `GET /words/:id`, `/words/of-the-day`, và `GET /learn/lessons/:id` (learn.service.ts — trước đó
 BỊ THIẾU include, đã sửa 2026-09-18). Phiên học bài tự có bước điền từ vào câu (`sentence`) cho từ nào có câu.
 **HSK 2–3 (2026-10-19)**: soạn theo luật của đề thi thử — mọi chữ Hán trong câu cấp N nằm trong từ vựng HSK ≤ N,
@@ -1474,7 +1521,7 @@ câu nào; `--fix=1` UPDATE pinyin 86 câu HSK 1 chỉ khi giá trị hiện t�
 qua API công khai: 86/86 khớp). File HSK 1 từng giữ 11 khoá cách đọc CŨ (个 ge3, 吗 ma2, 要 yao1… trước đợt sửa
 2026-09-22) nên seed lại DB mới là mất 11 câu — đã sửa, spec giờ soát khoá cả HSK 1. Thử trên PGlite với toàn bộ
 từ production: 995 câu lệch 0, chạy lại không đổi gì. HSK 4–9 (9.963 từ) CHƯA làm — cùng cách: thêm
-`word-examples-hsk{N}.json`, thêm cấp vào spec + `seed-word-examples.ts`, sinh migration mới.
+`word-examples-hsk{N}.json`, thêm cấp vào spec + `EXAMPLE_FILES` (`seed/word-examples.ts`), sinh migration mới.
 
 Chưa làm (roadmap, chừa chỗ): câu ví dụ HSK4-9, cấu trúc đề thi HSK
 thật đầy đủ (nhiều phần nghe/đọc/viết đúng số câu + thời gian từng cấp — hiện mới có câu

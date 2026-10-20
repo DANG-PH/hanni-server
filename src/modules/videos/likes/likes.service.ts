@@ -1,41 +1,41 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../../infra/prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Video, VideoLike } from '../../../database/entities';
 
 @Injectable()
 export class LikesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(Video) private readonly videos: Repository<Video>,
+    @InjectRepository(VideoLike) private readonly likes: Repository<VideoLike>,
+  ) {}
 
   async like(userId: string, videoId: string) {
-    const video = await this.prisma.video.findUnique({
-      where: { id: videoId },
-      select: { id: true },
-    });
-    if (!video) throw new NotFoundException('Không tìm thấy video');
+    if (!(await this.videos.existsBy({ id: videoId })))
+      throw new NotFoundException('Không tìm thấy video');
 
-    // upsert: bấm thích nhiều lần vẫn idempotent, không lỗi unique constraint.
-    await this.prisma.videoLike.upsert({
-      where: { userId_videoId: { userId, videoId } },
-      create: { userId, videoId },
-      update: {},
-    });
+    // ON CONFLICT DO NOTHING: bấm thích nhiều lần vẫn idempotent.
+    await this.likes
+      .createQueryBuilder()
+      .insert()
+      .values({ userId, videoId })
+      .orIgnore()
+      .execute();
 
     return this.status(userId, videoId);
   }
 
   async unlike(userId: string, videoId: string) {
-    await this.prisma.videoLike
-      .delete({ where: { userId_videoId: { userId, videoId } } })
-      .catch(() => undefined); // đã bỏ thích rồi cũng coi như thành công
+    // Đã bỏ thích rồi thì không xoá được dòng nào — vẫn coi như thành công.
+    await this.likes.delete({ userId, videoId });
     return this.status(userId, videoId);
   }
 
   private async status(userId: string, videoId: string) {
     const [likeCount, liked] = await Promise.all([
-      this.prisma.videoLike.count({ where: { videoId } }),
-      this.prisma.videoLike.findUnique({
-        where: { userId_videoId: { userId, videoId } },
-      }),
+      this.likes.countBy({ videoId }),
+      this.likes.existsBy({ userId, videoId }),
     ]);
-    return { likeCount, liked: Boolean(liked) };
+    return { likeCount, liked };
   }
 }

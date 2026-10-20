@@ -4,13 +4,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Follow, User } from '../../../database/entities';
 import { AppEvent, type UserFollowedPayload } from '../../../events/events';
-import { PrismaService } from '../../../infra/prisma/prisma.service';
 
 @Injectable()
 export class FollowsService {
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Follow) private readonly follows: Repository<Follow>,
     private readonly events: EventEmitter2,
   ) {}
 
@@ -18,20 +21,16 @@ export class FollowsService {
     if (userId === targetId) {
       throw new BadRequestException('Không thể tự theo dõi chính mình');
     }
-    const target = await this.prisma.user.findUnique({
-      where: { id: targetId },
-      select: { id: true },
-    });
-    if (!target) throw new NotFoundException('Không tìm thấy người dùng');
+    if (!(await this.users.existsBy({ id: targetId })))
+      throw new NotFoundException('Không tìm thấy người dùng');
 
-    // upsert: bấm theo dõi nhiều lần vẫn idempotent.
-    await this.prisma.follow.upsert({
-      where: {
-        followerId_followingId: { followerId: userId, followingId: targetId },
-      },
-      create: { followerId: userId, followingId: targetId },
-      update: {},
-    });
+    // ON CONFLICT DO NOTHING: bấm theo dõi nhiều lần vẫn idempotent.
+    await this.follows
+      .createQueryBuilder()
+      .insert()
+      .values({ followerId: userId, followingId: targetId })
+      .orIgnore()
+      .execute();
 
     const payload: UserFollowedPayload = {
       followerId: userId,
@@ -43,25 +42,16 @@ export class FollowsService {
   }
 
   async unfollow(userId: string, targetId: string) {
-    await this.prisma.follow
-      .delete({
-        where: {
-          followerId_followingId: { followerId: userId, followingId: targetId },
-        },
-      })
-      .catch(() => undefined); // đã bỏ theo dõi rồi cũng coi như thành công
+    // Đã bỏ theo dõi rồi thì không xoá được dòng nào — vẫn coi như thành công.
+    await this.follows.delete({ followerId: userId, followingId: targetId });
     return this.status(userId, targetId);
   }
 
   private async status(userId: string, targetId: string) {
     const [followerCount, following] = await Promise.all([
-      this.prisma.follow.count({ where: { followingId: targetId } }),
-      this.prisma.follow.findUnique({
-        where: {
-          followerId_followingId: { followerId: userId, followingId: targetId },
-        },
-      }),
+      this.follows.countBy({ followingId: targetId }),
+      this.follows.existsBy({ followerId: userId, followingId: targetId }),
     ]);
-    return { followerCount, following: Boolean(following) };
+    return { followerCount, following };
   }
 }

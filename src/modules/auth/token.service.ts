@@ -4,7 +4,9 @@ import { JwtService } from '@nestjs/jwt';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { Env } from '../../config/env.validation';
 import type { AccessTokenPayload } from '../../common/types';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { IsNull, Repository } from 'typeorm';
+import { RefreshToken } from '../../database/entities';
 
 interface RefreshContext {
   userAgent?: string;
@@ -45,7 +47,8 @@ export class TokenService {
   constructor(
     private readonly jwt: JwtService,
     private readonly config: ConfigService<Env, true>,
-    private readonly prisma: PrismaService,
+    @InjectRepository(RefreshToken)
+    private readonly refreshTokens: Repository<RefreshToken>,
   ) {}
 
   signAccessToken(payload: AccessTokenPayload): string {
@@ -77,15 +80,13 @@ export class TokenService {
 
     const raw = randomBytes(REFRESH_BYTES).toString('base64url');
     const refreshExpiresAt = new Date(Date.now() + this.refreshTtlMs);
-    await this.prisma.refreshToken.create({
-      data: {
-        userId: user.id,
-        tokenHash: sha256(raw),
-        familyId,
-        expiresAt: refreshExpiresAt,
-        userAgent: ctx.userAgent?.slice(0, 255),
-        ip: ctx.ip,
-      },
+    await this.refreshTokens.insert({
+      userId: user.id,
+      tokenHash: sha256(raw),
+      familyId,
+      expiresAt: refreshExpiresAt,
+      userAgent: ctx.userAgent?.slice(0, 255),
+      ip: ctx.ip,
     });
 
     return { accessToken, refreshToken: raw, refreshExpiresAt };
@@ -96,9 +97,9 @@ export class TokenService {
    * → coi là bị đánh cắp, revoke cả family.
    */
   async rotate(rawToken: string, ctx: RefreshContext): Promise<IssuedTokens> {
-    const row = await this.prisma.refreshToken.findUnique({
+    const row = await this.refreshTokens.findOne({
       where: { tokenHash: sha256(rawToken) },
-      include: { user: true },
+      relations: { user: true },
     });
 
     if (!row) throw new UnauthorizedException('Refresh token không hợp lệ');
@@ -136,34 +137,31 @@ export class TokenService {
     }
 
     const next = await this.issueForUser(row.user, ctx, row.familyId);
-    await this.prisma.refreshToken.update({
-      where: { id: row.id },
-      data: {
-        revokedAt: new Date(),
-        replacedById: null, // giữ đơn giản; đủ để phát hiện reuse
-      },
+    await this.refreshTokens.update(row.id, {
+      revokedAt: new Date(),
+      replacedById: null, // giữ đơn giản; đủ để phát hiện reuse
     });
     return next;
   }
 
   async revoke(rawToken: string): Promise<void> {
-    await this.prisma.refreshToken.updateMany({
-      where: { tokenHash: sha256(rawToken), revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
+    await this.refreshTokens.update(
+      { tokenHash: sha256(rawToken), revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
   }
 
   async revokeFamily(familyId: string): Promise<void> {
-    await this.prisma.refreshToken.updateMany({
-      where: { familyId, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
+    await this.refreshTokens.update(
+      { familyId, revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
   }
 
   async revokeAllForUser(userId: string): Promise<void> {
-    await this.prisma.refreshToken.updateMany({
-      where: { userId, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
+    await this.refreshTokens.update(
+      { userId, revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
   }
 }

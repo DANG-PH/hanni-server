@@ -4,9 +4,11 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { IsNull, Repository } from 'typeorm';
 import webpush from 'web-push';
 import type { Env } from '../../config/env.validation';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { PushSubscription, UserSettings } from '../../database/entities';
 import type { SubscribeDto } from './dto/push.dto';
 
 /** Giờ nhắc học mặc định khi người dùng vừa bật thông báo (giờ địa phương
@@ -20,7 +22,10 @@ export class PushService {
   private readonly publicKey: string;
 
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(PushSubscription)
+    private readonly subscriptions: Repository<PushSubscription>,
+    @InjectRepository(UserSettings)
+    private readonly settings: Repository<UserSettings>,
     private readonly config: ConfigService<Env, true>,
   ) {
     this.publicKey = this.config.get('VAPID_PUBLIC_KEY', { infer: true });
@@ -50,22 +55,17 @@ export class PushService {
 
   async subscribe(userId: string, dto: SubscribeDto, userAgent?: string) {
     this.assertEnabled();
-    await this.prisma.pushSubscription.upsert({
-      where: { endpoint: dto.endpoint },
-      create: {
+    // 1 thiết bị = 1 endpoint: đăng ký lại (hoặc đổi tài khoản trên cùng máy) thì ghi đè.
+    await this.subscriptions.upsert(
+      {
         userId,
         endpoint: dto.endpoint,
         p256dh: dto.keys.p256dh,
         auth: dto.keys.auth,
         userAgent,
       },
-      update: {
-        userId,
-        p256dh: dto.keys.p256dh,
-        auth: dto.keys.auth,
-        userAgent,
-      },
-    });
+      ['endpoint'],
+    );
 
     // Bật thông báo xong thì đặt luôn GIỜ NHẮC mặc định nếu chưa có.
     //
@@ -79,26 +79,22 @@ export class PushService {
     // chính là thứ họ vừa đồng ý — mặc định `DEFAULT_REMINDER_HOUR` và vẫn
     // đổi/tắt được ở `/settings`. Job cũng đã tự bỏ qua ai đạt mục tiêu ngày
     // hôm đó nên không thành phiền.
-    await this.prisma.userSettings.updateMany({
-      where: { userId, reminderHour: null },
-      data: { reminderHour: DEFAULT_REMINDER_HOUR },
-    });
+    await this.settings.update(
+      { userId, reminderHour: IsNull() },
+      { reminderHour: DEFAULT_REMINDER_HOUR },
+    );
     return { ok: true as const };
   }
 
   async unsubscribe(userId: string, endpoint: string) {
-    await this.prisma.pushSubscription.deleteMany({
-      where: { endpoint, userId },
-    });
+    await this.subscriptions.delete({ endpoint, userId });
     return { ok: true as const };
   }
 
   /** Gửi thử 1 thông báo tới mọi thiết bị user đã đăng ký; tự dọn subscription hết hạn (404/410). */
   async sendTest(userId: string) {
     this.assertEnabled();
-    const subs = await this.prisma.pushSubscription.findMany({
-      where: { userId },
-    });
+    const subs = await this.subscriptions.findBy({ userId });
     if (subs.length === 0) {
       throw new NotFoundException(
         'Chưa đăng ký nhận thông báo trên thiết bị nào',
@@ -125,9 +121,7 @@ export class PushService {
         } catch (err) {
           const status = (err as { statusCode?: number }).statusCode;
           if (status === 404 || status === 410) {
-            await this.prisma.pushSubscription.delete({
-              where: { id: sub.id },
-            });
+            await this.subscriptions.delete(sub.id);
           }
         }
       }),
@@ -145,9 +139,7 @@ export class PushService {
     body: string,
   ): Promise<number> {
     if (!this.enabled) return 0;
-    const subs = await this.prisma.pushSubscription.findMany({
-      where: { userId },
-    });
+    const subs = await this.subscriptions.findBy({ userId });
     if (subs.length === 0) return 0;
 
     const payload = JSON.stringify({ title, body });
@@ -166,9 +158,7 @@ export class PushService {
         } catch (err) {
           const status = (err as { statusCode?: number }).statusCode;
           if (status === 404 || status === 410) {
-            await this.prisma.pushSubscription.delete({
-              where: { id: sub.id },
-            });
+            await this.subscriptions.delete(sub.id);
           }
         }
       }),

@@ -7,20 +7,39 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from '@google/genai';
-import {
-  PracticeSkill,
-  ReviewRating,
-  ReviewType,
-  SrsState,
-} from '@prisma/client';
+import { InjectRepository } from '@nestjs/typeorm';
 import { DateTime } from 'luxon';
+import {
+  And,
+  Between,
+  In,
+  LessThan,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  Repository,
+} from 'typeorm';
 import {
   isoDateToUtcDate,
   localStudyDate,
   shiftIsoDate,
 } from '../../common/time.util';
 import type { Env } from '../../config/env.validation';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import {
+  MockExamAttempt,
+  PracticeAttempt,
+  ReviewLog,
+  User,
+  UserDailyActivity,
+  UserLessonProgress,
+  UserWordProgress,
+  Word,
+} from '../../database/entities';
+import {
+  PracticeSkill,
+  ReviewRating,
+  ReviewType,
+  SrsState,
+} from '../../database/enums';
 import { RedisService } from '../../infra/redis/redis.service';
 import { CHAT_MODELS } from '../assistant/gemini-models';
 import { StreakService } from '../gamification/streak/streak.service';
@@ -46,6 +65,10 @@ const WEAK_PART_MIN_TOTAL = 4;
 const WEAK_PART_RATE = 0.75;
 const DAY_SEC = 86_400;
 
+/** Điều kiện "trong khoảng [gte, lt)" cho cột thời gian. */
+const within = (span: Span) =>
+  And(MoreThanOrEqual(span.gte), LessThan(span.lt));
+
 interface Span {
   gte: Date;
   lt: Date;
@@ -64,7 +87,20 @@ export class InsightsService {
 
   constructor(
     config: ConfigService<Env, true>,
-    private readonly prisma: PrismaService,
+    @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Word) private readonly words: Repository<Word>,
+    @InjectRepository(ReviewLog)
+    private readonly reviewLogs: Repository<ReviewLog>,
+    @InjectRepository(UserWordProgress)
+    private readonly wordProgress: Repository<UserWordProgress>,
+    @InjectRepository(UserDailyActivity)
+    private readonly activities: Repository<UserDailyActivity>,
+    @InjectRepository(UserLessonProgress)
+    private readonly lessonProgress: Repository<UserLessonProgress>,
+    @InjectRepository(PracticeAttempt)
+    private readonly practiceAttempts: Repository<PracticeAttempt>,
+    @InjectRepository(MockExamAttempt)
+    private readonly mockAttempts: Repository<MockExamAttempt>,
     private readonly redis: RedisService,
     private readonly streaks: StreakService,
   ) {
@@ -74,12 +110,14 @@ export class InsightsService {
   }
 
   async report(userId: string, period: Period, offset: 0 | 1) {
-    const user = await this.prisma.user.findUniqueOrThrow({
+    const user = await this.users.findOneOrFail({
       where: { id: userId },
+      relations: { settings: true },
       select: {
+        id: true,
         timezone: true,
         premiumUntil: true,
-        settings: { select: { courseLevel: true } },
+        settings: { userId: true, courseLevel: true },
       },
     });
     const todayIso = localStudyDate(new Date(), user.timezone, this.cutoffHour);
@@ -105,37 +143,43 @@ export class InsightsService {
           range.prevEndIso,
           span(range.prevStartIso, range.prevEndIso),
         ),
-        this.prisma.reviewLog.groupBy({
-          by: ['wordId'],
-          where: { userId, reviewedAt: now, rating: ReviewRating.AGAIN },
-          _count: { wordId: true },
-          orderBy: { _count: { wordId: 'desc' } },
-          take: 3,
-        }),
-        this.prisma.reviewLog.findMany({
-          where: { userId, reviewType: ReviewType.LEARN, reviewedAt: now },
-          select: { wordId: true },
-          distinct: ['wordId'],
-        }),
-        this.streaks.getStreak(userId),
-        this.prisma.userWordProgress.count({
-          where: {
+        // 3 từ bấm "Quên" nhiều nhất trong kỳ.
+        this.reviewLogs
+          .createQueryBuilder('log')
+          .select('log.wordId', 'wordId')
+          .addSelect('COUNT(*)::int', 'count')
+          .where({
             userId,
-            isSuspended: false,
-            state: {
-              in: [SrsState.LEARNING, SrsState.REVIEW, SrsState.RELEARNING],
-            },
-            dueAt: { lte: new Date() },
-          },
+            reviewedAt: within(now),
+            rating: ReviewRating.AGAIN,
+          })
+          .groupBy('log.wordId')
+          .orderBy('COUNT(*)', 'DESC')
+          .limit(3)
+          .getRawMany<{ wordId: string; count: number }>(),
+        // Các từ MỚI học trong kỳ (mỗi từ 1 lần).
+        this.reviewLogs
+          .createQueryBuilder('log')
+          .select('DISTINCT log.wordId', 'wordId')
+          .where({
+            userId,
+            reviewType: ReviewType.LEARN,
+            reviewedAt: within(now),
+          })
+          .getRawMany<{ wordId: string }>(),
+        this.streaks.getStreak(userId),
+        this.wordProgress.countBy({
+          userId,
+          isSuspended: false,
+          state: In([SrsState.LEARNING, SrsState.REVIEW, SrsState.RELEARNING]),
+          dueAt: LessThanOrEqual(new Date()),
         }),
-        this.prisma.userWordProgress.count({
-          where: { userId, isLeech: true },
-        }),
+        this.wordProgress.countBy({ userId, isLeech: true }),
       ]);
 
     const [forgotWords, learnedWords] = await Promise.all([
-      this.prisma.word.findMany({
-        where: { id: { in: forgot.map((f) => f.wordId) } },
+      this.words.find({
+        where: { id: In(forgot.map((f) => f.wordId)) },
         select: {
           id: true,
           simplified: true,
@@ -144,9 +188,9 @@ export class InsightsService {
           meaningVi: true,
         },
       }),
-      this.prisma.word.findMany({
-        where: { id: { in: learned.map((l) => l.wordId) } },
-        select: { simplified: true, hanViet: true, meaningVi: true },
+      this.words.find({
+        where: { id: In(learned.map((l) => l.wordId)) },
+        select: { id: true, simplified: true, hanViet: true, meaningVi: true },
       }),
     ]);
     const familiar = learnedWords.filter(hanVietMatchesMeaning);
@@ -172,7 +216,7 @@ export class InsightsService {
         })),
       hardWords: forgot.flatMap((f) => {
         const w = forgotWords.find((x) => x.id === f.wordId);
-        return w ? [{ ...w, forgot: f._count.wordId }] : [];
+        return w ? [{ ...w, forgot: f.count }] : [];
       }),
       familiar: {
         count: familiar.length,
@@ -284,37 +328,62 @@ export class InsightsService {
     when: Span,
   ) {
     const [days, reviews, lessons, practice, mocks] = await Promise.all([
-      this.prisma.userDailyActivity.findMany({
+      this.activities.find({
         where: {
           userId,
-          localDate: {
-            gte: isoDateToUtcDate(startIso),
-            lte: isoDateToUtcDate(endIso),
-          },
+          localDate: Between(
+            isoDateToUtcDate(startIso),
+            isoDateToUtcDate(endIso),
+          ),
         },
-        select: { localDate: true, minutesStudied: true, wordsReviewed: true },
+        select: {
+          id: true,
+          localDate: true,
+          minutesStudied: true,
+          wordsReviewed: true,
+        },
       }),
-      this.prisma.reviewLog.groupBy({
-        by: ['reviewType', 'rating'],
-        where: { userId, reviewedAt: when },
-        _count: { _all: true },
-      }),
-      this.prisma.userLessonProgress.count({
-        where: { userId, completedAt: when },
-      }),
-      this.prisma.practiceAttempt.groupBy({
-        by: ['skill', 'isCorrect'],
-        where: { userId, createdAt: when },
-        _count: { _all: true },
-      }),
-      this.prisma.mockExamAttempt.findMany({
-        where: { userId, createdAt: when },
-        select: { examSlug: true, score: true, maxScore: true, answers: true },
+      // Số lượt chấm thẻ theo (loại lượt, mức đánh giá).
+      this.reviewLogs
+        .createQueryBuilder('log')
+        .select(['log.reviewType AS "reviewType"', 'log.rating AS "rating"'])
+        .addSelect('COUNT(*)::int', 'count')
+        .where({ userId, reviewedAt: within(when) })
+        .groupBy('log.reviewType')
+        .addGroupBy('log.rating')
+        .getRawMany<{
+          reviewType: ReviewType;
+          rating: ReviewRating;
+          count: number;
+        }>(),
+      this.lessonProgress.countBy({ userId, completedAt: within(when) }),
+      // Số lượt luyện nghe/phát âm theo (kỹ năng, đúng/sai).
+      this.practiceAttempts
+        .createQueryBuilder('p')
+        .select(['p.skill AS "skill"', 'p.isCorrect AS "isCorrect"'])
+        .addSelect('COUNT(*)::int', 'count')
+        .where({ userId, createdAt: within(when) })
+        .groupBy('p.skill')
+        .addGroupBy('p.isCorrect')
+        .getRawMany<{
+          skill: PracticeSkill;
+          isCorrect: boolean | null;
+          count: number;
+        }>(),
+      this.mockAttempts.find({
+        where: { userId, createdAt: within(when) },
+        select: {
+          id: true,
+          examSlug: true,
+          score: true,
+          maxScore: true,
+          answers: true,
+        },
       }),
     ]);
 
-    const total = (rows: { _count: { _all: number } }[]) =>
-      rows.reduce((n, r) => n + r._count._all, 0);
+    const total = (rows: { count: number }[]) =>
+      rows.reduce((n, r) => n + r.count, 0);
     // Tỉ lệ nhớ chỉ tính lượt ÔN thật (không tính lần đầu học từ mới).
     const srs = reviews.filter(
       (r) =>

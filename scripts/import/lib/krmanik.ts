@@ -88,7 +88,8 @@ export function parseFrequency(dir: string): Map<string, number> {
       const [word, count] = line.split('\t');
       if (!word || !count) continue;
       const n = Number(count.trim());
-      if (Number.isFinite(n)) map.set(word.trim(), Math.max(map.get(word.trim()) ?? 0, n));
+      if (Number.isFinite(n))
+        map.set(word.trim(), Math.max(map.get(word.trim()) ?? 0, n));
     }
   }
   return map;

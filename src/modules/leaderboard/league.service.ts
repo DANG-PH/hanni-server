@@ -1,6 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, Repository } from 'typeorm';
+import {
+  LeagueEntry,
+  LeagueWeek,
+  ReviewLog,
+  User,
+} from '../../database/entities';
+import { findOrCreate, insertAndReturn } from '../../database/repository.util';
 import {
   currentWeekKey,
   LEAGUE_TIERS,
@@ -25,15 +33,18 @@ export interface LeagueRow {
 export class LeagueService {
   private readonly logger = new Logger(LeagueService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(LeagueWeek)
+    private readonly weeks: Repository<LeagueWeek>,
+    @InjectRepository(LeagueEntry)
+    private readonly entries: Repository<LeagueEntry>,
+    @InjectRepository(ReviewLog)
+    private readonly reviewLogs: Repository<ReviewLog>,
+    @InjectRepository(User) private readonly users: Repository<User>,
+  ) {}
 
-  async getOrCreateCurrentWeek() {
-    const key = currentWeekKey();
-    const existing = await this.prisma.leagueWeek.findUnique({
-      where: { weekKey: key },
-    });
-    if (existing) return existing;
-    return this.prisma.leagueWeek.create({ data: { weekKey: key } });
+  getOrCreateCurrentWeek() {
+    return findOrCreate(this.weeks, { weekKey: currentWeekKey() });
   }
 
   /** Đảm bảo user có 1 dòng trong tuần hiện tại — lần đầu vào giải thì xếp
@@ -41,17 +52,17 @@ export class LeagueService {
    * (rollover đã tự thăng/giáng trước khi tuần mới bắt đầu). */
   private async getOrCreateMyEntry(userId: string) {
     const week = await this.getOrCreateCurrentWeek();
-    const existing = await this.prisma.leagueEntry.findUnique({
-      where: { weekId_userId: { weekId: week.id, userId } },
-    });
+    const existing = await this.entries.findOneBy({ weekId: week.id, userId });
     if (existing) return { week, entry: existing };
 
-    const lastEntry = await this.prisma.leagueEntry.findFirst({
+    const lastEntry = await this.entries.findOne({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
+      order: { createdAt: 'DESC' },
     });
-    const entry = await this.prisma.leagueEntry.create({
-      data: { weekId: week.id, userId, tier: lastEntry?.tier ?? STARTING_TIER },
+    const entry = await insertAndReturn(this.entries, {
+      weekId: week.id,
+      userId,
+      tier: lastEntry?.tier ?? STARTING_TIER,
     });
     return { week, entry };
   }
@@ -62,20 +73,27 @@ export class LeagueService {
     to: Date,
   ): Promise<Map<string, number>> {
     if (userIds.length === 0) return new Map();
-    const grouped = await this.prisma.reviewLog.groupBy({
-      by: ['userId'],
-      where: { userId: { in: userIds }, reviewedAt: { gte: from, lt: to } },
-      _count: true,
-    });
-    return new Map(grouped.map((g) => [g.userId, g._count]));
+    // Điểm tuần = số lượt ôn (ReviewLog) trong [from, to).
+    const grouped = await this.reviewLogs
+      .createQueryBuilder('log')
+      .select('log.userId', 'userId')
+      .addSelect('COUNT(*)::int', 'count')
+      .where('log.userId IN (:...userIds)', { userIds })
+      .andWhere('log.reviewedAt >= :from AND log.reviewedAt < :to', {
+        from,
+        to,
+      })
+      .groupBy('log.userId')
+      .getRawMany<{ userId: string; count: number }>();
+    return new Map(grouped.map((g) => [g.userId, g.count]));
   }
 
   /** Giải đấu của TÔI tuần này — cùng bậc với tôi, xếp theo điểm giảm dần. */
   async getMyLeague(userId: string) {
     const { week, entry } = await this.getOrCreateMyEntry(userId);
-    const groupEntries = await this.prisma.leagueEntry.findMany({
+    const groupEntries = await this.entries.find({
       where: { weekId: week.id, tier: entry.tier },
-      select: { userId: true },
+      select: { id: true, userId: true },
     });
     const ids = groupEntries.map((e) => e.userId);
     const points = await this.pointsFor(
@@ -83,8 +101,8 @@ export class LeagueService {
       week.startedAt,
       new Date(Math.min(Date.now(), weekKeyEnd(week.weekKey).getTime())),
     );
-    const users = await this.prisma.user.findMany({
-      where: { id: { in: ids } },
+    const users = await this.users.find({
+      where: { id: In(ids) },
       select: { id: true, displayName: true, avatarUrl: true },
     });
     const uMap = new Map(users.map((u) => [u.id, u]));
@@ -142,14 +160,10 @@ export class LeagueService {
   }
 
   private async rolloverWeek(weekId: string): Promise<void> {
-    const week = await this.prisma.leagueWeek.findUnique({
-      where: { id: weekId },
-    });
+    const week = await this.weeks.findOneBy({ id: weekId });
     if (!week || week.endedAt) return; // đã rollover rồi (an toàn nếu lỡ gọi trùng)
 
-    const entries = await this.prisma.leagueEntry.findMany({
-      where: { weekId },
-    });
+    const entries = await this.entries.findBy({ weekId });
     this.logger.log(
       `Kết thúc tuần giải đấu ${week.weekKey} — ${entries.length} người tham gia`,
     );
@@ -190,31 +204,25 @@ export class LeagueService {
     }
     await Promise.all(
       entries.map((e) =>
-        this.prisma.leagueEntry.update({
-          where: { id: e.id },
-          data: {
-            finalPoints: points.get(e.userId) ?? 0,
-            movement: movementOf.get(e.userId) ?? 'stay',
-          },
+        this.entries.update(e.id, {
+          finalPoints: points.get(e.userId) ?? 0,
+          movement: movementOf.get(e.userId) ?? 'stay',
         }),
       ),
     );
 
-    await this.prisma.leagueWeek.update({
-      where: { id: week.id },
-      data: { endedAt: new Date() },
-    });
-    const nextWeek = await this.prisma.leagueWeek.create({
-      data: { weekKey: currentWeekKey() },
+    await this.weeks.update(week.id, { endedAt: new Date() });
+    const nextWeek = await insertAndReturn(this.weeks, {
+      weekKey: currentWeekKey(),
     });
     if (entries.length) {
-      await this.prisma.leagueEntry.createMany({
-        data: entries.map((e) => ({
+      await this.entries.insert(
+        entries.map((e) => ({
           weekId: nextWeek.id,
           userId: e.userId,
           tier: nextTierOf.get(e.userId) ?? e.tier,
         })),
-      });
+      );
     }
   }
 }

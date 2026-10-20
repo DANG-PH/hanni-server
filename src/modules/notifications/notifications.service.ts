@@ -1,17 +1,52 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { NotificationType } from '@prisma/client';
-import { PrismaService } from '../../infra/prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { IsNull, Repository } from 'typeorm';
+import { Notification } from '../../database/entities';
+import { NotificationType } from '../../database/enums';
 import { PushService } from '../push/push.service';
 import type { NotificationQueryDto } from './dto/notifications.dto';
 import { NotificationsGateway } from './notifications.gateway';
 
-const ACTOR_SELECT = { id: true, displayName: true, avatarUrl: true };
-const INCLUDE = {
-  actor: { select: ACTOR_SELECT },
-  video: { select: { id: true, title: true } },
-  comment: { select: { id: true, content: true } },
-  achievement: { select: { code: true, nameVi: true, descriptionVi: true } },
+/** Quan hệ cần nạp để hiện 1 thông báo (ai, video nào, bình luận nào, huy hiệu nào). */
+const RELATIONS = {
+  actor: true,
+  video: true,
+  comment: true,
+  achievement: true,
 } as const;
+
+/** Thông báo gửi cho client — chỉ những trường cần hiện (không lộ email… của người gây ra). */
+function notificationView(n: Notification) {
+  return {
+    id: n.id,
+    userId: n.userId,
+    type: n.type,
+    actorId: n.actorId,
+    videoId: n.videoId,
+    commentId: n.commentId,
+    achievementId: n.achievementId,
+    readAt: n.readAt,
+    createdAt: n.createdAt,
+    actor: n.actor
+      ? {
+          id: n.actor.id,
+          displayName: n.actor.displayName,
+          avatarUrl: n.actor.avatarUrl,
+        }
+      : null,
+    video: n.video ? { id: n.video.id, title: n.video.title } : null,
+    comment: n.comment
+      ? { id: n.comment.id, content: n.comment.content }
+      : null,
+    achievement: n.achievement
+      ? {
+          code: n.achievement.code,
+          nameVi: n.achievement.nameVi,
+          descriptionVi: n.achievement.descriptionVi,
+        }
+      : null,
+  };
+}
 
 interface CreateNotificationInput {
   userId: string;
@@ -54,7 +89,8 @@ export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectRepository(Notification)
+    private readonly notifications: Repository<Notification>,
     private readonly gateway: NotificationsGateway,
     private readonly push: PushService,
   ) {}
@@ -68,17 +104,20 @@ export class NotificationsService {
    * không biết gì, kể cả có người trả lời bình luận hay theo dõi mình. */
   async create(input: CreateNotificationInput) {
     if (input.actorId && input.actorId === input.userId) return null;
-    const notification = await this.prisma.notification.create({
-      data: {
-        userId: input.userId,
-        type: input.type,
-        actorId: input.actorId ?? null,
-        videoId: input.videoId ?? null,
-        commentId: input.commentId ?? null,
-        achievementId: input.achievementId ?? null,
-      },
-      include: INCLUDE,
+    const { identifiers } = await this.notifications.insert({
+      userId: input.userId,
+      type: input.type,
+      actorId: input.actorId ?? null,
+      videoId: input.videoId ?? null,
+      commentId: input.commentId ?? null,
+      achievementId: input.achievementId ?? null,
     });
+    const notification = notificationView(
+      await this.notifications.findOneOrFail({
+        where: { id: identifiers[0].id as string },
+        relations: RELATIONS,
+      }),
+    );
     this.gateway.emitToUser(input.userId, 'notification:new', notification);
 
     // Không await: push chậm/lỗi không được làm chậm luồng tạo thông báo.
@@ -98,18 +137,18 @@ export class NotificationsService {
     const page = q.page ?? 1;
     const pageSize = q.pageSize ?? 20;
     const [items, total, unreadCount] = await Promise.all([
-      this.prisma.notification.findMany({
+      this.notifications.find({
         where: { userId },
-        orderBy: { createdAt: 'desc' },
+        order: { createdAt: 'DESC' },
         skip: (page - 1) * pageSize,
         take: pageSize,
-        include: INCLUDE,
+        relations: RELATIONS,
       }),
-      this.prisma.notification.count({ where: { userId } }),
-      this.prisma.notification.count({ where: { userId, readAt: null } }),
+      this.notifications.countBy({ userId }),
+      this.notifications.countBy({ userId, readAt: IsNull() }),
     ]);
     return {
-      items,
+      items: items.map(notificationView),
       total,
       page,
       pageSize,
@@ -119,25 +158,26 @@ export class NotificationsService {
   }
 
   async unreadCount(userId: string) {
-    const count = await this.prisma.notification.count({
-      where: { userId, readAt: null },
+    const count = await this.notifications.countBy({
+      userId,
+      readAt: IsNull(),
     });
     return { count };
   }
 
   async markRead(userId: string, id: string) {
-    await this.prisma.notification.updateMany({
-      where: { id, userId, readAt: null },
-      data: { readAt: new Date() },
-    });
+    await this.notifications.update(
+      { id, userId, readAt: IsNull() },
+      { readAt: new Date() },
+    );
     return { ok: true };
   }
 
   async markAllRead(userId: string) {
-    await this.prisma.notification.updateMany({
-      where: { userId, readAt: null },
-      data: { readAt: new Date() },
-    });
+    await this.notifications.update(
+      { userId, readAt: IsNull() },
+      { readAt: new Date() },
+    );
     return { ok: true };
   }
 }

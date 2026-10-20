@@ -1,4 +1,4 @@
-import { PracticeSkill } from '@prisma/client';
+import { PracticeSkill } from '../../../database/enums';
 import { IsBoolean, IsEnum, IsOptional, IsUUID } from 'class-validator';
 
 export class RecordAttemptDto {
