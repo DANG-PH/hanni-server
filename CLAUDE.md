@@ -925,17 +925,24 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
   hạng. Khoá tuần `currentWeekKey()` tự tăng dạng "W123" tính từ 1 mốc thứ Hai cố định (KHÔNG
   dùng số tuần ISO lịch — tránh phải xử lý các trường hợp biên qua năm, chỉ cần tăng đều đặn mỗi
   7 ngày). Mỗi user CÙNG bậc xếp chung 1 nhóm (không chia nhiều phòng ~30 người/phòng như
-  Duolingo — quy mô Hanni hiện tại chưa cần, đơn giản hoá cho phù hợp). `@Cron(EVERY_DAY_AT_2AM)`
-  kiểm tra mỗi ngày, chỉ THẬT SỰ rollover khi khoá tuần đổi (idempotent). Lúc rollover: mỗi
-  nhóm-bậc tự xếp hạng theo điểm tuần, top ~20% (tối đa 3, tối thiểu 1) thăng 1 bậc, đáy ~20%
+  Duolingo — quy mô Hanni hiện tại chưa cần, đơn giản hoá cho phù hợp). `@Cron(EVERY_HOUR)`
+  chốt mọi tuần ĐÃ QUA mà chưa chốt, cũ nhất trước (idempotent). Lúc chốt (`planRollover()`/`zoneOf()` ở
+  `league.util.ts`, có spec): mỗi
+  nhóm-bậc tự xếp hạng theo điểm tuần, top ~20% (tối đa 3, tối thiểu 1) thăng 1 bậc — PHẢI có điểm > 0, đáy ~20%
   giáng 1 bậc, giữa an toàn — nhóm dưới 5 người (`MIN_GROUP_FOR_MOVEMENT`) thì KHÔNG giáng ai
-  (tránh giáng oan lúc còn ít user hoạt động tuần đó). Người chưa từng tham gia bắt đầu ở bậc
+  (tránh giáng oan lúc còn ít user hoạt động tuần đó).
+  **Sửa 2026-10-20 (phát hiện lúc chuyển TypeORM)**: (1) bản cũ lấy tuần HIỆN TẠI rồi so với khoá tuần hiện tại
+  nên luôn thoát sớm — từ lúc ra mắt (2026-09-19) CHƯA tuần nào được chốt, không ai từng thăng/giáng; giờ chốt
+  tuần N thì upsert bậc mới sang tuần N+1 (tạo nếu chưa có — tuần không ai mở giải đấu vẫn được chốt; ghi đè dòng
+  người đã mở giải đấu trước lượt chốt, vốn mang bậc cũ), N+1 cũng đã qua thì vòng sau chốt tiếp — lần deploy
+  đầu bù lại các tuần đã lỡ. (2) Điểm tuần tính từ `LeagueWeek.startedAt` = lúc tạo dòng (người ĐẦU TIÊN mở giải
+  đấu tuần đó) nên lượt ôn trước đó không được tính; giờ tính từ `weekKeyStart()` (thứ Hai 00:00 UTC). Kiểm chứng
+  trên Postgres thật: dựng 3 tuần cũ chưa chốt (1 tuần thiếu dòng) + lượt ôn trước lúc tạo dòng, chạy bản cũ (không
+  chốt gì, điểm 0) và bản sửa (chốt đúng từng tuần, chạy lại không đổi). Người chưa từng tham gia bắt đầu ở bậc
   thấp nhất (Đồng) khi lần đầu xem giải đấu (`getOrCreateMyEntry()`), người tuần trước có tham
   gia thì MANG NGUYÊN bậc mới (đã thăng/giáng) sang tuần tiếp theo. **KHÔNG có thưởng xu** (khác
   mùa ELO đấu 1v1 ở trên) — tránh động đến cân bằng kinh tế xu chưa được xác nhận, đây thuần là
-  cơ chế tâm lý (thăng/giáng hạng), không phải kinh tế. **CHƯA verify được rollover thật** (như
-  mùa ELO ở trên, không mô phỏng được đổi tuần trong môi trường hiện tại) — chỉ verify qua
-  `GET /leaderboard/league` trả đúng dữ liệu tuần hiện tại. Client: thẻ "Giải đấu tuần"
+  cơ chế tâm lý (thăng/giáng hạng), không phải kinh tế. Client: thẻ "Giải đấu tuần"
   (`components/weekly-league-card.tsx`) ở dashboard — CỐ Ý không chèn vào hệ thống tab đã có ở
   `/leaderboard` (khác hẳn cấu trúc dữ liệu — nhóm theo bậc + vùng thăng/giáng, không phải 1
   bảng metric đơn giản) để tránh phải sửa `components/leaderboard.tsx` đang được dev FE khác

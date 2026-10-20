@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, In, IsNull, Repository } from 'typeorm';
 import {
   LeagueEntry,
   LeagueWeek,
@@ -12,11 +12,11 @@ import { findOrCreate, insertAndReturn } from '../../database/repository.util';
 import {
   currentWeekKey,
   LEAGUE_TIERS,
-  MAX_TIER,
-  MIN_GROUP_FOR_MOVEMENT,
-  promoteDemoteCount,
+  planRollover,
   STARTING_TIER,
   weekKeyEnd,
+  weekKeyStart,
+  zoneOf,
 } from './league.util';
 
 export interface LeagueRow {
@@ -41,6 +41,7 @@ export class LeagueService {
     @InjectRepository(ReviewLog)
     private readonly reviewLogs: Repository<ReviewLog>,
     @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectDataSource() private readonly dataSource: DataSource,
   ) {}
 
   getOrCreateCurrentWeek() {
@@ -98,7 +99,7 @@ export class LeagueService {
     const ids = groupEntries.map((e) => e.userId);
     const points = await this.pointsFor(
       ids,
-      week.startedAt,
+      weekKeyStart(week.weekKey),
       new Date(Math.min(Date.now(), weekKeyEnd(week.weekKey).getTime())),
     );
     const users = await this.users.find({
@@ -111,20 +112,10 @@ export class LeagueService {
       .map((id) => ({ userId: id, points: points.get(id) ?? 0 }))
       .sort((a, b) => b.points - a.points);
 
-    const promoteN =
-      ranked.length >= MIN_GROUP_FOR_MOVEMENT
-        ? promoteDemoteCount(ranked.length)
-        : 0;
-    const demoteN = promoteN;
-
+    const ZONE = { up: 'promote', down: 'demote', stay: 'safe' } as const;
     const rows: LeagueRow[] = ranked.map((r, i) => {
       const rank = i + 1;
-      const zone: LeagueRow['zone'] =
-        entry.tier < MAX_TIER && rank <= promoteN
-          ? 'promote'
-          : entry.tier > STARTING_TIER && rank > ranked.length - demoteN
-            ? 'demote'
-            : 'safe';
+      const zone = ZONE[zoneOf(rank, ranked.length, entry.tier, r.points)];
       return {
         rank,
         userId: r.userId,
@@ -150,79 +141,62 @@ export class LeagueService {
     };
   }
 
-  /** Chạy mỗi ngày — chỉ THẬT SỰ rollover khi khoá tuần đã đổi, gọi lại
-   * nhiều lần trong cùng 1 tuần vô hại (idempotent theo `weekKey`). */
-  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  /** Mỗi giờ: chốt các tuần ĐÃ QUA mà chưa chốt, cũ nhất trước — chốt tuần N mang bậc mới sang tuần
+   * N+1, nếu N+1 cũng đã qua thì vòng sau chốt tiếp (bù được cả khi server tắt nhiều tuần). Gọi lại vô hại. */
+  @Cron(CronExpression.EVERY_HOUR)
   async checkRollover(): Promise<void> {
-    const week = await this.getOrCreateCurrentWeek();
-    if (week.weekKey === currentWeekKey()) return;
-    await this.rolloverWeek(week.id);
+    for (;;) {
+      const now = Date.now();
+      const open = await this.weeks.findBy({ endedAt: IsNull() });
+      const [oldest] = open
+        .filter((w) => weekKeyEnd(w.weekKey).getTime() <= now)
+        .sort(
+          (a, b) =>
+            weekKeyStart(a.weekKey).getTime() -
+            weekKeyStart(b.weekKey).getTime(),
+        );
+      if (!oldest) return;
+      await this.rolloverWeek(oldest);
+    }
   }
 
-  private async rolloverWeek(weekId: string): Promise<void> {
-    const week = await this.weeks.findOneBy({ id: weekId });
-    if (!week || week.endedAt) return; // đã rollover rồi (an toàn nếu lỡ gọi trùng)
-
-    const entries = await this.entries.findBy({ weekId });
+  private async rolloverWeek(week: LeagueWeek): Promise<void> {
+    const entries = await this.entries.findBy({ weekId: week.id });
     this.logger.log(
       `Kết thúc tuần giải đấu ${week.weekKey} — ${entries.length} người tham gia`,
     );
     const points = await this.pointsFor(
       entries.map((e) => e.userId),
-      week.startedAt,
+      weekKeyStart(week.weekKey),
       weekKeyEnd(week.weekKey),
     );
+    const plan = planRollover(entries, points);
 
-    const byTier = new Map<number, typeof entries>();
-    for (const e of entries) {
-      byTier.set(e.tier, [...(byTier.get(e.tier) ?? []), e]);
-    }
-
-    const nextTierOf = new Map<string, number>();
-    const movementOf = new Map<string, 'up' | 'down' | 'stay'>();
-    for (const [tier, group] of byTier) {
-      const ranked = [...group].sort(
-        (a, b) => (points.get(b.userId) ?? 0) - (points.get(a.userId) ?? 0),
-      );
-      const n =
-        ranked.length >= MIN_GROUP_FOR_MOVEMENT
-          ? promoteDemoteCount(ranked.length)
-          : 0;
-      ranked.forEach((e, i) => {
-        const rank = i + 1;
-        if (tier < MAX_TIER && rank <= n) {
-          nextTierOf.set(e.userId, tier + 1);
-          movementOf.set(e.userId, 'up');
-        } else if (tier > STARTING_TIER && rank > ranked.length - n) {
-          nextTierOf.set(e.userId, tier - 1);
-          movementOf.set(e.userId, 'down');
-        } else {
-          nextTierOf.set(e.userId, tier);
-          movementOf.set(e.userId, 'stay');
-        }
-      });
-    }
-    await Promise.all(
-      entries.map((e) =>
-        this.entries.update(e.id, {
+    await this.dataSource.transaction(async (db) => {
+      for (const e of entries) {
+        await db.update(LeagueEntry, e.id, {
           finalPoints: points.get(e.userId) ?? 0,
-          movement: movementOf.get(e.userId) ?? 'stay',
-        }),
-      ),
-    );
+          movement: plan.get(e.userId)?.movement ?? 'stay',
+        });
+      }
+      await db.update(LeagueWeek, week.id, { endedAt: new Date() });
 
-    await this.weeks.update(week.id, { endedAt: new Date() });
-    const nextWeek = await insertAndReturn(this.weeks, {
-      weekKey: currentWeekKey(),
+      // Tuần kế tiếp có thể đã có sẵn (có người mở giải đấu trước lượt chốt — dòng của họ mang bậc CŨ)
+      // nên upsert: ghi đè bậc theo kết quả vừa chốt.
+      const nextKey = currentWeekKey(weekKeyEnd(week.weekKey));
+      const nextWeek = await findOrCreate(db.getRepository(LeagueWeek), {
+        weekKey: nextKey,
+      });
+      if (entries.length)
+        await db.upsert(
+          LeagueEntry,
+          entries.map((e) => ({
+            weekId: nextWeek.id,
+            userId: e.userId,
+            tier: plan.get(e.userId)?.tier ?? e.tier,
+          })),
+          ['weekId', 'userId'],
+        );
     });
-    if (entries.length) {
-      await this.entries.insert(
-        entries.map((e) => ({
-          weekId: nextWeek.id,
-          userId: e.userId,
-          tier: nextTierOf.get(e.userId) ?? e.tier,
-        })),
-      );
-    }
   }
 }

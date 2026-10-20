@@ -32,6 +32,52 @@ export function promoteDemoteCount(groupSize: number): number {
  * oan chỉ vì tuần đó vô tình không đủ người hoạt động. */
 export const MIN_GROUP_FOR_MOVEMENT = 5;
 
+export type Movement = 'up' | 'down' | 'stay';
+
+/** Vùng của 1 người trong nhóm-bậc khi tuần kết thúc (`rank` tính từ 1, nhóm đã xếp điểm giảm dần).
+ * Thăng hạng phải có điểm — nhóm cả tuần không ai ôn thì không ai được lên. */
+export function zoneOf(
+  rank: number,
+  groupSize: number,
+  tier: number,
+  points: number,
+): Movement {
+  const n =
+    groupSize >= MIN_GROUP_FOR_MOVEMENT ? promoteDemoteCount(groupSize) : 0;
+  if (tier < MAX_TIER && rank <= n && points > 0) return 'up';
+  if (tier > STARTING_TIER && rank > groupSize - n) return 'down';
+  return 'stay';
+}
+
+/** Chốt tuần: mỗi nhóm-bậc xếp theo điểm rồi thăng/giáng 1 bậc theo `zoneOf`. */
+export function planRollover(
+  entries: { userId: string; tier: number }[],
+  points: Map<string, number>,
+): Map<string, { tier: number; movement: Movement }> {
+  const byTier = new Map<number, string[]>();
+  for (const e of entries)
+    byTier.set(e.tier, [...(byTier.get(e.tier) ?? []), e.userId]);
+
+  const plan = new Map<string, { tier: number; movement: Movement }>();
+  for (const [tier, userIds] of byTier) {
+    const ranked = [...userIds].sort(
+      (a, b) => (points.get(b) ?? 0) - (points.get(a) ?? 0),
+    );
+    ranked.forEach((userId, i) => {
+      const movement = zoneOf(
+        i + 1,
+        ranked.length,
+        tier,
+        points.get(userId) ?? 0,
+      );
+      const next =
+        movement === 'up' ? tier + 1 : movement === 'down' ? tier - 1 : tier;
+      plan.set(userId, { tier: next, movement });
+    });
+  }
+  return plan;
+}
+
 const WEEK_MS = 7 * 86_400_000;
 // Thứ Hai 1/1/2024 (UTC) — mốc cố định bất kỳ, chỉ cần đúng là thứ Hai thật.
 const EPOCH_MONDAY_UTC = Date.UTC(2024, 0, 1);
