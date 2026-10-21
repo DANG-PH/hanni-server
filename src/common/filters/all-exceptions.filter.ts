@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import { ThrottlerException } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { EntityNotFoundError } from 'typeorm';
 import {
@@ -34,8 +35,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const body = exception.getResponse();
-      if (typeof body === 'string') {
+      if (exception instanceof ThrottlerException) {
+        // Gói throttler trả chuỗi tiếng Anh ("ThrottlerException: Too Many Requests") — form hiện thẳng message cho người dùng.
+        message = 'Bạn thao tác hơi nhanh, thử lại sau ít phút nhé.';
+        error = 'TooManyRequests';
+      } else if (typeof body === 'string') {
         message = body;
+        error = exception.name;
       } else if (typeof body === 'object' && body !== null) {
         const b = body as Record<string, unknown>;
         message = (b.message as string | string[]) ?? exception.message;
