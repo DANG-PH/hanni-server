@@ -553,8 +553,15 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
     theo từ điển, khớp dài nhất trước (≤4 chữ), chỉ từ có ĐÚNG 1 mục từ điển (chữ đa âm chọn bừa
     dễ sai), bỏ đại từ/hư từ có ở mọi câu (我 你 的 了 吗…) và chữ dẫn "问：", tối đa 6 từ/câu.
     Giống lớp "dựa vào từ khoá" của Migii HSK, riêng Hanni có âm Hán Việt.
-  - **Chưa làm**: HSK 4–6 (HSK 4+ phần viết có viết câu theo tranh/viết đoạn — cần chấm bằng AI),
-    khoá đề cho Premium (chưa bật payOS thì khoá là không ai trả được tiền).
+  - **HSK 4 (2026-10-21)**: 1 đề `papers/hsk4.ts`, 100 câu — nghe 10·15·20 (đúng/sai đoạn nghe · hội thoại ngắn · hội thoại dài
+    hoặc đoạn văn; 36–45 mỗi đoạn 2 câu hỏi, đoạn đọc lại ở câu thứ hai), đọc 5·5·10·20 (điền từ 2 nửa A–F · `order` sắp xếp 3 câu
+    thành đoạn · đọc hiểu, 80–85 mỗi đoạn 2 câu hỏi), viết 10·5 (`order` · dạng MỚI `write-sentence`: tranh + từ cho sẵn, đặt câu),
+    100 phút, đạt 180/300. Câu chọn đáp án từ HSK 4 có 4 phương án A–D (spec theo cấp). `write-sentence` chấm tự động MỨC TỐI THIỂU
+    `acceptableSentence()` (có từ cho sẵn, ≥6 chữ Hán, ≥4 chữ khác nhau, chỉ chữ Hán + dấu câu) — đề thật do giám khảo chấm theo
+    mức; chữa bài hiện câu mẫu (`answer` + `alternatives`), spec bắt câu mẫu phải qua cách chấm. Soạn đề cấp cao TRÁNH: 穿着 (từ điển
+    đọc chuānzhuó), 得 nghĩa "phải" (děi), 系 jì (系好安全带), 地 trợ từ (rubyOf đọc dì) — viết lại câu thay vì để pinyin sai.
+  - **Chưa làm**: HSK 5–6, thêm đề HSK 4 (mới 1 đề — Hanbeego có hàng chục đề/cấp), AI chấm câu viết theo mức, khoá đề cho
+    Premium (chưa bật payOS thì khoá là không ai trả được tiền).
 - **Bảng phiên âm (`GET /pinyin/overview`, `@Public()`, `src/modules/pinyin`, 2026-10-15)** — cho
   trang `/phien-am` (bước 拼/声 của "Sáu chặng", trước đó trỏ sang từ điển = hứa suông). Âm thanh
   từng âm tiết = ghi âm thật của CHỮ ĐƠN trong từ điển (八 → bā); **bỏ chữ có nhiều cách đọc** vì
@@ -850,6 +857,13 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
   liễu nhất — `durationMs` phải ≥ `MATCH_PAIRS * MATCH_MIN_MS_PER_PAIR` (500ms/cặp) mới tính điểm,
   không xác minh được chi tiết từng lượt lật như MC. Điểm = `MATCH_PAIRS - mistakes` (tối thiểu
   1 nếu hợp lệ), `mistakes` (số lần lật sai) do client tự đếm và báo qua `FinishMinigameDto`.
+- **Giám sát + sao lưu bằng GitHub Actions (2026-10-21)**: `.github/workflows/uptime.yml` — mỗi 15 phút gọi `/api/health` (DB +
+  Redis) và trang chủ web, thử 3 lần; lỗi thì job đỏ → GitHub gửi email cho chủ repo (repo không có commit 60 ngày thì GitHub tự tắt
+  lịch). `backup.yml` — 2h sáng giờ VN `pg_dump --format=custom` qua SSH (dùng lại secret deploy) → mã hoá AES256 → artifact 14 ngày;
+  repo CÔNG KHAI nên CHỈ chạy khi đặt secret `BACKUP_PASSPHRASE` (chưa đặt thì dừng ngay, không đụng máy chủ), giải mã thử + kiểm
+  "PGDMP" trước khi lưu, không in nội dung ra log. Cách giải mã/khôi phục ghi ở đầu tệp workflow.
+- Thông báo kết quả giải đấu tuần mở `/leaderboard#giai-dau` (2026-10-21 — thẻ giải đấu chuyển từ trang chủ học sang trang Xếp
+  hạng; dòng cũ trong DB vẫn trỏ `/learn#giai-dau`, bấm vào chỉ về trang chủ học).
 - **`GET /auth/session` (2026-10-21, `auth.controller.ts`)** — client hỏi "ai đang đăng nhập" mỗi lần mở app. `@OptionalAuth()`:
   khách → `{ user: null }` (200); đã đăng nhập → `{ user: getProfile() }`; KHÔNG có access token nhưng còn cookie `hanni_refresh` →
   401 để client làm mới rồi hỏi lại. Route phải nằm dưới `/auth` vì cookie làm mới có `path: /api/auth` (`/users/me` không thấy
@@ -1557,8 +1571,12 @@ fang — soát bằng `--review` + liệt kê cách đọc từng chữ đa âm)
 câu nào; `--fix=1` UPDATE pinyin 86 câu HSK 1 chỉ khi giá trị hiện tại đúng bằng giá trị `pinyin-pro` cũ (đối chiếu
 qua API công khai: 86/86 khớp). File HSK 1 từng giữ 11 khoá cách đọc CŨ (个 ge3, 吗 ma2, 要 yao1… trước đợt sửa
 2026-09-22) nên seed lại DB mới là mất 11 câu — đã sửa, spec giờ soát khoá cả HSK 1. Thử trên PGlite với toàn bộ
-từ production: 995 câu lệch 0, chạy lại không đổi gì. HSK 4–9 (9.963 từ) CHƯA làm — cùng cách: thêm
-`word-examples-hsk{N}.json`, thêm cấp vào spec + `EXAMPLE_FILES` (`seed/word-examples.ts`), sinh migration mới.
+từ production: 995 câu lệch 0, chạy lại không đổi gì. **HSK 4 (997/997 từ, 2026-10-21)**: cùng luật (chữ HSK ≤ 4, chứa đúng từ, phủ
+đủ khoá), migration `1792573663407-WordExamplesHsk4` (997 INSERT, chỉ chèn khi từ chưa có câu); 997/997 khoá đối chiếu qua API
+công khai `GET /words?level=4` đều khớp. Soát pinyin: so cách đọc của từ cần minh hoạ trong pinyin câu với từ điển (11 lệch → 8 sai
+thật) + soát tay chữ đa âm khác trong câu (得 děi, 长得 zhǎng, 地 trợ từ de, 来不了 liǎo, 当作家 dāng bị ghép thành 当作) → 18 câu
+ghi tay pinyin ở phần tử thứ 5; "一场大雨" (cháng) đổi thành "一场电影" cho khớp mục 场 chǎng. HSK 5–9 (8.966 từ) CHƯA làm — cùng
+cách: thêm `word-examples-hsk{N}.json`, thêm cấp vào spec + `EXAMPLE_FILES` (`seed/word-examples.ts`), sinh migration mới.
 
 Chưa làm (roadmap, chừa chỗ): câu ví dụ HSK4-9, cấu trúc đề thi HSK
 thật đầy đủ (nhiều phần nghe/đọc/viết đúng số câu + thời gian từng cấp — hiện mới có câu
