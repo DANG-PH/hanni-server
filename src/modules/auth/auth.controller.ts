@@ -1,9 +1,20 @@
-import { Body, Controller, HttpCode, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
-import { Public } from '../../common/decorators/public.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { OptionalAuth, Public } from '../../common/decorators/public.decorator';
+import type { AuthUser } from '../../common/types';
 import type { Env } from '../../config/env.validation';
 import { AuthService } from './auth.service';
 import { REFRESH_COOKIE, clearAuthCookies, setAuthCookies } from './cookies';
@@ -15,6 +26,7 @@ import {
   ResetPasswordDto,
   VerifyEmailDto,
 } from './dto/auth.dto';
+import { UsersService } from '../users/users.service';
 import { TokenService, type IssuedTokens } from './token.service';
 
 @ApiTags('auth')
@@ -23,6 +35,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly tokens: TokenService,
+    private readonly users: UsersService,
     private readonly config: ConfigService<Env, true>,
   ) {}
 
@@ -81,6 +94,21 @@ export class AuthController {
     );
     this.send(res, tokens);
     return { ok: true };
+  }
+
+  /** Ai đang đăng nhập — client gọi mỗi lần mở app. Khách nhận `{ user: null }` (200): trước đây client gọi `/users/me`
+   * rồi `/auth/refresh`, khách nào mở trang cũng dính 2 lỗi 401 trong console và chờ thêm 2 lượt mạng. Phiên hết hạn mà
+   * còn cookie làm mới (cookie đó chỉ gửi tới `/api/auth/*`, nên route phải nằm ở đây) → 401 để client làm mới rồi hỏi lại. */
+  @OptionalAuth()
+  @Get('session')
+  async session(
+    @CurrentUser() user: AuthUser | undefined,
+    @Req() req: Request,
+  ) {
+    if (user) return { user: await this.users.getProfile(user.id) };
+    if ((req.cookies as Record<string, string>)?.[REFRESH_COOKIE])
+      throw new UnauthorizedException('Phiên đăng nhập đã hết hạn');
+    return { user: null };
   }
 
   @Public()
