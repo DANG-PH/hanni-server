@@ -1,0 +1,68 @@
+name: Sao lưu cơ sở dữ liệu
+
+# Mỗi ngày 2h sáng giờ Việt Nam (19:00 UTC) + bấm tay ở tab Actions ("Run workflow").
+# CHỈ chạy khi có secret BACKUP_PASSPHRASE: repo đang CÔNG KHAI, ai đăng nhập GitHub cũng tải được artifact, nên
+# bản sao lưu PHẢI mã hoá — chưa đặt mật khẩu thì job dừng ngay, không đụng tới máy chủ.
+# Bật: Settings → Secrets and variables → Actions → New repository secret → BACKUP_PASSPHRASE (chuỗi dài, ngẫu nhiên;
+# cất ở nơi khác ngoài GitHub — mất mật khẩu là không mở được bản sao lưu nào).
+# Mở bản sao lưu (tải artifact ở trang lượt chạy):
+#   gpg --batch --pinentry-mode loopback --passphrase '<mật khẩu>' -d hanni-<ngày>.dump.gpg > hanni.dump
+# Khôi phục vào container Postgres (GHI ĐÈ dữ liệu đang có — sao lưu bản hiện tại trước):
+#   docker cp hanni.dump hanni-postgres:/tmp/ && docker exec hanni-postgres pg_restore -U hanni -d hanni --clean --if-exists /tmp/hanni.dump
+on:
+  schedule:
+    - cron: "0 19 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    name: Kết xuất, mã hoá, lưu 14 ngày
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Kiểm tra đã đặt mật khẩu sao lưu
+        id: gate
+        run: |
+          if [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::notice::Chưa đặt secret BACKUP_PASSPHRASE — bỏ qua sao lưu."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Kết xuất cơ sở dữ liệu từ VPS và mã hoá
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT || 22 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/key"
+          # Định dạng custom của pg_dump đã nén sẵn, khôi phục bằng pg_restore. Không in nội dung ra log (repo công khai).
+          ssh -i "$RUNNER_TEMP/key" -p "$VPS_PORT" -o StrictHostKeyChecking=accept-new -o BatchMode=yes \
+            "$VPS_USER@$VPS_HOST" 'docker exec hanni-postgres pg_dump -U hanni -d hanni --format=custom' > "$RUNNER_TEMP/hanni.dump"
+          rm -f "$RUNNER_TEMP/key"
+          test -s "$RUNNER_TEMP/hanni.dump"
+          out="hanni-$(date -u +%F).dump.gpg"
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" \
+            --symmetric --cipher-algo AES256 -o "$out" "$RUNNER_TEMP/hanni.dump"
+          rm -f "$RUNNER_TEMP/hanni.dump"
+          # Giải mã thử rồi kiểm tra đúng tệp pg_dump (5 byte đầu "PGDMP") — chỉ in kích thước.
+          gpg --batch --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" -d "$out" > "$RUNNER_TEMP/check.dump" 2>/dev/null
+          [ "$(head -c 5 "$RUNNER_TEMP/check.dump")" = "PGDMP" ]
+          rm -f "$RUNNER_TEMP/check.dump"
+          echo "Đã mã hoá $out ($(du -h "$out" | cut -f1))"
+
+      - name: Lưu bản sao lưu đã mã hoá
+        if: steps.gate.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanni-db-${{ github.run_id }}
+          path: hanni-*.dump.gpg
+          retention-days: 14
+          if-no-files-found: error

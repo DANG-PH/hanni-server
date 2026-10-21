@@ -1,0 +1,41 @@
+name: Giám sát hoạt động
+
+# Mỗi 15 phút kiểm tra API (kèm DB + Redis) và trang web. Lỗi 3 lần liền → job đỏ → GitHub gửi email cho người
+# sửa lịch chạy gần nhất (chủ repo). GitHub có thể chạy trễ vài phút lúc đông; repo không có commit 60 ngày thì
+# GitHub tự tắt lịch — bật lại ở tab Actions.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    name: API, cơ sở dữ liệu, trang web
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: API + cơ sở dữ liệu + Redis
+        run: |
+          for i in 1 2 3; do
+            body=$(curl -fsS --max-time 20 https://hanni-api.dangpham.id.vn/api/health || true)
+            if echo "$body" | grep -q '"status":"ok"' && echo "$body" | grep -q '"db":"up"' && echo "$body" | grep -q '"redis":"up"'; then
+              echo "$body"
+              exit 0
+            fi
+            echo "Lần $i lỗi: ${body:-không phản hồi}"
+            sleep 20
+          done
+          exit 1
+
+      - name: Trang web
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 https://hanni.dangpham.id.vn/ || true)
+            if [ "$code" = "200" ]; then
+              echo "HTTP 200"
+              exit 0
+            fi
+            echo "Lần $i: HTTP ${code:-không phản hồi}"
+            sleep 20
+          done
+          exit 1
