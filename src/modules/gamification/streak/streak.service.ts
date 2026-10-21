@@ -3,11 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  diffCalendarDays,
-  isoDateToUtcDate,
-  localStudyDate,
-} from '../../../common/time.util';
+import { isoDateToUtcDate, localStudyDate } from '../../../common/time.util';
 import type { Env } from '../../../config/env.validation';
 import {
   User,
@@ -24,15 +20,13 @@ import {
   type StreakFreezeUsedPayload,
   type StreakUpdatedPayload,
 } from '../../../events/events';
+import { displayStreak, MAX_STREAK_FREEZE, nextStreak } from './streak.util';
+
+export { MAX_STREAK_FREEZE };
 
 function toIso(d: Date | null | undefined): string | null {
   return d ? d.toISOString().slice(0, 10) : null;
 }
-
-/** Cứ đủ 7 ngày liên tục lại được thưởng 1 "lá chắn" — dùng để giữ nguyên
- * chuỗi nếu lỡ nghỉ đúng 1 ngày (xem nhánh gap>1 trong advanceStreak()). */
-const FREEZE_MILESTONE_DAYS = 7;
-export const MAX_STREAK_FREEZE = 2;
 
 interface ActivityDelta {
   wordsReviewed?: number;
@@ -121,53 +115,27 @@ export class StreakService {
     }
   }
 
+  /** Cập nhật chuỗi khi có hoạt động ĐẦU TIÊN của ngày — luật nằm ở `nextStreak()` (streak.util.ts). */
   private async advanceStreak(userId: string, todayIso: string): Promise<void> {
     const streak = await findOrCreate(this.streaks, { userId });
-    const lastIso = toIso(streak.lastActiveLocalDate);
+    const step = nextStreak(
+      {
+        current: streak.currentStreak,
+        freeze: streak.streakFreezeCount,
+        lastIso: toIso(streak.lastActiveLocalDate),
+      },
+      todayIso,
+    );
+    if (!step) return; // hôm nay đã tính rồi
 
-    if (lastIso === todayIso) return; // đã tính hôm nay
-
-    let current = streak.currentStreak;
-    let freeze = streak.streakFreezeCount;
-    let usedFreeze = false;
-
-    if (!lastIso) {
-      current = 1;
-    } else {
-      const gap = diffCalendarDays(lastIso, todayIso);
-      if (gap === 1) {
-        current += 1;
-      } else if (gap > 1) {
-        if (freeze > 0 && gap === 2) {
-          freeze -= 1; // dùng 1 "streak freeze", giữ nguyên chuỗi
-          usedFreeze = true;
-        } else {
-          current = 1; // đứt chuỗi, hôm nay là ngày 1
-        }
-      } else {
-        return; // gap <= 0: lệch đồng hồ / đổi timezone — bỏ qua
-      }
-    }
-
-    // Thưởng 1 "lá chắn" (streak freeze) mỗi mốc 7 ngày liên tục, tối đa
-    // MAX_STREAK_FREEZE cái tồn cùng lúc — trước đây streakFreezeCount chỉ
-    // có logic TIÊU (ở nhánh gap>1 phía trên) mà không bao giờ được CẤP, nên
-    // luôn kẹt ở 0 và không có tác dụng thật.
-    if (
-      current > 0 &&
-      current % FREEZE_MILESTONE_DAYS === 0 &&
-      freeze < MAX_STREAK_FREEZE
-    ) {
-      freeze += 1;
-    }
-
+    const current = step.current;
     const longest = Math.max(streak.longestStreak, current);
     await this.streaks.update(
       { userId },
       {
         currentStreak: current,
         longestStreak: longest,
-        streakFreezeCount: freeze,
+        streakFreezeCount: step.freeze,
         lastActiveLocalDate: isoDateToUtcDate(todayIso),
       },
     );
@@ -178,11 +146,11 @@ export class StreakService {
       longestStreak: longest,
     };
     this.events.emit(AppEvent.StreakUpdated, payload);
-    if (usedFreeze) {
+    if (step.usedFreeze) {
       const used: StreakFreezeUsedPayload = {
         userId,
         currentStreak: current,
-        freezeLeft: freeze,
+        freezeLeft: step.freeze,
       };
       this.events.emit(AppEvent.StreakFreezeUsed, used);
     }
@@ -201,14 +169,14 @@ export class StreakService {
 
     const todayIso = localStudyDate(new Date(), user.timezone, this.cutoffHour);
     const lastIso = toIso(streak.lastActiveLocalDate);
-
-    let displayCurrent = streak.currentStreak;
-    let active = false;
-    if (lastIso === todayIso) {
-      active = true;
-    } else if (lastIso && diffCalendarDays(lastIso, todayIso) > 1) {
-      displayCurrent = 0; // đã bỏ lỡ → chuỗi đứt cho tới khi học lại
-    }
+    const shown = displayStreak(
+      {
+        current: streak.currentStreak,
+        freeze: streak.streakFreezeCount,
+        lastIso,
+      },
+      todayIso,
+    );
 
     const activity = await this.activities.findOneBy({
       userId,
@@ -223,11 +191,13 @@ export class StreakService {
       : 0;
 
     return {
-      currentStreak: displayCurrent,
+      currentStreak: shown.current,
       longestStreak: streak.longestStreak,
       streakFreezeCount: streak.streakFreezeCount,
       lastActiveLocalDate: lastIso,
-      activeToday: active,
+      activeToday: shown.activeToday,
+      /** Hôm qua lỡ nghỉ nhưng còn lá chắn — học hôm nay là chuỗi được giữ. */
+      savedByFreeze: shown.savedByFreeze,
       goal: {
         type: goalType,
         value: goalValue,
