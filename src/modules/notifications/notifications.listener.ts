@@ -71,7 +71,8 @@ export class NotificationsListener {
         userId: p.userId,
         type: NotificationType.LEAGUE_RESULT,
         message,
-        href: '/learn#giai-dau',
+        // Thẻ giải đấu tuần nằm ở trang Xếp hạng (2026-10-21, trước đó ở trang chủ học).
+        href: '/leaderboard#giai-dau',
         pushTitle:
           p.movement === 'up'
             ? 'Bạn đã lên bảng mới!'
