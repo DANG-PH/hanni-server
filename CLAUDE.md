@@ -850,6 +850,11 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
   liễu nhất — `durationMs` phải ≥ `MATCH_PAIRS * MATCH_MIN_MS_PER_PAIR` (500ms/cặp) mới tính điểm,
   không xác minh được chi tiết từng lượt lật như MC. Điểm = `MATCH_PAIRS - mistakes` (tối thiểu
   1 nếu hợp lệ), `mistakes` (số lần lật sai) do client tự đếm và báo qua `FinishMinigameDto`.
+- **`GET /auth/session` (2026-10-21, `auth.controller.ts`)** — client hỏi "ai đang đăng nhập" mỗi lần mở app. `@OptionalAuth()`:
+  khách → `{ user: null }` (200); đã đăng nhập → `{ user: getProfile() }`; KHÔNG có access token nhưng còn cookie `hanni_refresh` →
+  401 để client làm mới rồi hỏi lại. Route phải nằm dưới `/auth` vì cookie làm mới có `path: /api/auth` (`/users/me` không thấy
+  cookie đó). Trước đó client gọi `/users/me` → 401 → `/auth/refresh` → 401: khách nào mở trang cũng dính 2 lỗi 401 trong console
+  + chờ thêm 2 lượt mạng (Lighthouse Best Practices 75 ở `/learn`).
 - **Luật chuỗi ngày là hàm thuần (2026-10-21, `gamification/streak/streak.util.ts`, 9 ca test)**: `nextStreak()` — lỡ nghỉ ĐÚNG
   1 ngày mà còn lá chắn thì tiêu 1 lá chắn VÀ hôm nay vẫn +1 (trước đó chỉ giữ số, học lại chuỗi đứng yên); `displayStreak()` —
   hôm sau ngày nghỉ mà còn lá chắn thì `GET /streak` vẫn trả chuỗi cũ + `savedByFreeze: true` (trước đó trả 0 dù lá chắn sẽ cứu).
