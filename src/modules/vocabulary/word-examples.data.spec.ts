@@ -38,7 +38,7 @@ function forms(simplified: string): string[] {
   ];
 }
 
-describe.each([1, 2, 3])('câu ví dụ HSK %i', (level) => {
+describe.each([1, 2, 3, 4])('câu ví dụ HSK %i', (level) => {
   let entries: Entry[] = [];
   try {
     entries = JSON.parse(

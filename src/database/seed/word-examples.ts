@@ -39,6 +39,11 @@ export const EXAMPLE_FILES: { level: number; file: string; source: string }[] =
       file: 'src/database/seed/data/word-examples-hsk3.json',
       source: 'Hanni soạn (2026-10)',
     },
+    {
+      level: 4,
+      file: 'src/database/seed/data/word-examples-hsk4.json',
+      source: 'Hanni soạn (2026-10)',
+    },
   ];
 
 export const readExamples = (file: string) => read<ExampleEntry[]>(file);
