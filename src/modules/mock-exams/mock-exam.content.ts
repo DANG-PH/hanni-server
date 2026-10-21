@@ -9,11 +9,13 @@ import type {
 import { HSK1_PAPERS } from './papers/hsk1';
 import { HSK2_PAPERS } from './papers/hsk2';
 import { HSK3_PAPERS } from './papers/hsk3';
+import { HSK4_PAPERS } from './papers/hsk4';
 
 export const PAPERS: MockPaper[] = [
   ...HSK1_PAPERS,
   ...HSK2_PAPERS,
   ...HSK3_PAPERS,
+  ...HSK4_PAPERS,
 ];
 
 /** Mỗi phần thi tối đa 100 điểm (HSK 1–2: 200 điểm, HSK 3–6: 300 điểm), đạt
@@ -205,10 +207,25 @@ export function answerOf(n: NumberedItem): AnswerValue {
  * người làm thêm đúng dấu chấm/dấu hỏi cuối câu. */
 export const normalizeSentence = (s: string) => s.replace(/[\s\p{P}]/gu, '');
 
+/** Câu tự đặt (HSK 4 viết phần 2) đạt mức tối thiểu: dùng đúng từ cho sẵn, ít nhất 6 chữ Hán (4 chữ khác nhau),
+ * chỉ gồm chữ Hán + dấu câu. Không chấm được ngữ pháp/ý như giám khảo — chữa bài kèm câu mẫu để người học tự so. */
+export function acceptableSentence(given: string, word: string): boolean {
+  const s = given.replace(/\s/g, '');
+  const han = Array.from(s).filter((c) => HAN.test(c));
+  return (
+    s.includes(word) &&
+    han.length >= 6 &&
+    new Set(han).size >= 4 &&
+    Array.from(s).every((c) => HAN.test(c) || /\p{P}/u.test(c))
+  );
+}
+
 /** `given` có phải đáp án đúng của câu `n` không. Câu sắp xếp nhận cả các
  * thứ tự khác cũng đúng (`alternatives`); sai kiểu thì tính như sai. */
 export function isCorrect(n: NumberedItem, given: unknown): boolean {
   const raw = itemsOf(n.part)[n.itemIndex];
+  if ('word' in raw)
+    return typeof given === 'string' && acceptableSentence(given, raw.word);
   if ('pieces' in raw) {
     if (typeof given !== 'string') return false;
     const g = normalizeSentence(given);
@@ -357,6 +374,7 @@ export function publicPaper(
           if ('question' in raw && raw.question)
             item.question = ruby(raw.question);
           if ('statement' in raw) item.statement = ruby(raw.statement);
+          if ('word' in raw) item.word = ruby(raw.word);
           if ('pieces' in raw) item.pieces = piecesOf(raw.pieces, raw.answer);
           if ('choices' in raw) {
             item.pinyin = raw.pinyin;
@@ -397,7 +415,7 @@ function textsOf(n: NumberedItem): string[] {
   else if ('text' in raw && raw.text) texts.push(raw.text);
   if ('question' in raw && raw.question) texts.push(raw.question);
   if ('statement' in raw) texts.push(raw.statement);
-  if ('pieces' in raw) texts.push(raw.answer);
+  if ('pieces' in raw || 'word' in raw) texts.push(raw.answer);
   if (n.part.type === 'match-text')
     texts.push(n.part.options[raw.answer as number]);
   if ('options' in raw && typeof raw.answer === 'number')

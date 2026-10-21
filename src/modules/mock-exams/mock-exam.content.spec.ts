@@ -1,5 +1,6 @@
 import {
   BLANK,
+  acceptableSentence,
   answerOf,
   isCorrect,
   normalizeSentence,
@@ -27,6 +28,11 @@ const STRUCTURE: Record<number, Record<string, number[]>> = {
     listening: [5, 5, 10, 10, 10],
     reading: [5, 5, 5, 5, 10],
     writing: [5, 5],
+  },
+  4: {
+    listening: [10, 15, 20],
+    reading: [5, 5, 10, 20],
+    writing: [10, 5],
   },
 };
 const PART_TYPES: Record<number, Record<string, string[]>> = {
@@ -67,14 +73,20 @@ const PART_TYPES: Record<number, Record<string, string[]>> = {
     ],
     writing: ['order', 'pinyin-char'],
   },
+  4: {
+    listening: ['judge-text', 'choose-text', 'choose-text'],
+    reading: ['fill-blank', 'fill-blank', 'order', 'choose-text'],
+    writing: ['order', 'write-sentence'],
+  },
 };
 /** Phần nào là nửa sau (`continues`) — vị trí theo dữ liệu. */
 const CONTINUES: Record<number, Record<string, number[]>> = {
   1: { listening: [], reading: [] },
   2: { listening: [2], reading: [4] },
   3: { listening: [1], reading: [1, 3], writing: [] },
+  4: { listening: [], reading: [1], writing: [] },
 };
-const DURATION: Record<number, number> = { 1: 35, 2: 50, 3: 85 };
+const DURATION: Record<number, number> = { 1: 35, 2: 50, 3: 85, 4: 100 };
 
 const NO_OVERRIDES: PinyinOverrides = new Map();
 
@@ -115,12 +127,15 @@ describe('nội dung đề thi thử', () => {
                 expect(it.answer).toBeGreaterThanOrEqual(0);
                 expect(it.answer).toBeLessThan(3);
               }
-            if (part.type === 'choose-text')
+            if (part.type === 'choose-text') {
+              // HSK 1–3 chọn A/B/C, HSK 4 trở lên A/B/C/D.
+              const n = paper.level >= 4 ? 4 : 3;
               for (const it of part.items) {
-                expect(it.options).toHaveLength(3);
-                expect(new Set(it.options).size).toBe(3);
-                expect(it.answer).toBeLessThan(3);
+                expect(it.options).toHaveLength(n);
+                expect(new Set(it.options).size).toBe(n);
+                expect(it.answer).toBeLessThan(n);
               }
+            }
             if (
               part.type === 'match-picture' ||
               part.type === 'match-text' ||
@@ -171,6 +186,13 @@ describe('nội dung đề thi thử', () => {
                 expect(accepted.map(normalizeSentence)).not.toContain(
                   it.pieces.join(''),
                 );
+              }
+            if (part.type === 'write-sentence')
+              for (const it of part.items) {
+                // Câu mẫu phải tự qua được cách chấm tự động — chấm sai câu mẫu thì cách chấm có vấn đề.
+                for (const a of [it.answer, ...(it.alternatives ?? [])])
+                  expect(acceptableSentence(a, it.word)).toBe(true);
+                expect(acceptableSentence(it.word, it.word)).toBe(false);
               }
             if (part.type === 'pinyin-char')
               for (const it of part.items) {
@@ -506,7 +528,7 @@ describe('đề chỉ dùng chữ trong phạm vi cấp', () => {
             ...((it.audio as { zh: string }[] | undefined) ?? []).map(
               (l) => l.zh,
             ),
-            ...['text', 'statement', 'question', 'answer'].map((k) =>
+            ...['text', 'statement', 'question', 'answer', 'word'].map((k) =>
               typeof it[k] === 'string' ? it[k] : '',
             ),
             ...((it.options as string[] | undefined) ?? []),

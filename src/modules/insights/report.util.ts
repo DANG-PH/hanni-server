@@ -137,6 +137,7 @@ const PART_TYPE_VI: Record<string, string> = {
   'judge-text': 'xét câu ★ đúng/sai',
   order: 'sắp xếp từ thành câu',
   'pinyin-char': 'viết chữ theo pinyin',
+  'write-sentence': 'nhìn tranh đặt câu',
 };
 const SECTION_VI: Record<string, string> = {
   listening: 'Nghe',

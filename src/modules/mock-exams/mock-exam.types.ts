@@ -96,6 +96,18 @@ export interface PinyinCharItem extends ItemBase {
   answer: number;
 }
 
+/** Nhìn tranh, dùng từ cho sẵn đặt 1 câu (HSK 4 phần viết 2). Đề thật do giám khảo chấm theo mức; ở đây chấm
+ * tự động mức tối thiểu (`acceptableSentence`) và chữa bài bằng câu mẫu. */
+export interface WriteSentenceItem extends ItemBase {
+  picture: Picture;
+  /** Từ bắt buộc dùng, in dưới tranh. */
+  word: string;
+  /** Câu mẫu (hiện khi chữa bài). */
+  answer: string;
+  /** Câu mẫu khác. */
+  alternatives?: string[];
+}
+
 /** Ghép câu hỏi với câu trả lời / điền từ vào chỗ trống, dùng bộ A–F chung. */
 export interface TextItem extends ItemBase {
   /** Với `fill-blank`: chỗ trống viết là "（ ）". */
@@ -113,6 +125,7 @@ export type PaperPart = (
   | { type: 'judge-text'; items: JudgeTextItem[] }
   | { type: 'order'; items: OrderItem[] }
   | { type: 'pinyin-char'; items: PinyinCharItem[] }
+  | { type: 'write-sentence'; items: WriteSentenceItem[] }
 ) & {
   /** Nửa sau của CÙNG 1 phần đề nhưng dùng bộ tranh/đáp án riêng (HSK 2: câu
    * 11–15 và 16–20 cùng là "第二部分") — đánh số phần, phân tích điểm gộp chung. */
