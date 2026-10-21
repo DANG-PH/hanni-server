@@ -850,6 +850,12 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
   liễu nhất — `durationMs` phải ≥ `MATCH_PAIRS * MATCH_MIN_MS_PER_PAIR` (500ms/cặp) mới tính điểm,
   không xác minh được chi tiết từng lượt lật như MC. Điểm = `MATCH_PAIRS - mistakes` (tối thiểu
   1 nếu hợp lệ), `mistakes` (số lần lật sai) do client tự đếm và báo qua `FinishMinigameDto`.
+- **Luật chuỗi ngày là hàm thuần (2026-10-21, `gamification/streak/streak.util.ts`, 9 ca test)**: `nextStreak()` — lỡ nghỉ ĐÚNG
+  1 ngày mà còn lá chắn thì tiêu 1 lá chắn VÀ hôm nay vẫn +1 (trước đó chỉ giữ số, học lại chuỗi đứng yên); `displayStreak()` —
+  hôm sau ngày nghỉ mà còn lá chắn thì `GET /streak` vẫn trả chuỗi cũ + `savedByFreeze: true` (trước đó trả 0 dù lá chắn sẽ cứu).
+  `MAX_STREAK_FREEZE`/`FREEZE_MILESTONE_DAYS` chuyển sang file này (service re-export). Cùng ngày: `AllExceptionsFilter` bắt riêng
+  `ThrottlerException` → 429 "Bạn thao tác hơi nhanh, thử lại sau ít phút nhé." (trước đó form hiện nguyên câu tiếng Anh và nhãn
+  lỗi kẹt `InternalServerError`); trợ lý AI thêm trang `practice` (/luyen-tap) và `classroom` (/lop-hoc) vào tool điều hướng.
 - **Gỡ hệ thống xu + nhắn tin/theo dõi/bình luận (2026-10-20 — user: "hệ thống xu chỉ để mua cái kia thôi sao, có nên bỏ
   không", "logic backend nào không còn nữa thì xoá")**. Xu chỉ có MỘT chỗ tiêu (lá chắn giữ chuỗi 300 xu) nên là một vòng vô
   nghĩa: kiếm xu → đổi lá chắn. Giờ thưởng thẳng:
