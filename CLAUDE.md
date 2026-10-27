@@ -31,7 +31,7 @@ scripts/         script chạy tay (backfill, đồng bộ cách đọc, sinh mi
 scripts/import/  ETL nguồn mở → data/processed/words.seed.json
 ```
 
-## Bản đồ route ↔ giao diện (2026-10-27 — để dev chưa đọc source vẫn sửa được khi thuyết trình)
+## Bản đồ route ↔ giao diện (2026-10-27 — để dev chưa đọc source vẫn tìm và sửa được ngay)
 - **Mục lục** "URL bắt đầu bằng → thư mục nào" ở đầu `src/app.module.ts` (4 chỗ khác tên: `/study` → `srs/`, `/streak` `/achievements`
   `/quiz` → `gamification/`, `/words` `/dictionary` `/levels` → `vocabulary/`, `/ai` → `ai-tools/`) + job chạy ngầm, WebSocket, listener.
 - **Khối `BẢN ĐỒ`** đầu MỖI controller: từng route — method, đường dẫn, quyền ([khách] / [khách+] / [đăng nhập] / [admin]), nút/trang nào
@@ -75,8 +75,18 @@ qua webhook. Giờ (`payments.service.ts`, đầu file có khối "Luồng 1 l�
 - `APP_URL` (dựng `ipnUrl` MoMo) trên VPS = `https://hanni-api.dangpham.id.vn` — bản cũ `api.hanni.dangpham.id.vn` không phân giải.
 - **Còn làm tay**: khai Webhook URL `https://hanni-api.dangpham.id.vn/api/payments/webhook/payos` ở my.payos.vn (chưa khai thì Premium
   vẫn lên, chậm tối đa 5 phút); khoá MoMo thật: business.momo.vn (hồ sơ doanh nghiệp, hợp đồng, phí theo giao dịch) → đổi 3 khoá +
-  `MOMO_API_URL=https://payment.momo.vn`. Test: `payments.service.spec.ts` (8 ca), `momo.util.spec.ts` (4 ca).
+  `MOMO_API_URL=https://payment.momo.vn`. Test: `payments.service.spec.ts` (11 ca), `momo.util.spec.ts` (5 ca).
 - Route: 132 (thêm webhook MoMo); 5 route cố ý không có giao diện: `/health`, `/assistant/status`, `GET /partners/leads`, 2 webhook.
+- **Hoàn thiện + tách file (2026-10-27 tối, user: "tích hợp momo hoàn thiện", "source server dễ tìm, dễ đọc, dễ sửa")**:
+  `payments/` giờ mỗi file 1 việc — `payments.service.ts` = nghiệp vụ đơn hàng chung mọi cổng (tạo đơn, 3 đường xác nhận,
+  `grantPaidOrder`, `cancelOrder`), `payos.service.ts` = gọi payOS (`createPaymentLink`, `getPaymentStatus`, `verifyWebhook`),
+  `momo.service.ts` = gọi MoMo, `momo.util.ts` = chữ ký + `momoOutcome()` (bảng mã kết quả: 0 đã trả; `MOMO_PENDING_CODES`
+  1000/7000/7002/8000/9000 chờ; `MOMO_FAILED_CODES` 1001–1007, 1017, 1026, 4001, 4100 thất bại; mã khác = chưa rõ, để nguyên
+  hỏi lại sau). Trước đó MoMo thất bại/huỷ/hết hạn để đơn treo PENDING 7 ngày; giờ cả đối soát lẫn IPN đều chuyển CANCELLED
+  (`cancelOrder` có điều kiện PENDING — đơn đã PAID không bị huỷ ngược). Đầu `app.module.ts` thêm mục **"THAM SỐ HAY ĐỔI"**
+  (hạn mức AI, giá gói, phiên học, SRS, thi thử, lá chắn, nhắc học, thanh toán → đúng file + hằng số).
+  IPN của MoMo sandbox không tới: đã loại trừ phía Hanni — API không qua Cloudflare, POST bất kỳ đều vào (204), chứng chỉ có
+  chuỗi ký chéo về ISRG Root X1 (máy chủ Java cũ vẫn tin) → do sandbox; đơn vẫn xác nhận bằng hỏi lại MoMo.
 
 ## Convention
 - Mỗi domain = 1 module NestJS (controller / service / module / dto). Business logic ở service.

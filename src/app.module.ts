@@ -73,16 +73,36 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
  *   /roleplay                     → roleplay/        luyện nói với AI theo tình huống
  *   /ai                         ★ → ai-tools/        mẹo nhớ, chấm câu, phân tích câu, bài đọc AI
  *   /scan                         → scan/            quét ảnh học từ (Gemini vision)
- *   /payments /premium            → payments/ premium/  thanh toán payOS + trạng thái Premium
+ *   /payments /premium            → payments/ premium/  thanh toán payOS + MoMo (đơn hàng ở payments.service.ts,
+ *                                                     gọi cổng ở payos.service.ts / momo.service.ts) + trạng thái Premium
  *   /shop                       ★ → shop/            CHỈ còn danh hiệu (tên thư mục cũ từ thời bán đồ bằng xu)
  *   /push /notifications /mail    → push/ notifications/ mail/  thông báo đẩy, chuông thông báo, email
  *   /referrals                    → referrals/       mời bạn bè
  *   /health                       → src/health/      giám sát (GitHub Actions gọi)
  *
  * Chạy NGẦM, không có giao diện gọi: mỗi giờ — push/reminder.service.ts (nhắc học, sắp mất chuỗi), mail/weekly-
- * digest.service.ts (email tuần), leaderboard/league.service.ts checkRollover (chốt giải đấu tuần). WebSocket chuông
+ * digest.service.ts (email tuần), leaderboard/league.service.ts checkRollover (chốt giải đấu tuần); mỗi 5 phút —
+ * payments/payments.service.ts reconcilePending (hỏi lại payOS/MoMo các đơn chưa xác nhận). WebSocket chuông
  * thông báo: notifications/notifications.gateway.ts (namespace /notifications). Sự kiện nội bộ (src/events/events.ts)
  * do các *.listener.ts nghe: gamification (huy hiệu), progress (tiến độ bài), notifications (tạo thông báo), referrals.
+ *
+ * THAM SỐ HAY ĐỔI — sửa đúng 1 hằng số (đường dẫn trong src/modules/), server dev tự nạp lại; chạy `npx jest` nếu có test:
+ *   Hạn mức AI miễn phí / ngày   assistant/assistant.service.ts FREE_ASK_DAILY_LIMIT (15) · roleplay/roleplay.service.ts
+ *                                FREE_ROLEPLAY_DAILY_LIMIT (15) · ai-tools/ai-tools.util.ts FREE_/PREMIUM_AI_TOOLS_DAILY_LIMIT
+ *                                (10/200) · scan/scan.util.ts FREE_/PREMIUM_SCAN_DAILY_LIMIT (3/100)
+ *   Giá gói Premium              premium/premium-plans.ts PREMIUM_PLANS (priceVnd)
+ *   Phiên học 1 bài              learn/lesson-session.util.ts CHUNK (4 từ/nhóm), OPTION_COUNT (4 phương án)
+ *   Kiểm tra trình độ            learn/placement.service.ts PER_LEVEL (4 câu/cấp), PASS_PER_LEVEL (đúng 3 là qua)
+ *   Ôn tập (SRS)                 srs/srs.constants.ts LEARNED_INTERVAL_DAYS (21 ngày = "đã thuộc") ·
+ *                                srs/scheduler/sm2.scheduler.ts LEECH_LAPSES (sai 8 lần = "từ khó nhớ")
+ *   Thi thử                      mock-exams/mock-exam.content.ts PASS_RATIO (0.6) · thời gian: durationMin trong papers/*.ts
+ *   Chuỗi ngày + lá chắn         gamification/streak/streak.util.ts MAX_STREAK_FREEZE (2), FREEZE_MILESTONE_DAYS (7)
+ *   Nhiệm vụ hằng ngày           quests/quest.util.ts QUEST_POOL (tên + chỉ tiêu)
+ *   Nhắc học                     push/push.service.ts DEFAULT_REMINDER_HOUR (20h) · push/reminder.service.ts STREAK_RISK_HOUR
+ *   Tra từ (chỉ mục trong RAM)   vocabulary/words.service.ts SEARCH_INDEX_TTL_MS · xếp hạng: vocabulary/word-search.util.ts
+ *   Thanh toán                   payments/payments.service.ts RECONCILE_WINDOW_MS (7 ngày đối soát) · mã kết quả MoMo:
+ *                                payments/momo.util.ts MOMO_PENDING_CODES / MOMO_FAILED_CODES
+ *   Biến môi trường (.env)       config/env.validation.ts — THROTTLE_LIMIT, STREAK_DAY_CUTOFF_HOUR, khoá payOS/MoMo/Gemini…
  */
 @Module({
   imports: [

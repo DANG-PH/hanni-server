@@ -3,6 +3,7 @@ import {
   ipnSignature,
   type MomoIpn,
   momoOrderId,
+  momoOutcome,
   orderCodeFromMomoOrderId,
   verifyIpn,
 } from './momo.util';
@@ -66,6 +67,16 @@ describe('momo.util', () => {
         SECRET,
       ),
     ).toBe(false);
+  });
+
+  it('mã kết quả MoMo → đã trả / đang chờ / thất bại / chưa rõ', () => {
+    expect(momoOutcome(0)).toBe('paid');
+    expect(momoOutcome(1000)).toBe('pending');
+    expect(momoOutcome(7000)).toBe('pending');
+    expect(momoOutcome(1006)).toBe('failed');
+    expect(momoOutcome(1005)).toBe('failed');
+    expect(momoOutcome(99)).toBe('unknown');
+    expect(momoOutcome(undefined)).toBe('unknown');
   });
 
   it('orderId gửi MoMo đọc ngược ra đúng mã đơn', () => {

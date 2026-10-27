@@ -101,6 +101,34 @@ export function querySignature(
   );
 }
 
+/** resultCode MoMo trả về (IPN + tra trạng thái) → đơn nên ra sao. Bảng mã: developers.momo.vn, mục "Mã lỗi".
+ * Mã KHÔNG có trong 2 danh sách (lỗi hệ thống, không tìm thấy giao dịch…) = 'unknown': để nguyên đơn, lượt đối soát sau
+ * hỏi lại — không huỷ vội đơn có thể vẫn đang được trả. */
+export const MOMO_PENDING_CODES = [1000, 7000, 7002, 8000, 9000]; // khởi tạo, chờ người dùng xác nhận, đang xử lý
+export const MOMO_FAILED_CODES = [
+  1001, // không đủ tiền
+  1002, // ngân hàng/nguồn tiền từ chối
+  1003, // giao dịch bị huỷ
+  1004, // vượt hạn mức thanh toán
+  1005, // link / mã QR đã hết hạn
+  1006, // người dùng từ chối / bấm huỷ
+  1007, // tài khoản không hoạt động
+  1017, // đối tác huỷ
+  1026, // bị chặn bởi thể lệ khuyến mãi
+  4001, // tài khoản bị hạn chế
+  4100, // người dùng đăng nhập thất bại
+];
+
+export function momoOutcome(
+  resultCode: number | null | undefined,
+): 'paid' | 'pending' | 'failed' | 'unknown' {
+  const code = Number(resultCode);
+  if (code === 0) return 'paid';
+  if (MOMO_PENDING_CODES.includes(code)) return 'pending';
+  if (MOMO_FAILED_CODES.includes(code)) return 'failed';
+  return 'unknown';
+}
+
 /** orderId gửi MoMo: "HN<mã đơn>T<thời điểm>" — MoMo bắt orderId KHÔNG trùng trong cả partnerCode (sandbox dùng chung
  * partnerCode "MOMO" với mọi người nên chỉ số mã đơn sẽ đụng), vẫn đọc ngược ra mã đơn của Hanni được. */
 export function momoOrderId(orderCode: number, now: number): string {

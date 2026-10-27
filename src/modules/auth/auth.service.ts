@@ -74,7 +74,7 @@ export class AuthService {
   }
 
   /**
-   * LUỒNG ĐĂNG NHẬP + GIỮ PHIÊN (thầy hay hỏi "token lưu ở đâu, hết hạn thì sao"):
+   * LUỒNG ĐĂNG NHẬP + GIỮ PHIÊN (câu hay được hỏi: "token lưu ở đâu, hết hạn thì sao"):
    *   1. Form /login (client components/auth-form-card.tsx) → POST /auth/login → hàm này: so mật khẩu với bản băm
    *      (password.service.ts: scrypt có salt riêng từng người, so bằng timingSafeEqual chống đo thời gian) →
    *      TokenService.issueForUser(): access token JWT (JWT_ACCESS_TTL, mặc định 15 phút)
