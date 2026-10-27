@@ -10,8 +10,7 @@ import {
 } from '../../database/entities';
 import { SrsState } from '../../database/enums';
 import { TITLE_CATALOG } from '../shop/title-catalog';
-
-const LEARNED_INTERVAL_DAYS = 21;
+import { LEARNED_INTERVAL_DAYS } from '../srs/srs.constants';
 
 export type LeaderboardMetric = 'learned' | 'streak' | 'longest' | 'lessons';
 

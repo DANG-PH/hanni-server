@@ -12,8 +12,7 @@ import {
 } from '../../database/entities';
 import { SrsState } from '../../database/enums';
 import { relatedGrammarForWords } from '../grammar/grammar-match.util';
-
-const LEARNED_INTERVAL_DAYS = 21;
+import { LEARNED_INTERVAL_DAYS } from '../srs/srs.constants';
 
 export type LessonStatus = 'COMPLETED' | 'IN_PROGRESS' | 'AVAILABLE' | 'LOCKED';
 

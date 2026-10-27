@@ -10,8 +10,7 @@ import {
   Word,
 } from '../../database/entities';
 import { SrsState } from '../../database/enums';
-
-const LEARNED_INTERVAL_DAYS = 21;
+import { LEARNED_INTERVAL_DAYS } from '../srs/srs.constants';
 
 export interface LevelBucket {
   level: number;

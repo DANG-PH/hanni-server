@@ -46,6 +46,7 @@ import { startOfLocalDayInstant } from '../../common/time.util';
 import { isPremiumActive } from '../premium/premium-plans';
 import { CHAT_MODELS } from './gemini-models';
 import { EmbeddedChunk, InMemoryVectorStore } from './rag/vector-store';
+import { LEARNED_INTERVAL_DAYS } from '../srs/srs.constants';
 
 /** Hạn mức lượt hỏi/ngày cho user MIỄN PHÍ — Premium không giới hạn. Đúng
  * hướng đã ghi ở TODO(scale) bên dưới: cần hạn mức/ngày trước khi ra mắt
@@ -173,7 +174,6 @@ const TOOLS: Tool[] = [
   },
 ];
 
-const LEARNED_INTERVAL_DAYS = 21;
 const HISTORY_LIMIT = 16;
 // dàn call embedding ra để không vượt rate-limit/phút của Gemini free tier
 const EMBED_DELAY_MS = 200;

@@ -30,8 +30,8 @@ import type { QueueQueryDto, ReviewDto } from './dto/srs.dto';
 import { LEECH_LAPSES } from './scheduler/sm2.scheduler';
 import { SchedulerRegistry } from './scheduler/scheduler.registry';
 import type { SchedulerInput } from './scheduler/scheduler.types';
+import { LEARNED_INTERVAL_DAYS } from './srs.constants';
 
-const LEARNED_INTERVAL_DAYS = 21;
 const ACTIVE_STATES: SrsState[] = [
   SrsState.LEARNING,
   SrsState.REVIEW,
@@ -70,7 +70,7 @@ export class ReviewService {
    *      vụ ngày, báo cáo đều đếm từ bảng này) + cộng vào buổi học (StudySession).
    *   4. Phát sự kiện WordReviewed → listener tự chạy nền: chuỗi ngày + huy hiệu (gamification.listener.ts), tiến độ
    *      bài (progress.listener.ts). Muốn thêm "phần thưởng khi ôn" thì nghe sự kiện này, đừng sửa hàm này.
-   * "Đã thuộc" = trạng thái REVIEW với khoảng cách ≥ LEARNED_INTERVAL_DAYS (21 ngày) — đổi ngưỡng ở đầu file.
+   * "Đã thuộc" = trạng thái REVIEW với khoảng cách ≥ LEARNED_INTERVAL_DAYS (21 ngày) — đổi ở srs/srs.constants.ts.
    */
   async review(userId: string, dto: ReviewDto) {
     const [user, word] = await Promise.all([

@@ -23,6 +23,7 @@ import { insertIfAbsent } from '../../database/repository.util';
 import { PasswordService } from '../auth/password.service';
 import { TITLE_CATALOG } from '../shop/title-catalog';
 import { isPremiumActive } from '../premium/premium-plans';
+import { LEARNED_INTERVAL_DAYS } from '../srs/srs.constants';
 
 interface CreateUserInput {
   email: string;
@@ -124,7 +125,7 @@ export class UsersService {
           {
             userId: targetId,
             state: SrsState.REVIEW,
-            intervalDays: MoreThanOrEqual(21),
+            intervalDays: MoreThanOrEqual(LEARNED_INTERVAL_DAYS),
           },
         ],
       }),
