@@ -18,8 +18,18 @@ import { extendPremiumUntil, PREMIUM_PLANS } from '../premium/premium-plans';
 
 /**
  * Bán gói Premium qua payOS. payOS dùng mô hình A2A (Account-to-Account): tạo payment link, người dùng chuyển
- * khoản/quét VietQR, tiền về thẳng tài khoản ngân hàng đã đăng ký ở my.payos.vn — Hanni KHÔNG giữ tiền hộ ai. Có gói
- * miễn phí cho cá nhân/hộ kinh doanh, eKYC ngân hàng Kiên Long ~5 phút là dùng được.
+ * khoản/quét VietQR (app ngân hàng nào cũng quét được, cả ví MoMo), tiền về thẳng tài khoản ngân hàng đã liên kết ở
+ * my.payos.vn — Hanni KHÔNG giữ tiền hộ ai. payOS miễn phí, không phí trung gian (trang chủ payos.vn, đọc 2026-10-27),
+ * cá nhân đăng ký bằng CCCD, không cần giấy phép kinh doanh. KHÔNG có môi trường test riêng — thử bằng giao dịch thật,
+ * số tiền nhỏ (payos.vn/docs/moi-truong-test).
+ *
+ * Luồng 1 lần mua (đọc theo thứ tự):
+ *   1. Popup Premium (client `components/premium-modal.tsx`) → POST /payments/premium-checkout → `createPremiumCheckout()`
+ *      tạo `PaymentOrder` PENDING + gọi payOS tạo link → trình duyệt chuyển sang trang thanh toán của payOS.
+ *   2. Người dùng chuyển khoản → payOS gọi POST /payments/webhook/payos (máy chủ payOS gọi máy chủ Hanni) →
+ *      `handleWebhook()` xác thực chữ ký → đơn PAID → cộng hạn `User.premiumUntil`.
+ *   3. payOS đưa trình duyệt về `/account?premium=<mã đơn>` → client (`components/premium-section.tsx`) hỏi
+ *      GET /payments/orders/:orderCode → `getOrderStatus()` cho tới khi thấy PAID.
  *
  * Để trống `PAYOS_CLIENT_ID`/`PAYOS_API_KEY`/`PAYOS_CHECKSUM_KEY` thì mọi method ở đây ném
  * `ServiceUnavailableException` rõ ràng — KHÔNG chặn app khởi động, giống `GEMINI_API_KEY`/VAPID.
@@ -48,7 +58,7 @@ export class PaymentsService {
     });
     if (!clientId || !apiKey || !checksumKey) {
       throw new ServiceUnavailableException(
-        'Chưa cấu hình nạp tiền — thiếu PAYOS_CLIENT_ID/PAYOS_API_KEY/PAYOS_CHECKSUM_KEY',
+        'Chưa cấu hình thanh toán — thiếu PAYOS_CLIENT_ID/PAYOS_API_KEY/PAYOS_CHECKSUM_KEY',
       );
     }
     this.client = new PayOS({ clientId, apiKey, checksumKey });
@@ -85,7 +95,10 @@ export class PaymentsService {
       const link = await client.paymentRequests.create({
         orderCode: order.orderCode,
         amount: plan.priceVnd,
-        description: `Hanni Premium #${order.orderCode}`,
+        // Nội dung chuyển khoản. payOS: tài khoản ngân hàng KHÔNG liên kết qua payOS chỉ nhận tối đa 9 ký tự (tài liệu
+        // API "Tạo link thanh toán", trường description) — bản cũ "Hanni Premium #123" dài 18 ký tự thì payOS từ chối
+        // tạo link với các tài khoản đó. "HN" + mã đơn vừa 9 ký tự tới đơn thứ 9.999.999, vẫn tra được đơn trong sao kê.
+        description: `HN${order.orderCode}`,
         returnUrl: `${frontendUrl}/account?premium=${order.orderCode}`,
         cancelUrl: `${frontendUrl}/account?premium=${order.orderCode}&cancelled=1`,
       });
