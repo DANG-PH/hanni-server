@@ -6,36 +6,58 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PayOS } from '@payos/node';
 import type { Webhook } from '@payos/node/lib/resources/webhooks/webhook';
-import { Repository } from 'typeorm';
+import { In, MoreThan, Repository } from 'typeorm';
 import type { Env } from '../../config/env.validation';
 import { PaymentOrder, User } from '../../database/entities';
 import { PaymentOrderStatus } from '../../database/enums';
 import { insertAndReturn } from '../../database/repository.util';
-import { extendPremiumUntil, PREMIUM_PLANS } from '../premium/premium-plans';
+import {
+  extendPremiumUntil,
+  PREMIUM_PLANS,
+  type PremiumPlan,
+} from '../premium/premium-plans';
+import { MomoService } from './momo.service';
+import {
+  type MomoIpn,
+  momoOrderId,
+  orderCodeFromMomoOrderId,
+} from './momo.util';
+
+export type PaymentProvider = 'payos' | 'momo';
+
+/** Đơn PENDING tạo trong ngần này ngày được job đối soát hỏi lại cổng thanh toán (link payOS mặc định hết hạn sau 1 ngày). */
+const RECONCILE_WINDOW_MS = 7 * 86_400_000;
 
 /**
- * Bán gói Premium qua payOS. payOS dùng mô hình A2A (Account-to-Account): tạo payment link, người dùng chuyển
- * khoản/quét VietQR (app ngân hàng nào cũng quét được, cả ví MoMo), tiền về thẳng tài khoản ngân hàng đã liên kết ở
- * my.payos.vn — Hanni KHÔNG giữ tiền hộ ai. payOS miễn phí, không phí trung gian (trang chủ payos.vn, đọc 2026-10-27),
- * cá nhân đăng ký bằng CCCD, không cần giấy phép kinh doanh. KHÔNG có môi trường test riêng — thử bằng giao dịch thật,
- * số tiền nhỏ (payos.vn/docs/moi-truong-test).
+ * Bán gói Premium qua 2 cổng, chung 1 bảng `PaymentOrder` (cột `provider`):
+ * - **payOS** (mặc định): chuyển khoản/quét VietQR — app ngân hàng nào cũng quét được, cả ví MoMo — tiền về thẳng tài
+ *   khoản ngân hàng đã liên kết ở my.payos.vn, Hanni KHÔNG giữ tiền hộ ai. Miễn phí, cá nhân đăng ký bằng CCCD, KHÔNG có
+ *   môi trường test riêng (thử bằng giao dịch thật số tiền nhỏ — payos.vn/docs/moi-truong-test).
+ * - **MoMo**: trang thanh toán của MoMo (ví MoMo / thẻ ATM / thẻ quốc tế) — xem MomoService (mặc định sandbox).
  *
  * Luồng 1 lần mua (đọc theo thứ tự):
- *   1. Popup Premium (client `components/premium-modal.tsx`) → POST /payments/premium-checkout → `createPremiumCheckout()`
- *      tạo `PaymentOrder` PENDING + gọi payOS tạo link → trình duyệt chuyển sang trang thanh toán của payOS.
- *   2. Người dùng chuyển khoản → payOS gọi POST /payments/webhook/payos (máy chủ payOS gọi máy chủ Hanni) →
- *      `handleWebhook()` xác thực chữ ký → đơn PAID → cộng hạn `User.premiumUntil`.
- *   3. payOS đưa trình duyệt về `/account?premium=<mã đơn>` → client (`components/premium-section.tsx`) hỏi
- *      GET /payments/orders/:orderCode → `getOrderStatus()` cho tới khi thấy PAID.
+ *   1. Popup Premium (client `components/premium-modal.tsx`) → POST /payments/premium-checkout { planKey, provider } →
+ *      `createPremiumCheckout()` tạo `PaymentOrder` PENDING + gọi cổng tạo link → trình duyệt sang trang thanh toán.
+ *   2. Người dùng trả tiền. Đơn được xác nhận bằng 1 trong 3 đường — CẢ 3 đều đi qua `grantPaidOrder()` nên Premium chỉ
+ *      được cộng đúng 1 lần dù đường nào tới trước:
+ *      a. cổng gọi thẳng server: payOS → POST /payments/webhook/payos (`handleWebhook`), MoMo → POST
+ *         /payments/webhook/momo (`handleMomoIpn`) — xác thực chữ ký HMAC trước khi tin dữ liệu;
+ *      b. người dùng quay về `/account?premium=<mã đơn>` → client hỏi GET /payments/orders/:orderCode → `getOrderStatus()`
+ *         tự hỏi lại cổng (`syncOrder`) nếu đơn còn PENDING;
+ *      c. job `reconcilePending()` mỗi 5 phút hỏi lại mọi đơn PENDING trong 7 ngày — theo khuyến nghị "đồng bộ trạng thái
+ *         thanh toán" của payOS: webhook có thể không tới (chưa khai Webhook URL, server đang khởi động lại, mạng chập
+ *         chờn). Lỗi thật 2026-10-27: 2 đơn trả xong trên payOS nhưng chưa khai webhook → Premium không lên; nay job này
+ *         tự cộng.
+ *   3. `grantPaidOrder()`: so số tiền với đơn → UPDATE … WHERE status = PENDING (chỉ 1 lượt thắng) → cộng hạn
+ *      `User.premiumUntil` (nối tiếp hạn cũ, `extendPremiumUntil`).
  *
- * Để trống `PAYOS_CLIENT_ID`/`PAYOS_API_KEY`/`PAYOS_CHECKSUM_KEY` thì mọi method ở đây ném
- * `ServiceUnavailableException` rõ ràng — KHÔNG chặn app khởi động, giống `GEMINI_API_KEY`/VAPID.
- *
- * Trước 2026-10-20 còn bán xu (nạp tiền lấy xu, 1 VNĐ = 1 xu) — đã bỏ cùng hệ thống xu; bảng `PaymentOrder` vẫn giữ
- * cột `kind`/`xuAmount` của các đơn cũ.
+ * Để trống `PAYOS_*` thì mọi method payOS ném `ServiceUnavailableException` rõ ràng — KHÔNG chặn app khởi động, giống
+ * `GEMINI_API_KEY`/VAPID. Trước 2026-10-20 còn bán xu (nạp tiền lấy xu) — đã bỏ cùng hệ thống xu; bảng `PaymentOrder`
+ * vẫn giữ cột `kind`/`xuAmount` của các đơn cũ.
  */
 @Injectable()
 export class PaymentsService {
@@ -47,6 +69,7 @@ export class PaymentsService {
     private readonly orders: Repository<PaymentOrder>,
     @InjectRepository(User) private readonly users: Repository<User>,
     private readonly config: ConfigService<Env, true>,
+    private readonly momo: MomoService,
   ) {}
 
   private getClient(): PayOS {
@@ -73,21 +96,44 @@ export class PaymentsService {
     );
   }
 
-  /** Tạo đơn Premium + payment link payOS; người dùng thanh toán xong được đưa về `/account?premium=<mã đơn>`. */
+  /** Cổng nào đang bật — popup Premium chỉ hiện lựa chọn của cổng đã cấu hình. `configured` giữ cho client cũ. */
+  providers() {
+    const payos = this.isConfigured();
+    const momo = this.momo.isConfigured();
+    return {
+      configured: payos || momo,
+      payos,
+      momo,
+      momoSandbox: momo && this.momo.isSandbox(),
+    };
+  }
+
+  /** Tạo đơn Premium + link thanh toán ở cổng đã chọn; xong người dùng được đưa về `/account?premium=<mã đơn>`. */
   async createPremiumCheckout(
     userId: string,
     planKey: string,
-  ): Promise<{ checkoutUrl: string; qrCode: string; orderCode: number }> {
+    provider: PaymentProvider = 'payos',
+  ): Promise<{
+    checkoutUrl: string;
+    qrCode: string | null;
+    orderCode: number;
+  }> {
     const plan = PREMIUM_PLANS.find((p) => p.key === planKey);
     if (!plan) throw new BadRequestException('Không tìm thấy gói Premium này');
-    const client = this.getClient();
+    return provider === 'momo'
+      ? this.createMomoCheckout(userId, plan)
+      : this.createPayosCheckout(userId, plan);
+  }
 
+  private async createPayosCheckout(userId: string, plan: PremiumPlan) {
+    const client = this.getClient();
     const order = await insertAndReturn(this.orders, {
       userId,
       amountVnd: plan.priceVnd,
       xuAmount: 0,
       kind: 'PREMIUM',
-      premiumPlanKey: planKey,
+      premiumPlanKey: plan.key,
+      provider: 'PAYOS',
     });
 
     const frontendUrl = this.config.get('FRONTEND_URL', { infer: true });
@@ -123,28 +169,67 @@ export class PaymentsService {
     }
   }
 
-  /** Đọc trạng thái đơn — dùng cho trang /account sau khi payOS
-   * redirect về qua `returnUrl`. Đọc thẳng DB (đã được webhook cập nhật)
-   * thay vì gọi lại API payOS — nhanh hơn, và tránh phụ thuộc thêm 1 lượt
-   * gọi mạng ra ngoài chỉ để hiện trạng thái cho FE. */
+  private async createMomoCheckout(userId: string, plan: PremiumPlan) {
+    if (!this.momo.isConfigured())
+      throw new ServiceUnavailableException('Chưa cấu hình MoMo');
+    const order = await insertAndReturn(this.orders, {
+      userId,
+      amountVnd: plan.priceVnd,
+      xuAmount: 0,
+      kind: 'PREMIUM',
+      premiumPlanKey: plan.key,
+      provider: 'MOMO',
+    });
+    const ref = momoOrderId(order.orderCode, Date.now());
+    await this.orders.update(order.id, { providerRef: ref });
+
+    const frontendUrl = this.config.get('FRONTEND_URL', { infer: true });
+    const apiUrl = `${this.config.get('APP_URL', { infer: true })}${this.config.get('API_PREFIX', { infer: true })}`;
+    try {
+      const { payUrl } = await this.momo.createPayment({
+        orderId: ref,
+        amount: plan.priceVnd,
+        // Chỉ chữ không dấu: trang MoMo hiện nguyên văn, ký tự lạ dễ bị từ chối.
+        orderInfo: `Hanni Premium ${order.orderCode}`,
+        redirectUrl: `${frontendUrl}/account?premium=${order.orderCode}`,
+        ipnUrl: `${apiUrl}/payments/webhook/momo`,
+      });
+      return { checkoutUrl: payUrl, qrCode: null, orderCode: order.orderCode };
+    } catch (err) {
+      await this.orders.update(order.id, {
+        status: PaymentOrderStatus.CANCELLED,
+      });
+      throw err;
+    }
+  }
+
+  /** Trạng thái 1 đơn cho trang /account sau khi cổng thanh toán đưa người dùng quay về. Đơn còn PENDING thì hỏi lại
+   * cổng ngay (`syncOrder`) — không chờ webhook/IPN, vốn có thể tới chậm hoặc không tới. */
   async getOrderStatus(userId: string, orderCode: number) {
-    const order = await this.orders.findOneBy({ orderCode });
+    let order = await this.orders.findOneBy({ orderCode });
     if (!order || order.userId !== userId) {
       throw new NotFoundException('Không tìm thấy đơn thanh toán');
+    }
+    if (order.status === PaymentOrderStatus.PENDING) {
+      await this.syncOrder(order);
+      order = (await this.orders.findOneBy({ id: order.id })) ?? order;
     }
     return {
       orderCode: order.orderCode,
       amountVnd: order.amountVnd,
       premiumPlanKey: order.premiumPlanKey,
       status: order.status,
+      provider: order.provider,
+      // MoMo sandbox trên production: đã trả (tiền ảo) nhưng không cộng Premium thật.
+      sandbox: order.provider === 'MOMO' && !this.momo.grantsPremium(),
     };
   }
 
-  /** payOS gọi thẳng endpoint này (không qua JWT) khi trạng thái thanh
-   * toán đổi — xác thực bằng `webhooks.verify()` của SDK (HMAC-SHA256 với
-   * checksum key), KHÔNG tin dữ liệu gửi lên nếu chưa xác thực được. Idempotent
-   * theo `status !== PENDING` — payOS có thể gọi lại webhook nhiều lần cho
-   * cùng 1 giao dịch. */
+  /** payOS gọi thẳng endpoint này (không qua JWT) khi có giao dịch — xác thực bằng `webhooks.verify()` của SDK
+   * (HMAC-SHA256 với checksum key), KHÔNG tin dữ liệu gửi lên nếu chưa xác thực được. Chỉ xử lý giao dịch thành công
+   * (`data.code === "00"` như mẫu webhook ở payos.vn/docs/du-lieu-tra-ve/webhook). payOS có thể gọi lại nhiều lần cho
+   * cùng giao dịch — `grantPaidOrder` chặn xử lý trùng. Lúc khai Webhook URL payOS gửi 1 webhook thử (đơn 123 không có
+   * thật) — vẫn trả 200 để được nhận. */
   async handleWebhook(payload: Webhook): Promise<void> {
     const client = this.getClient();
     let verified: Awaited<ReturnType<typeof client.webhooks.verify>>;
@@ -154,7 +239,12 @@ export class PaymentsService {
       this.logger.warn(`Webhook payOS không xác thực được: ${err}`);
       return;
     }
-
+    if (verified.code !== '00') {
+      this.logger.warn(
+        `Webhook payOS không phải giao dịch thành công: orderCode=${verified.orderCode} code=${verified.code}`,
+      );
+      return;
+    }
     const order = await this.orders.findOneBy({
       orderCode: verified.orderCode,
     });
@@ -164,25 +254,104 @@ export class PaymentsService {
       );
       return;
     }
+    await this.grantPaidOrder(order, verified.amount, 'webhook payOS');
+  }
+
+  /** MoMo gọi ipnUrl (POST /payments/webhook/momo) khi giao dịch có kết quả. Xác thực chữ ký (có transId) rồi mới tin;
+   * resultCode 0 = thành công, khác 0 = huỷ/lỗi (không làm gì, đơn sẽ được đối soát). */
+  async handleMomoIpn(body: MomoIpn): Promise<void> {
+    if (!this.momo.verifyIpn(body)) {
+      this.logger.warn(
+        `IPN MoMo không xác thực được: orderId=${body?.orderId}`,
+      );
+      return;
+    }
+    if (Number(body.resultCode) !== 0) return;
+    const orderCode = orderCodeFromMomoOrderId(body.orderId);
+    const order = orderCode ? await this.orders.findOneBy({ orderCode }) : null;
+    if (
+      !order ||
+      order.provider !== 'MOMO' ||
+      order.providerRef !== body.orderId
+    ) {
+      this.logger.warn(`IPN MoMo cho đơn không khớp: orderId=${body.orderId}`);
+      return;
+    }
+    await this.grantPaidOrder(
+      order,
+      Number(body.amount),
+      `IPN MoMo transId=${body.transId}`,
+    );
+  }
+
+  /** Mỗi 5 phút: hỏi lại cổng thanh toán mọi đơn còn PENDING tạo trong 7 ngày qua (xem đường c ở đầu file). */
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async reconcilePending(): Promise<void> {
+    const pending = await this.orders.find({
+      where: {
+        status: PaymentOrderStatus.PENDING,
+        provider: In(['PAYOS', 'MOMO']),
+        createdAt: MoreThan(new Date(Date.now() - RECONCILE_WINDOW_MS)),
+      },
+      order: { createdAt: 'ASC' },
+      take: 50,
+    });
+    for (const order of pending) await this.syncOrder(order);
+  }
+
+  /** Hỏi cổng thanh toán trạng thái THẬT của 1 đơn (server → cổng, có khoá) rồi cập nhật đơn: đã trả → cộng Premium,
+   * huỷ/hết hạn → CANCELLED. Lỗi mạng thì để nguyên, lần đối soát sau hỏi tiếp. */
+  private async syncOrder(order: PaymentOrder): Promise<void> {
+    try {
+      if (order.provider === 'MOMO') {
+        if (!order.providerRef) return;
+        const q = await this.momo.queryStatus(order.providerRef);
+        if (q?.resultCode === 0)
+          await this.grantPaidOrder(
+            order,
+            q.amount,
+            `đối soát MoMo transId=${q.transId}`,
+          );
+        return;
+      }
+      if (!this.isConfigured()) return;
+      const link = await this.getClient().paymentRequests.get(order.orderCode);
+      if (link.status === 'PAID') {
+        await this.grantPaidOrder(order, link.amountPaid, 'đối soát payOS');
+      } else if (['CANCELLED', 'EXPIRED', 'FAILED'].includes(link.status)) {
+        await this.orders.update(
+          { id: order.id, status: PaymentOrderStatus.PENDING },
+          { status: PaymentOrderStatus.CANCELLED },
+        );
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Đối soát đơn #${order.orderCode} (${order.provider}) lỗi: ${err}`,
+      );
+    }
+  }
+
+  /** Đơn được cổng xác nhận đã trả `paidAmount` → PAID (đúng 1 lần) → cộng hạn Premium. Dùng chung webhook, IPN, đối
+   * soát. `source` chỉ để ghi log đối soát. */
+  private async grantPaidOrder(
+    order: PaymentOrder,
+    paidAmount: number,
+    source: string,
+  ): Promise<void> {
     if (order.status !== PaymentOrderStatus.PENDING) return; // đã xử lý rồi (đọc nhanh, tránh việc thừa — xem chặn thật ở dưới)
 
-    // So khớp số tiền — phòng payload bị chỉnh sửa dù đã qua verify() (vd
-    // lỗi tích hợp phía payOS), không tin thẳng verified.amount.
-    if (verified.amount !== order.amountVnd) {
+    // So khớp số tiền — phòng payload bị chỉnh sửa dù đã qua xác thực (vd lỗi tích hợp phía cổng), không tin thẳng số
+    // tiền cổng gửi.
+    if (paidAmount < order.amountVnd) {
       this.logger.error(
-        `Webhook payOS lệch số tiền: order=${order.amountVnd} nhận=${verified.amount}`,
+        `Đơn #${order.orderCode} lệch số tiền (${source}): đơn=${order.amountVnd} nhận=${paidAmount}`,
       );
       return;
     }
 
-    // Chuyển PENDING -> PAID bằng UPDATE có ĐIỀU KIỆN status = PENDING
-    // (atomic ở tầng DB) thay vì đọc-rồi-ghi — payOS xác nhận có gọi lại
-    // webhook nhiều lần cho cùng giao dịch, 2 lượt gọi trùng nhau chạy gần
-    // như đồng thời đều có thể đọc thấy PENDING trước khi bên nào commit
-    // xong PAID (lỗi thật, cộng xu/gia hạn Premium 2 lần cho 1 giao dịch).
-    // UPDATE với where lọc theo status CHỈ 1 request thắng được điều
-    // kiện này dù chạy song song, `affected === 0` nghĩa là request khác đã
-    // xử lý xong (hoặc đang xử lý) — bỏ qua an toàn.
+    // Chuyển PENDING -> PAID bằng UPDATE có ĐIỀU KIỆN status = PENDING (atomic ở tầng DB) thay vì đọc-rồi-ghi — webhook,
+    // IPN, đối soát và việc payOS gọi lại webhook nhiều lần có thể chạy gần như đồng thời cho cùng 1 đơn. CHỈ 1 lượt
+    // thắng được điều kiện này, `affected === 0` nghĩa là lượt khác đã xử lý xong — bỏ qua an toàn.
     const claimed = await this.orders.update(
       { id: order.id, status: PaymentOrderStatus.PENDING },
       { status: PaymentOrderStatus.PAID, paidAt: new Date() },
@@ -192,7 +361,13 @@ export class PaymentsService {
     if (order.kind !== 'PREMIUM') {
       // Đơn nạp xu tạo trước khi bỏ hệ thống xu (2026-10-20) — không còn gì để cộng, cần hoàn tiền thủ công.
       this.logger.error(
-        `Webhook payOS: đơn nạp xu cũ #${order.orderCode} vừa được thanh toán — cần hoàn tiền thủ công`,
+        `Đơn nạp xu cũ #${order.orderCode} vừa được thanh toán (${source}) — cần hoàn tiền thủ công`,
+      );
+      return;
+    }
+    if (order.provider === 'MOMO' && !this.momo.grantsPremium()) {
+      this.logger.warn(
+        `Đơn #${order.orderCode} trả qua MoMo SANDBOX (tiền ảo) trên production — không cộng Premium (${source})`,
       );
       return;
     }
@@ -206,13 +381,15 @@ export class PaymentsService {
         order.premiumPlanKey!,
       );
       await this.users.update(order.userId, { premiumUntil: newUntil });
+      this.logger.log(
+        `Đơn #${order.orderCode} (${order.provider}, ${order.amountVnd}đ) đã thanh toán — Premium tới ${newUntil.toISOString()} (${source})`,
+      );
     } catch (err) {
-      // Đơn đã chắc chắn PAID (đã thanh toán thật) nhưng gia hạn Premium thất
-      // bại — KHÔNG lùi lại PENDING (payOS gọi lại webhook sẽ bị chặn bởi guard
-      // ở trên, không tự sửa được) — log ERROR rõ ràng để đối soát thủ công,
-      // còn hơn nuốt lỗi im lặng khiến user mất tiền thật mà không ai biết.
+      // Đơn đã chắc chắn PAID (đã thanh toán thật) nhưng gia hạn Premium thất bại — KHÔNG lùi lại PENDING (lượt sau sẽ bị
+      // chặn bởi điều kiện ở trên, không tự sửa được) — log ERROR rõ ràng để đối soát thủ công, còn hơn nuốt lỗi im lặng
+      // khiến người dùng mất tiền thật mà không ai biết.
       this.logger.error(
-        `Webhook payOS: đơn #${order.orderCode} đã PAID nhưng gia hạn Premium thất bại — cần đối soát thủ công: ${err}`,
+        `Đơn #${order.orderCode} đã PAID nhưng gia hạn Premium thất bại — cần đối soát thủ công: ${err}`,
       );
     }
   }

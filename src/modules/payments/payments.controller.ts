@@ -14,6 +14,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import type { AuthUser } from '../../common/types';
 import { CreatePremiumCheckoutDto } from './dto/payments.dto';
+import type { MomoIpn } from './momo.util';
 import { PaymentsService } from './payments.service';
 
 /**
@@ -22,22 +23,28 @@ import { PaymentsService } from './payments.service';
  * http://localhost:8000/api/docs. Quyền: [khách] không cần đăng nhập · [khách+] khách gọi được, đã đăng nhập thì
  * server biết là ai · [đăng nhập] thiếu cookie phiên là 401 · [admin]. "client:" = file trong hanni-client/ gọi route.
  *
- * GET       /payments/configured         [đăng nhập]  Popup Premium hỏi payOS đã cấu hình chưa (chưa thì nút hiện
- *                                                     "Sắp mở bán")
- *                                                     → configured() → PaymentsService.isConfigured()
+ * GET       /payments/configured         [đăng nhập]  Popup Premium hỏi cổng nào đã cấu hình (payOS / MoMo; chưa cổng
+ *                                                     nào thì nút hiện "Sắp mở bán")
+ *                                                     → configured() → PaymentsService.providers()
  *                                                     client: lib/payments.ts (usePaymentsConfigured)
  * GET       /payments/orders/:orderCode  [đăng nhập]  Quay về /account?premium=<mã> sau khi thanh toán → hiện "Nâng
- *                                                     cấp thành công"
- *                                                     → getStatus() → PaymentsService.getOrderStatus()
+ *                                                     cấp thành công". Đơn còn PENDING thì server TỰ HỎI LẠI payOS/MoMo
+ *                                                     (không đợi webhook)
+ *                                                     → getStatus() → PaymentsService.getOrderStatus() → syncOrder()
  *                                                     client: lib/payments.ts (getOrderStatus)
- * POST      /payments/premium-checkout   [đăng nhập]  Nút thanh toán ở bước 2 popup Premium → chuyển sang trang thanh
- *                                                     toán payOS
+ * POST      /payments/premium-checkout   [đăng nhập]  Nút thanh toán ở bước 2 popup Premium (body { planKey, provider:
+ *                                                     'payos' | 'momo' }) → chuyển sang trang thanh toán payOS / MoMo
  *                                                     → createPremiumCheckout() →
  *                                                       PaymentsService.createPremiumCheckout()
  *                                                     client: lib/payments.ts (createPremiumCheckout)
  * POST      /payments/webhook/payos      [khách]      Không phải giao diện: MÁY CHỦ payOS gọi khi tiền đã về → cộng
- *                                                     hạn Premium
+ *                                                     hạn Premium (URL này phải khai ở kênh thanh toán trên my.payos.vn)
  *                                                     → webhook() → PaymentsService.handleWebhook()
+ * POST      /payments/webhook/momo       [khách]      Không phải giao diện: MÁY CHỦ MoMo gọi (IPN) khi giao dịch có kết
+ *                                                     quả → cộng hạn Premium; trả 204
+ *                                                     → momoIpn() → PaymentsService.handleMomoIpn()
+ * (không route) PaymentsService.reconcilePending()    Job 5 phút/lần: hỏi lại payOS/MoMo mọi đơn PENDING ≤ 7 ngày —
+ *                                                     lưới an toàn khi webhook không tới
  */
 @ApiTags('payments')
 @ApiBearerAuth()
@@ -45,9 +52,10 @@ import { PaymentsService } from './payments.service';
 export class PaymentsController {
   constructor(private readonly payments: PaymentsService) {}
 
+  /** { configured, payos, momo, momoSandbox } — popup Premium chỉ hiện cổng đã cấu hình. */
   @Get('configured')
   configured() {
-    return { configured: this.payments.isConfigured() };
+    return this.payments.providers();
   }
 
   /** Trạng thái 1 đơn — trang /account đọc sau khi payOS đưa người dùng quay về. */
@@ -65,7 +73,11 @@ export class PaymentsController {
     @CurrentUser() user: AuthUser,
     @Body() dto: CreatePremiumCheckoutDto,
   ) {
-    return this.payments.createPremiumCheckout(user.id, dto.planKey);
+    return this.payments.createPremiumCheckout(
+      user.id,
+      dto.planKey,
+      dto.provider,
+    );
   }
 
   /** payOS gọi thẳng endpoint này từ máy chủ của họ — không có cookie đăng
@@ -86,5 +98,14 @@ export class PaymentsController {
   async webhook(@Body() payload: Webhook) {
     await this.payments.handleWebhook(payload);
     return { received: true };
+  }
+
+  /** MoMo gọi ipnUrl từ máy chủ của họ khi giao dịch có kết quả — @Public, xác thực bằng chữ ký HMAC ở
+   * `handleMomoIpn()`. MoMo yêu cầu trả HTTP 204 (không nội dung). Dùng interface thay DTO cùng lý do với payOS. */
+  @Public()
+  @HttpCode(204)
+  @Post('webhook/momo')
+  async momoIpn(@Body() body: MomoIpn) {
+    await this.payments.handleMomoIpn(body);
   }
 }

@@ -70,12 +70,20 @@ export const envSchema = z.object({
   GEMINI_API_KEY: z.string().default(''),
   AI_SYSTEM_PROMPT: z.string().default(''),
 
-  // Nạp xu qua payOS (A2A, tiền về thẳng tài khoản ngân hàng, không qua ví
+  // Bán Premium qua payOS (A2A, tiền về thẳng tài khoản ngân hàng, không qua ví
   // trung gian) — để trống thì PaymentsService tự báo lỗi rõ ràng khi gọi,
   // không chặn app khởi động (giống GEMINI_API_KEY/VAPID ở trên).
   PAYOS_CLIENT_ID: z.string().default(''),
   PAYOS_API_KEY: z.string().default(''),
   PAYOS_CHECKSUM_KEY: z.string().default(''),
+
+  // Cổng MoMo (ví MoMo / thẻ ATM / thẻ quốc tế) — để trống thì không hiện lựa chọn MoMo. MOMO_API_URL mặc định là
+  // SANDBOX của MoMo (tiền ảo): trên production, đơn sandbox chạy trọn luồng nhưng KHÔNG cộng Premium thật (xem
+  // MomoService). Có tài khoản MoMo Business thật thì đổi sang https://payment.momo.vn + khoá thật.
+  MOMO_PARTNER_CODE: z.string().default(''),
+  MOMO_ACCESS_KEY: z.string().default(''),
+  MOMO_SECRET_KEY: z.string().default(''),
+  MOMO_API_URL: z.string().url().default('https://test-payment.momo.vn'),
 });
 
 export type Env = z.infer<typeof envSchema>;

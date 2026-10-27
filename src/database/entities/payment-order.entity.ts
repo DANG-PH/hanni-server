@@ -12,7 +12,7 @@ import { PaymentOrderKind, PaymentOrderStatus } from '../enums';
 import { User } from './user.entity';
 
 /**
- * Đơn thanh toán payOS — mua gói Premium (mô hình A2A, tiền về THẲNG tài khoản ngân hàng của Hanni, không qua
+ * Đơn thanh toán (payOS hoặc MoMo, cột `provider`) — mua gói Premium (mô hình A2A, tiền về THẲNG tài khoản ngân hàng của Hanni, không qua
  * ví trung gian giữ tiền hộ). `orderCode` là số nguyên RIÊNG (không phải `id` UUID) vì payOS yêu cầu mã đơn
  * dạng số. Đơn `kind = TOPUP` (nạp xu) là của thời còn hệ thống xu (trước 2026-10-20).
  */
@@ -72,6 +72,14 @@ export class PaymentOrder {
 
   @Column({ type: 'text', nullable: true })
   payosPaymentLinkId!: string | null;
+
+  /** Cổng thanh toán: PAYOS (chuyển khoản/VietQR) | MOMO — đơn trước 2026-10-27 đều là PAYOS. */
+  @Column({ type: 'text', default: 'PAYOS' })
+  provider!: string;
+
+  /** Mã đơn phía cổng: MoMo = orderId đã gửi MoMo (`HN<orderCode>T<thời điểm>`, dùng để tra trạng thái). */
+  @Column({ type: 'text', nullable: true })
+  providerRef!: string | null;
 
   @CreateDateColumn({ type: 'timestamp', precision: 3 })
   createdAt!: Date;
