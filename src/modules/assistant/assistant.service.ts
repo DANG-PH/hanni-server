@@ -553,7 +553,7 @@ export class AssistantService implements OnModuleInit {
             subscriber.next({
               data: JSON.stringify({
                 delta:
-                  'Trợ lý AI chưa được bật — cần cấu hình GEMINI_API_KEY trước đã.',
+                  'Trợ lý AI đang tạm đóng — bạn thử lại sau nhé.',
               }),
             });
             subscriber.next({ data: JSON.stringify({ done: true }) });

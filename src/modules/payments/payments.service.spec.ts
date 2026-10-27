@@ -18,7 +18,6 @@ type Order = {
   orderCode: number;
   userId: string;
   amountVnd: number;
-  kind: string;
   premiumPlanKey: string;
   status: PaymentOrderStatus;
   provider: string;
@@ -40,7 +39,6 @@ function setup(
     orderCode: 2,
     userId: 'u1',
     amountVnd: 89000,
-    kind: 'PREMIUM',
     premiumPlanKey: 'half_year',
     status: PaymentOrderStatus.PENDING,
     provider: 'PAYOS',
@@ -173,15 +171,22 @@ describe('PaymentsService — xác nhận đơn', () => {
     expect(r.status).toBe(PaymentOrderStatus.PAID);
   });
 
-  it('MoMo sandbox trên production → đơn PAID nhưng KHÔNG cộng Premium (tiền ảo)', async () => {
+  it('MoMo khoá thử trên production: ẩn khỏi popup, không tạo được đơn', async () => {
+    const { svc } = setup({ momoGrants: false });
+    expect(svc.providers().momo).toBe(false);
+    await expect(
+      svc.createPremiumCheckout('u1', 'month', 'momo'),
+    ).rejects.toThrow('Chưa mở thanh toán qua MoMo');
+  });
+
+  it('đơn MoMo khoá thử còn sót trên production → PAID nhưng KHÔNG cộng Premium (tiền ảo)', async () => {
     const { svc, order, userUpdates } = setup({
       order: { provider: 'MOMO', providerRef: 'HN2T1' },
       momoGrants: false,
     });
-    const r = await svc.getOrderStatus('u1', 2);
+    await svc.getOrderStatus('u1', 2);
     expect(order.status).toBe(PaymentOrderStatus.PAID);
     expect(userUpdates).toHaveLength(0);
-    expect(r.sandbox).toBe(true);
   });
 
   it('MoMo báo người dùng huỷ / link hết hạn (1006, 1005) → đơn CANCELLED, không cộng', async () => {

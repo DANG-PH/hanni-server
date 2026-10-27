@@ -10,8 +10,6 @@ import {
 import { NotificationType } from '../enums';
 import { Achievement } from './achievement.entity';
 import { User } from './user.entity';
-import { Video } from './video.entity';
-import { VideoComment } from './video-comment.entity';
 
 /**
  * Thông báo trong app, lưu DB để xem lại lịch sử; đẩy realtime qua
@@ -53,48 +51,6 @@ export class Notification {
   /** Bấm thông báo thì mở trang này. */
   @Column({ type: 'text', nullable: true })
   href!: string | null;
-
-  @Column({ type: 'uuid', nullable: true })
-  actorId!: string | null;
-
-  @ManyToOne(() => User, (x) => x.notificationsCaused, {
-    onDelete: 'SET NULL',
-    onUpdate: 'CASCADE',
-    nullable: true,
-  })
-  @JoinColumn({
-    name: 'actorId',
-    foreignKeyConstraintName: 'Notification_actorId_fkey',
-  })
-  actor!: User | null;
-
-  @Column({ type: 'uuid', nullable: true })
-  videoId!: string | null;
-
-  @ManyToOne(() => Video, (x) => x.notifications, {
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE',
-    nullable: true,
-  })
-  @JoinColumn({
-    name: 'videoId',
-    foreignKeyConstraintName: 'Notification_videoId_fkey',
-  })
-  video!: Video | null;
-
-  @Column({ type: 'uuid', nullable: true })
-  commentId!: string | null;
-
-  @ManyToOne(() => VideoComment, (x) => x.notifications, {
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE',
-    nullable: true,
-  })
-  @JoinColumn({
-    name: 'commentId',
-    foreignKeyConstraintName: 'Notification_commentId_fkey',
-  })
-  comment!: VideoComment | null;
 
   @Column({ type: 'uuid', nullable: true })
   achievementId!: string | null;

@@ -50,7 +50,4 @@ export class UserAchievement {
 
   @Column({ type: 'timestamp', precision: 3, default: () => 'now()' })
   unlockedAt!: Date;
-
-  @Column({ type: 'integer', default: 0 })
-  progressValue!: number;
 }

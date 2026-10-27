@@ -138,7 +138,7 @@ export class RoleplayService {
 
     if (!this.genAI) {
       throw new BadRequestException(
-        'Luyện nói với AI chưa được bật — cần cấu hình GEMINI_API_KEY trước đã.',
+        'Tính năng AI đang tạm đóng — thử lại sau nhé.',
       );
     }
 
@@ -182,7 +182,7 @@ export class RoleplayService {
 
     if (!this.genAI) {
       throw new BadRequestException(
-        'Luyện nói với AI chưa được bật — cần cấu hình GEMINI_API_KEY trước đã.',
+        'Tính năng AI đang tạm đóng — thử lại sau nhé.',
       );
     }
 
@@ -250,7 +250,7 @@ export class RoleplayService {
     await this.checkDailyQuota(userId);
     if (!this.genAI) {
       throw new BadRequestException(
-        'Luyện nói với AI chưa được bật — cần cấu hình GEMINI_API_KEY trước đã.',
+        'Tính năng AI đang tạm đóng — thử lại sau nhé.',
       );
     }
 

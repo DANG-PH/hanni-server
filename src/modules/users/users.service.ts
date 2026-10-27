@@ -168,9 +168,6 @@ export class UsersService {
   /** Tạo user kèm settings + streak mặc định trong 1 transaction. */
   async createUser(input: CreateUserInput): Promise<User> {
     const defaultTz = this.config.get('DEFAULT_USER_TIMEZONE', { infer: true });
-    const newPerDay = this.config.get('SRS_DEFAULT_NEW_PER_DAY', {
-      infer: true,
-    });
     const retention = this.config.get('SRS_DEFAULT_TARGET_RETENTION', {
       infer: true,
     });
@@ -188,7 +185,6 @@ export class UsersService {
       const userId = identifiers[0].id as string;
       await db.insert(UserSettings, {
         userId,
-        newCardsPerDay: newPerDay,
         targetRetention: retention,
         srsScheduler: scheduler,
       });
@@ -197,36 +193,18 @@ export class UsersService {
     });
   }
 
+  /** Ghi nhận tài khoản Google (`sub`) thuộc về user này — lần sau đăng nhập Google tìm ra đúng user. Không lưu token
+   * của Google: Hanni chỉ cần danh tính, không gọi API Google thay người dùng. Đã liên kết rồi thì bỏ qua. */
   async linkOAuthAccount(
     userId: string,
     provider: AuthProvider,
-    data: {
-      providerAccountId: string;
-      accessToken?: string;
-      refreshToken?: string;
-      expiresAt?: Date;
-      scope?: string;
-      idToken?: string;
-      tokenType?: string;
-    },
+    providerAccountId: string,
   ): Promise<void> {
-    const payload = {
-      accessToken: data.accessToken ?? null,
-      refreshToken: data.refreshToken ?? null,
-      expiresAt: data.expiresAt ?? null,
-      scope: data.scope ?? null,
-      idToken: data.idToken ?? null,
-      tokenType: data.tokenType ?? null,
-    };
-    const key = { provider, providerAccountId: data.providerAccountId };
-
-    // Chưa liên kết thì tạo; đã có thì chỉ làm mới token (không đổi chủ tài khoản).
-    const created = await insertIfAbsent(this.accounts, {
+    await insertIfAbsent(this.accounts, {
       userId,
-      ...key,
-      ...payload,
+      provider,
+      providerAccountId,
     });
-    if (!created) await this.accounts.update(key, payload);
   }
 
   findAccount(provider: AuthProvider, providerAccountId: string) {
@@ -234,10 +212,6 @@ export class UsersService {
       where: { provider, providerAccountId },
       relations: { user: true },
     });
-  }
-
-  async touchLastActive(id: string): Promise<void> {
-    await this.users.update(id, { lastActiveAt: new Date() });
   }
 
   async updateProfile(
@@ -308,7 +282,7 @@ export class UsersService {
     for (const e of ['png', 'jpg', 'webp']) {
       await rm(join(dir, `${id}.${e}`), { force: true });
     }
-    // Dữ liệu cá nhân (tiến độ, bình luận, tin nhắn, cài đặt...) xoá theo khoá ngoại ON DELETE CASCADE.
+    // Dữ liệu cá nhân (tiến độ, nhật ký ôn, cài đặt, lớp học...) xoá theo khoá ngoại ON DELETE CASCADE.
     await this.users.delete(id);
   }
 }

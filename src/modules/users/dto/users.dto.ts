@@ -58,12 +58,6 @@ export class UpdateSettingsDto {
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Max(200)
-  newCardsPerDay?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(0)
   @Max(2000)
   maxReviewsPerDay?: number;
 

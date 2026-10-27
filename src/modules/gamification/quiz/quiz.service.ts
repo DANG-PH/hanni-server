@@ -4,10 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, IsNull, Not, Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, IsNull, Not, Repository } from 'typeorm';
 import {
-  QuizAnswer,
   QuizAttempt,
   UserWordProgress,
   Word,
@@ -40,7 +39,6 @@ const LISTENING_RATIO = 0.4;
 @Injectable()
 export class QuizService {
   constructor(
-    @InjectDataSource() private readonly dataSource: DataSource,
     @InjectRepository(Word) private readonly words: Repository<Word>,
     @InjectRepository(UserWordProgress)
     private readonly progress: Repository<UserWordProgress>,
@@ -131,7 +129,6 @@ export class QuizService {
     const { identifiers } = await this.attempts.insert({
       userId,
       totalQuestions: questions.length,
-      format: { type: 'hanzi_to_vi_mixed_listening' },
     });
 
     return { attemptId: identifiers[0].id as string, questions };
@@ -148,26 +145,11 @@ export class QuizService {
     const total = dto.answers.length || attempt.totalQuestions || 1;
     const scorePct = Math.round((correctCount / total) * 1000) / 10;
 
-    // Chốt bài + lưu từng câu trả lời trong cùng 1 transaction.
-    await this.dataSource.transaction(async (db) => {
-      await db.update(QuizAttempt, attempt.id, {
-        completedAt: new Date(),
-        totalQuestions: dto.answers.length || attempt.totalQuestions,
-        correctCount,
-        scorePct,
-      });
-      if (dto.answers.length)
-        await db.insert(
-          QuizAnswer,
-          dto.answers.map((a) => ({
-            quizAttemptId: attempt.id,
-            wordId: a.wordId,
-            isCorrect: a.isCorrect,
-            chosen: a.chosen ?? null,
-            correct: a.correct ?? null,
-            responseMs: a.responseMs ?? null,
-          })),
-        );
+    await this.attempts.update(attempt.id, {
+      completedAt: new Date(),
+      totalQuestions: dto.answers.length || attempt.totalQuestions,
+      correctCount,
+      scorePct,
     });
     const updated = await this.attempts.findOneByOrFail({ id: attempt.id });
 

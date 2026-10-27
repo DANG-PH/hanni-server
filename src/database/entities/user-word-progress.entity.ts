@@ -9,7 +9,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { ReviewRating, SrsState } from '../enums';
+import { SrsState } from '../enums';
 import { ReviewLog } from './review-log.entity';
 import { User } from './user.entity';
 import { Word } from './word.entity';
@@ -85,14 +85,6 @@ export class UserWordProgress {
 
   @Column({ type: 'integer', default: 0 })
   lapses!: number;
-
-  @Column({
-    type: 'enum',
-    enum: ReviewRating,
-    enumName: 'ReviewRating',
-    nullable: true,
-  })
-  lastRating!: ReviewRating | null;
 
   /** mốc "" lần đầu */
   @Column({ type: 'timestamp', precision: 3, nullable: true })

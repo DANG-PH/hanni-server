@@ -30,7 +30,7 @@ export class PayosService {
     if (this.client) return this.client;
     if (!this.isConfigured()) {
       throw new ServiceUnavailableException(
-        'Chưa cấu hình thanh toán — thiếu PAYOS_CLIENT_ID/PAYOS_API_KEY/PAYOS_CHECKSUM_KEY',
+        'Thanh toán đang tạm đóng — thử lại sau nhé', // thiếu PAYOS_CLIENT_ID/PAYOS_API_KEY/PAYOS_CHECKSUM_KEY
       );
     }
     this.client = new PayOS({

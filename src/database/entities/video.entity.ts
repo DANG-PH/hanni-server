@@ -8,10 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { VideoKind } from '../enums';
-import { Notification } from './notification.entity';
 import { UserVideoProgress } from './user-video-progress.entity';
-import { VideoComment } from './video-comment.entity';
-import { VideoLike } from './video-like.entity';
 import { VideoLine } from './video-line.entity';
 
 /** Video YouTube kèm bản chép (transcript) + bản dịch tiếng Việt. */
@@ -74,13 +71,4 @@ export class Video {
 
   @OneToMany(() => UserVideoProgress, (x) => x.video)
   progress!: UserVideoProgress[];
-
-  @OneToMany(() => VideoComment, (x) => x.video)
-  comments!: VideoComment[];
-
-  @OneToMany(() => VideoLike, (x) => x.video)
-  likes!: VideoLike[];
-
-  @OneToMany(() => Notification, (x) => x.video)
-  notifications!: Notification[];
 }

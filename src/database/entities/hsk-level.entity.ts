@@ -1,11 +1,10 @@
 import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
-import { HskBand, SkillType } from '../enums';
-import { arrayOrEmpty } from '../transformers';
+import { HskBand } from '../enums';
 import { Lesson } from './lesson.entity';
 import { UserLevelProgress } from './user-level-progress.entity';
 import { Word } from './word.entity';
 
-/** Bảng tra tĩnh 9 cấp HSK. Lưu CẢ chỉ tiêu bản 2021 và bản 2025 để app đối chiếu. */
+/** Bảng tra tĩnh 9 cấp HSK theo đại cương 11/2025 (số liệu: database/seed/hsk-levels.ts). */
 @Entity('HskLevel')
 export class HskLevel {
   /** 1..9 */
@@ -15,18 +14,8 @@ export class HskLevel {
   @Column({ type: 'enum', enum: HskBand, enumName: 'HskBand' })
   band!: HskBand;
 
-  /** true cho 7,8,9 (thi chung) */
-  @Column({ type: 'boolean', default: false })
-  isSharedBand!: boolean;
-
   @Column({ type: 'text' })
   nameVi!: string;
-
-  @Column({ type: 'integer' })
-  newWords2021!: number;
-
-  @Column({ type: 'integer' })
-  cumulative2021!: number;
 
   @Column({ type: 'integer' })
   newWords2025!: number;
@@ -39,16 +28,6 @@ export class HskLevel {
 
   @Column({ type: 'integer', nullable: true })
   writingChars!: number | null;
-
-  @Column({
-    type: 'enum',
-    enum: SkillType,
-    enumName: 'SkillType',
-    array: true,
-    transformer: arrayOrEmpty,
-    nullable: true,
-  })
-  skills!: SkillType[];
 
   @OneToMany(() => Word, (x) => x.level)
   words!: Word[];

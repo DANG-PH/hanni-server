@@ -250,7 +250,7 @@ export class InsightsService {
     }
     if (!this.genAI) {
       throw new BadRequestException(
-        'Hanni Coach chưa được bật — cần cấu hình GEMINI_API_KEY trước đã.',
+        'Hanni Coach đang tạm đóng — thử lại sau nhé.',
       );
     }
     const c = report.current;

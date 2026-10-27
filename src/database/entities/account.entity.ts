@@ -43,24 +43,6 @@ export class Account {
   @Column({ type: 'text' })
   providerAccountId!: string;
 
-  @Column({ type: 'text', nullable: true })
-  accessToken!: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  refreshToken!: string | null;
-
-  @Column({ type: 'timestamp', precision: 3, nullable: true })
-  expiresAt!: Date | null;
-
-  @Column({ type: 'text', nullable: true })
-  scope!: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  idToken!: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  tokenType!: string | null;
-
   @CreateDateColumn({ type: 'timestamp', precision: 3 })
   createdAt!: Date;
 

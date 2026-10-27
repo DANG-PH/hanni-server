@@ -43,7 +43,7 @@ export class PushService {
   private assertEnabled() {
     if (!this.enabled) {
       throw new ServiceUnavailableException(
-        'Thông báo đẩy chưa được cấu hình trên máy chủ',
+        'Chưa bật được thông báo lúc này — thử lại sau nhé',
       );
     }
   }

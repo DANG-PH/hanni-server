@@ -382,7 +382,7 @@ export class AiToolsService {
   ): Promise<T | null> {
     if (!this.genAI)
       throw new BadRequestException(
-        'Tiện ích AI chưa được bật — cần cấu hình GEMINI_API_KEY trước đã.',
+        'Tính năng AI đang tạm đóng — thử lại sau nhé.',
       );
     for (const model of CHAT_MODELS) {
       try {
@@ -408,7 +408,7 @@ export class AiToolsService {
   private async take(userId: string) {
     if (!this.genAI)
       throw new BadRequestException(
-        'Tiện ích AI chưa được bật — cần cấu hình GEMINI_API_KEY trước đã.',
+        'Tính năng AI đang tạm đóng — thử lại sau nhé.',
       );
     const { key, limit, premium } = await this.quotaOf(userId);
     const used = await this.redis.client.incr(key);

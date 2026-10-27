@@ -4,7 +4,6 @@ import {
   IsBoolean,
   IsInt,
   IsOptional,
-  IsString,
   IsUUID,
   Max,
   Min,
@@ -31,25 +30,10 @@ export class GenerateQuizDto {
   wordIds?: string[];
 }
 
+/** Chỉ cần đúng/sai để tính điểm — client gửi thêm wordId, đáp án… thì ValidationPipe tự bỏ. */
 export class QuizAnswerItemDto {
-  @IsUUID()
-  wordId!: string;
-
   @IsBoolean()
   isCorrect!: boolean;
-
-  @IsOptional()
-  @IsString()
-  chosen?: string;
-
-  @IsOptional()
-  @IsString()
-  correct?: string;
-
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  responseMs?: number;
 }
 
 export class SubmitQuizDto {

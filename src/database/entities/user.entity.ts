@@ -12,14 +12,7 @@ import { Account } from './account.entity';
 import { ChatSession } from './chat-session.entity';
 import { Classroom } from './classroom.entity';
 import { ClassroomMember } from './classroom-member.entity';
-import { CoinTransaction } from './coin-transaction.entity';
-import { Conversation } from './conversation.entity';
 import { DailyQuestClaim } from './daily-quest-claim.entity';
-import { DirectMessage } from './direct-message.entity';
-import { DuelMatch } from './duel-match.entity';
-import { DuelSeasonResult } from './duel-season-result.entity';
-import { ExamAttempt } from './exam-attempt.entity';
-import { Follow } from './follow.entity';
 import { LeagueEntry } from './league-entry.entity';
 import { MinigameSession } from './minigame-session.entity';
 import { MockExamAttempt } from './mock-exam-attempt.entity';
@@ -33,23 +26,17 @@ import { Referral } from './referral.entity';
 import { RefreshToken } from './refresh-token.entity';
 import { ReviewLog } from './review-log.entity';
 import { RoleplaySession } from './roleplay-session.entity';
-import { StudySession } from './study-session.entity';
 import { UserAchievement } from './user-achievement.entity';
 import { UserDailyActivity } from './user-daily-activity.entity';
 import { UserLessonProgress } from './user-lesson-progress.entity';
 import { UserLevelProgress } from './user-level-progress.entity';
-import { UserRating } from './user-rating.entity';
 import { UserSettings } from './user-settings.entity';
 import { UserStreak } from './user-streak.entity';
 import { UserVideoProgress } from './user-video-progress.entity';
-import { UserWallet } from './user-wallet.entity';
 import { UserWordProgress } from './user-word-progress.entity';
-import { VideoComment } from './video-comment.entity';
-import { VideoLike } from './video-like.entity';
 
 @Entity('User')
 @Index('User_email_key', ['email'], { unique: true })
-@Index('User_lastActiveAt_idx', ['lastActiveAt'])
 export class User {
   @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'User_pkey' })
   id!: string;
@@ -96,9 +83,6 @@ export class User {
   @UpdateDateColumn({ type: 'timestamp', precision: 3 })
   updatedAt!: Date;
 
-  @Column({ type: 'timestamp', precision: 3, nullable: true })
-  lastActiveAt!: Date | null;
-
   @OneToMany(() => Account, (x) => x.user)
   accounts!: Account[];
 
@@ -113,9 +97,6 @@ export class User {
 
   @OneToMany(() => ReviewLog, (x) => x.user)
   reviewLogs!: ReviewLog[];
-
-  @OneToMany(() => StudySession, (x) => x.user)
-  studySessions!: StudySession[];
 
   @OneToMany(() => UserDailyActivity, (x) => x.user)
   dailyActivity!: UserDailyActivity[];
@@ -138,15 +119,6 @@ export class User {
   @OneToMany(() => UserVideoProgress, (x) => x.user)
   videoProgress!: UserVideoProgress[];
 
-  @OneToMany(() => VideoComment, (x) => x.user)
-  videoComments!: VideoComment[];
-
-  @OneToMany(() => VideoLike, (x) => x.user)
-  videoLikes!: VideoLike[];
-
-  @OneToMany(() => ExamAttempt, (x) => x.user)
-  examAttempts!: ExamAttempt[];
-
   @OneToMany(() => MockExamAttempt, (x) => x.user)
   mockExamAttempts!: MockExamAttempt[];
 
@@ -156,17 +128,8 @@ export class User {
   @OneToMany(() => Notification, (x) => x.user)
   notifications!: Notification[];
 
-  @OneToMany(() => Notification, (x) => x.actor)
-  notificationsCaused!: Notification[];
-
   @OneToMany(() => PracticeAttempt, (x) => x.user)
   practiceAttempts!: PracticeAttempt[];
-
-  @OneToMany(() => Follow, (x) => x.follower)
-  following!: Follow[];
-
-  @OneToMany(() => Follow, (x) => x.following)
-  followers!: Follow[];
 
   @OneToOne(() => OnboardingProfile, (x) => x.user)
   onboarding!: OnboardingProfile | null;
@@ -177,15 +140,6 @@ export class User {
   @OneToMany(() => RoleplaySession, (x) => x.user)
   roleplaySessions!: RoleplaySession[];
 
-  @OneToMany(() => Conversation, (x) => x.userA)
-  conversationsAsA!: Conversation[];
-
-  @OneToMany(() => Conversation, (x) => x.userB)
-  conversationsAsB!: Conversation[];
-
-  @OneToMany(() => DirectMessage, (x) => x.sender)
-  sentDirectMessages!: DirectMessage[];
-
   @OneToMany(() => Referral, (x) => x.referrer)
   referralsSent!: Referral[];
 
@@ -194,24 +148,6 @@ export class User {
 
   @OneToMany(() => MinigameSession, (x) => x.user)
   minigameSessions!: MinigameSession[];
-
-  @OneToOne(() => UserWallet, (x) => x.user)
-  wallet!: UserWallet | null;
-
-  @OneToMany(() => CoinTransaction, (x) => x.user)
-  coinTransactions!: CoinTransaction[];
-
-  @OneToOne(() => UserRating, (x) => x.user)
-  rating!: UserRating | null;
-
-  @OneToMany(() => DuelMatch, (x) => x.playerA)
-  duelsAsA!: DuelMatch[];
-
-  @OneToMany(() => DuelMatch, (x) => x.playerB)
-  duelsAsB!: DuelMatch[];
-
-  @OneToMany(() => DuelSeasonResult, (x) => x.user)
-  duelSeasonResults!: DuelSeasonResult[];
 
   @OneToMany(() => PaymentOrder, (x) => x.user)
   paymentOrders!: PaymentOrder[];

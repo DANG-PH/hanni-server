@@ -14,11 +14,9 @@ import {
   AddWordDto,
   QueueQueryDto,
   ReviewDto,
-  StartSessionDto,
   SuspendWordDto,
 } from './dto/srs.dto';
 import { ReviewService } from './review.service';
-import { StudySessionService } from './study-session.service';
 
 /**
  * BẢN ĐỒ — giao diện nào gọi các route của file này (sinh từ mã nguồn ngày 27/10/2026; thêm/sửa route thì sửa
@@ -52,22 +50,12 @@ import { StudySessionService } from './study-session.service';
  *                                                      thử
  *                                                      → addWord() → ReviewService.addWord()
  *                                                      client: lib/hooks.ts (addWordToSrs)
- * POST      /study/session                [đăng nhập]  Mở buổi ôn ở /study — ghi lại thời điểm bắt đầu để tính phút
- *                                                      học
- *                                                      → startSession() → StudySessionService.start()
- *                                                      client: app/(app)/study/page.tsx
- * POST      /study/session/:id/end        [đăng nhập]  Kết thúc / rời buổi ôn ở /study — chốt số phút học
- *                                                      → endSession() → StudySessionService.end()
- *                                                      client: app/(app)/study/page.tsx
  */
 @ApiTags('study')
 @ApiBearerAuth()
 @Controller('study')
 export class SrsController {
-  constructor(
-    private readonly reviews: ReviewService,
-    private readonly sessions: StudySessionService,
-  ) {}
+  constructor(private readonly reviews: ReviewService) {}
 
   @Get('queue')
   queue(@CurrentUser() user: AuthUser, @Query() query: QueueQueryDto) {
@@ -108,18 +96,5 @@ export class SrsController {
   @Post('add-word')
   addWord(@CurrentUser() user: AuthUser, @Body() dto: AddWordDto) {
     return this.reviews.addWord(user.id, dto.wordId);
-  }
-
-  @Post('session')
-  startSession(@CurrentUser() user: AuthUser, @Body() dto: StartSessionDto) {
-    return this.sessions.start(user.id, dto.source);
-  }
-
-  @Post('session/:id/end')
-  endSession(
-    @CurrentUser() user: AuthUser,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
-    return this.sessions.end(user.id, id);
   }
 }

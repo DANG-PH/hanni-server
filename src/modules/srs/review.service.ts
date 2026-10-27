@@ -18,7 +18,6 @@ import { startOfLocalDayInstant } from '../../common/time.util';
 import type { Env } from '../../config/env.validation';
 import {
   ReviewLog,
-  StudySession,
   User,
   UserWordProgress,
   Word,
@@ -67,7 +66,7 @@ export class ReviewService {
    *      (AGAIN "Quên" / HARD "Khó" / GOOD "Nhớ" / EASY "Dễ"): trạng thái, khoảng cách ngày, ngày đến hạn `dueAt`.
    *      Công thức SM-2: scheduler/sm2.scheduler.ts · FSRS: scheduler/fsrs.scheduler.ts.
    *   3. Trong 1 transaction: ghi tiến độ mới (upsert) + 1 dòng ReviewLog (nhật ký từng lượt ôn — giải đấu tuần, nhiệm
-   *      vụ ngày, báo cáo đều đếm từ bảng này) + cộng vào buổi học (StudySession).
+   *      vụ ngày, báo cáo đều đếm từ bảng này).
    *   4. Phát sự kiện WordReviewed → listener tự chạy nền: chuỗi ngày + huy hiệu (gamification.listener.ts), tiến độ
    *      bài (progress.listener.ts). Muốn thêm "phần thưởng khi ôn" thì nghe sự kiện này, đừng sửa hàm này.
    * "Đã thuộc" = trạng thái REVIEW với khoảng cách ≥ LEARNED_INTERVAL_DAYS (21 ngày) — đổi ở srs/srs.constants.ts.
@@ -176,7 +175,6 @@ export class ReviewService {
         userId,
         wordId: dto.wordId,
         progressId: saved.id,
-        studySessionId: dto.studySessionId ?? null,
         rating: dto.rating,
         reviewType,
         reviewedAt: now,
@@ -194,20 +192,6 @@ export class ReviewService {
         scheduledDays: out.intervalDays,
         durationMs: dto.durationMs ?? null,
       });
-
-      if (dto.studySessionId) {
-        await db
-          .createQueryBuilder()
-          .update(StudySession)
-          .set({
-            cardsReviewed: () => '"cardsReviewed" + 1',
-            cardsCorrect: () => `"cardsCorrect" + ${out.isCorrect ? 1 : 0}`,
-            newCards: () =>
-              `"newCards" + ${reviewType === ReviewType.LEARN ? 1 : 0}`,
-          })
-          .where({ id: dto.studySessionId, userId, endedAt: IsNull() })
-          .execute();
-      }
 
       return saved;
     });
@@ -282,15 +266,10 @@ export class ReviewService {
       this.cutoffHour,
     );
     const limit = query.limit ?? 60;
-    const newPerDay = user.settings?.newCardsPerDay ?? 10;
     const maxReviewsPerDay = user.settings?.maxReviewsPerDay ?? null;
-
-    // Học theo BÀI: bỏ giới hạn từ mới/ngày, nạp cả bài (tối đa 25).
-    const byLesson = Boolean(query.lessonId);
-    const levelFilter = query.level ? { hskLevel: query.level } : {};
     const wordScope = query.lessonId
       ? { word: { lessonId: query.lessonId } }
-      : levelFilter;
+      : {};
     const dueWhere: FindOptionsWhere<UserWordProgress> = {
       userId,
       isSuspended: false,
@@ -299,12 +278,7 @@ export class ReviewService {
       ...wordScope,
     };
 
-    const [newDoneToday, reviewsDoneToday, dueCount] = await Promise.all([
-      this.reviewLogs.countBy({
-        userId,
-        reviewType: 'LEARN',
-        reviewedAt: MoreThanOrEqual(dayStart),
-      }),
+    const [reviewsDoneToday, dueCount] = await Promise.all([
       this.reviewLogs.countBy({
         userId,
         reviewedAt: MoreThanOrEqual(dayStart),
@@ -329,17 +303,12 @@ export class ReviewService {
           })
         : [];
 
-    // Ôn tự do (không bài, không cấp) CHỈ ôn từ đã học — không lấy từ mới.
-    // Trước đây rơi về lấy từ mới trên CẢ 9 cấp sắp theo tần suất, nên người
-    // mới mở flashcard gặp ngay 著名 (HSK4), 显著 (HSK6)... không theo cấp lẫn
-    // chủ đề (lỗi thật user báo). Từ mới giờ chỉ đến từ bài học trong lộ trình.
-    const newRemaining = byLesson
-      ? 25
-      : query.level
-        ? Math.max(0, newPerDay - newDoneToday)
-        : 0;
-    const newRows =
-      newRemaining > 0 ? await this.newWords(userId, query, newRemaining) : [];
+    // Ôn tự do CHỈ ôn từ đã học — từ mới chỉ đến từ bài học trong lộ trình (trước đây lấy từ mới trên cả 9 cấp theo
+    // tần suất, người mới mở flashcard gặp ngay 著名 HSK4 — lỗi thật user báo). Ôn theo 1 bài (?lessonId=) thì kèm cả
+    // từ chưa học của bài đó (tối đa 25) để vừa học xong bấm "Ôn bằng flashcard" là có thẻ.
+    const newRows = query.lessonId
+      ? await this.newWordsOfLesson(userId, query.lessonId, 25)
+      : [];
 
     return {
       due: dueRows.map((r) => ({
@@ -351,34 +320,21 @@ export class ReviewService {
         word: r.word,
       })),
       newCards: newRows.map((w) => ({ state: SrsState.NEW, word: w })),
-      counts: {
-        due: dueCount,
-        newRemaining,
-        newDoneToday,
-        reviewsDoneToday,
-      },
+      counts: { due: dueCount, reviewsDoneToday },
     };
   }
 
-  /** Từ MỚI (người này chưa có dòng tiến độ nào) của 1 bài hoặc 1 cấp. */
-  private newWords(userId: string, query: QueueQueryDto, take: number) {
-    const qb = this.words
+  /** Từ MỚI (người này chưa có dòng tiến độ nào) của 1 bài, theo thứ tự trong bài. */
+  private newWordsOfLesson(userId: string, lessonId: string, take: number) {
+    return this.words
       .createQueryBuilder('word')
       .where(
         'NOT EXISTS (SELECT 1 FROM "UserWordProgress" p WHERE p."wordId" = word.id AND p."userId" = :userId)',
         { userId },
       )
-      .take(take);
-    if (query.lessonId)
-      return qb
-        .andWhere('word.lessonId = :lessonId', { lessonId: query.lessonId })
-        .orderBy('word.lessonOrder', 'ASC')
-        .getMany();
-    if (query.level)
-      qb.andWhere('word.hskLevel = :level', { level: query.level });
-    return qb
-      .orderBy('word.frequencyRank', 'ASC')
-      .addOrderBy('word.simplified', 'ASC')
+      .andWhere('word.lessonId = :lessonId', { lessonId })
+      .orderBy('word.lessonOrder', 'ASC')
+      .take(take)
       .getMany();
   }
 
@@ -398,7 +354,6 @@ export class ReviewService {
       user.timezone,
       this.cutoffHour,
     );
-    const newPerDay = user.settings?.newCardsPerDay ?? 10;
 
     // "Sắp quên" = đến hạn trong 24h tới. Động lực quay lại mạnh hơn hẳn
     // "đến hạn ôn": người ta ngại MẤT cái đã có hơn là ngại bỏ lỡ việc mới.
@@ -410,7 +365,6 @@ export class ReviewService {
       learnedTotal,
       inProgress,
       reviewsDoneToday,
-      newDoneToday,
       leechCount,
       suspendedCount,
     ] = await Promise.all([
@@ -435,11 +389,6 @@ export class ReviewService {
         userId,
         reviewedAt: MoreThanOrEqual(dayStart),
       }),
-      this.reviewLogs.countBy({
-        userId,
-        reviewType: 'LEARN',
-        reviewedAt: MoreThanOrEqual(dayStart),
-      }),
       this.progress.countBy({ userId, isLeech: true }),
       this.progress.countBy({ userId, isSuspended: true }),
     ]);
@@ -450,8 +399,6 @@ export class ReviewService {
       learnedTotal,
       inProgress,
       reviewsDoneToday,
-      newDoneToday,
-      newRemaining: Math.max(0, newPerDay - newDoneToday),
       leechCount,
       suspendedCount,
     };

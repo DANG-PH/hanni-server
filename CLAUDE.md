@@ -2,12 +2,38 @@
 
 API học tiếng Trung theo chuẩn **HSK 3.0** (9 cấp). Xem `README.md` cho tổng quan.
 
+## Dọn cơ sở dữ liệu (2026-10-28 — user: "cắt hoặc gộp các bảng thừa, logic không dùng", "check các field trong entity")
+Còn **42 bảng**, bảng/cột nào cũng có code đọc hoặc ghi thật. Migration `1792700000000-DropUnusedTables` (KHÔNG hoàn tác —
+bản sao lưu trước khi chạy: `/root/backups/hanni-truoc-don-bang-20261028-0120.dump` trên VPS):
+- **Xoá 15 bảng**: nhắn tin/theo dõi (Conversation, DirectMessage, Follow), bình luận/thích video, ví xu (UserWallet,
+  CoinTransaction), đấu 1v1 (DuelMatch, DuelSeason, DuelSeasonResult, UserRating), ExamAttempt (/exams cũ), **StudySession** (chỉ
+  ghi, không ai đọc — số phút học tính từ `durationMs` từng lượt ôn; route `POST /study/session(/:id/end)` + sự kiện
+  `SessionEnded` không ai nghe đã gỡ), **QuizAnswer** (đáp án từng câu quiz, chỉ ghi), `_prisma_migrations`.
+- **Xoá cột chỉ ghi / không ai dùng**: token Google ở Account (chỉ cần `sub`; `linkOAuthAccount(userId, provider, sub)`),
+  `User.lastActiveAt` (không chỗ nào ghi — 8/8 null), `Notification.actorId/videoId/commentId`, `UserSettings.equippedFrame` +
+  **`newCardsPerDay`** (ô "Từ mới mỗi ngày" ở /settings không điều khiển gì — bỏ cả ô, biến `SRS_DEFAULT_NEW_PER_DAY`),
+  `UserDailyActivity.xp`, `Achievement.iconUrl`, `UserAchievement.progressValue`, `UserWordProgress.lastRating`,
+  `RefreshToken.replacedById`, `QuizAttempt.format/studySessionId`, `ReviewLog.studySessionId`, `UserLevelProgress.reviewingWords/
+  dueWords/atRiskWords` (cache chỉ còn totalWords/learnedWords/completedAt cho huy hiệu), `HskLevel.isSharedBand/newWords2021/
+  cumulative2021/skills` (số bản nháp 2021 không hiện ở đâu), `PaymentOrder.xuAmount/kind`.
+- **Gộp**: `PaymentOrder.payosPaymentLinkId` → `providerRef` (mã giao dịch phía cổng, chung payOS/MoMo).
+- **Enum**: xoá `StudySource`, `PaymentOrderKind`, `SkillType`; `NotificationType` dựng lại còn 4 loại (xoá 4 thông báo
+  NEW_FOLLOWER cũ) → bỏ bộ lọc `SHOWN_TYPES` ở notifications.service.
+- **Giữ có chủ đích**: các trường trước/sau của `ReviewLog` (nhật ký ôn kiểu Anki — cần nếu sau này tối ưu tham số FSRS),
+  `maxReviewsPerDay`, `targetRetention` (đang dùng).
+- **Kiểm chứng**: dựng cấu trúc production (`pg_dump --schema-only`) trong PGlite → thêm dòng mẫu → chạy migration 2 lần → so từng
+  bảng/cột/nullable/enum với metadata TypeORM của 42 entity: khớp hết; `providerRef` nhận mã link cũ. Bộ quét cột không ai dùng +
+  export không ai dùng + hàm service không ai gọi: còn 0 (trừ hàm `@Cron`).
+- **Câu báo lỗi dễ hiểu**: lỗi người dùng nhìn thấy không còn tên biến/thuật ngữ ("cần cấu hình GEMINI_API_KEY", "Google token…",
+  "Token đã hết hạn", "thiếu PAYOS_CLIENT_ID…") → "Tính năng AI đang tạm đóng…", "Liên kết đã hết hạn — hãy yêu cầu gửi lại"…
+  Tên biến cấu hình chỉ ghi trong comment/log.
+
 ## Stack
 - NestJS 11 + TypeScript (CommonJS, `module: nodenext`)
 - PostgreSQL 16 qua **TypeORM 0.3** (`src/database/`) — chuyển từ Prisma 6 ngày 2026-10-20, xem mục
   "TypeORM — quy tắc + bẫy đã gặp" bên dưới trước khi viết truy vấn mới
-- Redis (ioredis) — state OAuth, cache, và Redis adapter cho WebSocket (`RedisIoAdapter`,
-  `src/infra/redis/redis-io.adapter.ts`) — sẵn sàng scale nhiều instance
+- Redis (ioredis) — hạn mức AI theo ngày, lượt chơi trò chơi, cache Hanni Coach, và Redis adapter cho WebSocket
+  (`RedisIoAdapter`, `src/infra/redis/redis-io.adapter.ts`) — sẵn sàng scale nhiều instance
 - `@nestjs/event-emitter` (in-process) cho luồng sự kiện; handler phải **idempotent**
 - `@nestjs/websockets` + `socket.io` (namespace `/notifications`) — đẩy thông báo realtime (`notification:new`)
 - `@google/genai` (Gemini) — trợ lý AI RAG, để trống `GEMINI_API_KEY` thì tự tắt (báo rõ, không crash)
@@ -66,8 +92,9 @@ qua webhook. Giờ (`payments.service.ts`, đầu file có khối "Luồng 1 l�
   thẻ quốc tế). Chữ ký HMAC-SHA256 theo ĐÚNG thứ tự trường MoMo quy định; chữ ký IPN có `transId` ở CUỐI (repo mẫu bên thứ ba user gửi
   bỏ sót trường này nên không bao giờ khớp). `orderId` gửi MoMo = `HN<mã>T<thời điểm>` (sandbox dùng chung partnerCode "MOMO" với mọi
   người, chỉ số mã đơn sẽ trùng), lưu ở `PaymentOrder.providerRef`; cột `provider` PAYOS/MOMO (migration `1792670000000-PaymentProvider`).
-  `MOMO_API_URL` mặc định sandbox; **sandbox trên production chạy trọn luồng nhưng KHÔNG cộng Premium** (`grantsPremium()` — khoá +
-  thẻ thử công khai), `getOrderStatus` trả `sandbox: true` để client nói rõ. VPS đang dùng khoá sandbox công khai.
+  `MOMO_API_URL` mặc định sandbox. **Từ 28/10: khoá sandbox trên production bị ẨN** (`providers().momo` = `isConfigured() &&
+  grantsPremium()`; tạo đơn MoMo khi ẩn → 503) — người dùng thật không gặp cổng tiền ảo; chạy local (NODE_ENV ≠ production) thì
+  hiện + cộng Premium để thử trọn luồng. Có khoá thật (cần giấy phép kinh doanh) chỉ đổi 4 dòng `MOMO_*`, không sửa code.
 - **Đã thử thật trên production 27/10**: job đối soát cộng 2 đơn của user (Premium tới 27/05/2027); webhook/IPN giả bị từ chối ("Data
   not integrity" / chữ ký sai); MoMo sandbox bằng thẻ ATM test 9704 0000 0000 0018 → MoMo đưa về `/account?premium=8&partnerCode=…
   &resultCode=0` (nối bằng `&`), đơn PAID + `sandbox: true`, không cộng Premium. **IPN của MoMo sandbox không tới** trong 2 lần thử
@@ -111,14 +138,14 @@ qua webhook. Giờ (`payments.service.ts`, đầu file có khối "Luồng 1 l�
 ## TypeORM — quy tắc + bẫy đã gặp (chuyển từ Prisma 2026-10-20)
 User yêu cầu chuyển ("code dễ hiểu, dễ tìm") — TypeORM là lựa chọn phổ biến nhất trong hệ NestJS; mỗi bảng thành 1
 class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma` 1.500 dòng.
-- **Entity sinh từ chính DB production** (56 bảng): giữ nguyên tên bảng PascalCase, cột camelCase và TÊN RÀNG BUỘC
+- **Entity sinh từ chính DB production** (56 bảng lúc chuyển; còn 42 sau đợt dọn 28/10 — mục "Dọn cơ sở dữ liệu"): giữ nguyên tên bảng PascalCase, cột camelCase và TÊN RÀNG BUỘC
   của Prisma (`Word_pkey`, `Word_lessonId_fkey`, `Word_simplified_pinyinNumeric_key`) nên DB đang chạy không phải
   đổi tên gì. `npm run db:migration:generate` trên DB đã đồng bộ báo "No changes" — entity khớp DB 100%.
 - **Migration**: `InitialSchema` dựng toàn bộ bảng cho DB MỚI (bỏ qua nếu đã có bảng `User`); `TypeormConventions`
   CHỈ chạy trên DB cũ của Prisma (có `_prisma_migrations`): Prisma tự sinh uuid/`updatedAt` ở phía client, TypeORM
   cần DB làm → đặt DEFAULT `gen_random_uuid()` (48 cột id) và `now()` (62 cột thời gian), `Word.measureWords`
   DEFAULT `'{}'`, đổi unique của `Referral.referredId` sang tên TypeORM. Bảng theo dõi: `typeorm_migrations`
-  (`_prisma_migrations` để nguyên làm lịch sử). Deploy chạy `node dist/src/database/migrate.js`.
+  (`_prisma_migrations` đã xoá 28/10). Deploy chạy `node dist/src/database/migrate.js`.
 - **Thời gian**: cột `timestamp(3)` KHÔNG múi giờ, lưu giờ UTC (kiểu Prisma tạo). `database.config.ts` đọc chuỗi DB
   là UTC, ghi Date dạng UTC, phiên đặt `TimeZone=UTC` — VPS chạy giờ Việt Nam, thiếu 1 trong 3 là lệch 7 tiếng.
   Cột `date` (`UserDailyActivity.localDate`…) dùng transformer `dateOnly`; cột mảng có thể NULL dùng `arrayOrEmpty`.
@@ -423,8 +450,8 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
 - **SRS**: `SchedulerRegistry.get(name)` chọn `Sm2Scheduler` | `FsrsScheduler` theo
   `UserSettings.srsScheduler`. `UserWordProgress` có cả trường SM-2 (easeFactor/intervalDays)
   lẫn FSRS (stability/difficulty) → đổi thuật toán không cần migration.
-  `ReviewService.getQueue()` chặn 2 tầng riêng: `newCardsPerDay` giới hạn từ MỚI mỗi ngày (bỏ
-  qua khi học theo bài, `lessonId` — nạp cả bài luôn), `maxReviewsPerDay` (tuỳ chọn, null =
+  `ReviewService.getQueue()`: từ mới CHỈ khi ôn theo 1 bài (`lessonId`, tối đa 25 — `newCardsPerDay` + `?level=` đã bỏ 28/10
+  vì từ mới chỉ đến từ bài học), `maxReviewsPerDay` (tuỳ chọn, null =
   không giới hạn) giới hạn số THẺ ÔN lấy ra mỗi lần gọi hàng đợi dựa trên `reviewsDoneToday` —
   `counts.due` vẫn trả tổng số thực sự đến hạn (không bị cắt) để FE biết còn tồn đọng bao nhiêu,
   chỉ có mảng `due` trả về là bị giới hạn. `maxReviewsPerDay` trước đây đã có sẵn trong
@@ -838,12 +865,8 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
   tín dụng), nên hết hạn tự rơi về free, không tự trừ tiền tiếp. Bảng giá THAM KHẢO (tự điều
   chỉnh ở `premium-plans.ts`, cố tình định giá THẤP hơn nhiều so với app đối thủ vì không khoá
   nội dung): Premium tháng 19k, 3 tháng 49k, 6 tháng 89k, năm 149k, trọn đời 399k.
-  **Dùng CHUNG bảng `PaymentOrder`/webhook payOS với nạp xu** (thêm cột `kind: TOPUP|PREMIUM` +
-  `premiumPlanKey`) thay vì dựng luồng thanh toán riêng — tái dùng nguyên vẹn logic xác thực chữ
-  ký + idempotent đã có. `PaymentsService.createPremiumCheckout()` y hệt `createTopUp()` nhưng
-  `amountVnd` lấy từ giá gói, `xuAmount: 0`; `handleWebhook()` branch theo `order.kind`: TOPUP
-  thì `wallet.credit()` như cũ, PREMIUM thì `extendPremiumUntil()` (premium-plans.ts) rồi ghi
-  `User.premiumUntil`. **Cộng dồn khi mua thêm lúc đang Premium** — nối tiếp từ hạn cũ (nếu còn
+  Bảng `PaymentOrder` (`premiumPlanKey`; nạp xu + cột `kind`/`xuAmount` đã bỏ 20/10 và 28/10): đơn đã trả →
+  `grantPaidOrder()` → `extendPremiumUntil()` (premium-plans.ts) rồi ghi `User.premiumUntil`. **Cộng dồn khi mua thêm lúc đang Premium** — nối tiếp từ hạn cũ (nếu còn
   hiệu lực) thay vì tính lại từ hôm nay, giống chuẩn gia hạn subscription thông thường. Gói
   "trọn đời" lưu bằng MỐC XA (`PREMIUM_LIFETIME_UNTIL`, năm 2099) thay vì cột boolean riêng —
   mọi chỗ chỉ cần so `premiumUntil > now()` (`isPremiumActive()`), không cần rẽ nhánh thêm.
@@ -944,7 +967,7 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
     để hoàn tiền tay (không còn gì để cộng).
   - **Xoá hẳn module**: `wallet`, `messages`, `users/follows`, `users/search`, `videos/comments`, `videos/likes`, gateway bỏ sự kiện
     `typing`; xoá thêm route không client nào gọi: `GET /notifications/unread-count`, `GET /progress/levels/:level`.
-    Bảng DB giữ làm lịch sử (danh sách ở đầu `entities/index.ts`, entity ghi "KHÔNG CÒN DÙNG"); xoá tài khoản vẫn xoá dây chuyền.
+    Bảng DB của các tính năng này đã XOÁ hẳn 28/10 (mục "Dọn cơ sở dữ liệu").
   - **Thông báo làm lại** (`notifications.listener.ts` — mỗi loại 1 handler, soạn câu chữ ở MỘT chỗ): chỉ còn loại người học cần
     biết — `ACHIEVEMENT_UNLOCKED`, `CLASS_ASSIGNMENT` (giáo viên giao bài; `ClassroomsService` phát `AppEvent.ClassAssignmentCreated`
     thay vì tự gửi push), `LEAGUE_RESULT` (chốt tuần xong `LeagueService` phát cho người có ôn trong tuần hoặc có lên/xuống bậc),

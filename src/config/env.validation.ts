@@ -39,7 +39,6 @@ export const envSchema = z.object({
   MAIL_FROM: z.string().default('Hanni <no-reply@hanni.app>'),
 
   SRS_SCHEDULER: z.enum(['sm2', 'fsrs']).default('sm2'),
-  SRS_DEFAULT_NEW_PER_DAY: z.coerce.number().int().positive().default(10),
   SRS_DEFAULT_TARGET_RETENTION: z.coerce
     .number()
     .min(0.7)

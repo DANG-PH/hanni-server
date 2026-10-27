@@ -177,7 +177,7 @@ export class MinigameService {
 
     const pool = await this.buildPool(userId, mode);
     if (pool.length < 4) {
-      throw new BadRequestException('Chưa đủ từ vựng để chơi minigame');
+      throw new BadRequestException('Chưa đủ từ vựng để chơi trò này');
     }
 
     const picked = shuffle(pool).slice(
@@ -234,7 +234,7 @@ export class MinigameService {
       take: POOL_SIZE,
     });
     if (pool.length < MATCH_PAIRS) {
-      throw new BadRequestException('Chưa đủ từ vựng để chơi minigame');
+      throw new BadRequestException('Chưa đủ từ vựng để chơi trò này');
     }
     const picked = shuffle(pool).slice(0, MATCH_PAIRS);
     const cards: MatchCard[] = shuffle(

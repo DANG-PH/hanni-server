@@ -4,11 +4,8 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
-  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { QuizAnswer } from './quiz-answer.entity';
-import { StudySession } from './study-session.entity';
 import { User } from './user.entity';
 
 @Entity('QuizAttempt')
@@ -32,20 +29,6 @@ export class QuizAttempt {
   })
   user!: User;
 
-  @Column({ type: 'uuid', nullable: true })
-  studySessionId!: string | null;
-
-  @ManyToOne(() => StudySession, (x) => x.quizAttempts, {
-    onDelete: 'SET NULL',
-    onUpdate: 'CASCADE',
-    nullable: true,
-  })
-  @JoinColumn({
-    name: 'studySessionId',
-    foreignKeyConstraintName: 'QuizAttempt_studySessionId_fkey',
-  })
-  studySession!: StudySession | null;
-
   @Column({ type: 'timestamp', precision: 3, default: () => 'now()' })
   startedAt!: Date;
 
@@ -60,10 +43,4 @@ export class QuizAttempt {
 
   @Column({ type: 'double precision', default: 0 })
   scorePct!: number;
-
-  @Column({ type: 'jsonb', nullable: true })
-  format!: unknown;
-
-  @OneToMany(() => QuizAnswer, (x) => x.quizAttempt)
-  answers!: QuizAnswer[];
 }

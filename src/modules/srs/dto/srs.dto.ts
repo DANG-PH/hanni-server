@@ -8,7 +8,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
-import { ReviewRating, StudySource } from '../../../database/enums';
+import { ReviewRating } from '../../../database/enums';
 
 export class AddWordDto {
   @IsUUID()
@@ -27,20 +27,9 @@ export class ReviewDto {
   @Min(0)
   @Max(600_000)
   durationMs?: number;
-
-  @IsOptional()
-  @IsUUID()
-  studySessionId?: string;
 }
 
 export class QueueQueryDto {
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(9)
-  level?: number;
-
   @IsOptional()
   @IsUUID()
   lessonId?: string;
@@ -51,11 +40,6 @@ export class QueueQueryDto {
   @Min(1)
   @Max(200)
   limit?: number;
-}
-
-export class StartSessionDto {
-  @IsEnum(StudySource)
-  source!: StudySource;
 }
 
 /** Ẩn / bỏ ẩn 1 từ khỏi hàng đợi ôn ("tôi biết từ này rồi"). */

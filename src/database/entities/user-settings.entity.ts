@@ -39,9 +39,6 @@ export class UserSettings {
   @Column({ type: 'integer', default: 20 })
   dailyGoalValue!: number;
 
-  @Column({ type: 'integer', default: 10 })
-  newCardsPerDay!: number;
-
   @Column({ type: 'integer', nullable: true })
   maxReviewsPerDay!: number | null;
 
@@ -60,10 +57,6 @@ export class UserSettings {
   /** email tổng kết tuần */
   @Column({ type: 'boolean', default: true })
   weeklyDigestEnabled!: boolean;
-
-  /** key trong AVATAR_FRAMES (frame-catalog.ts, chỉ còn khung Premium), null = không dùng khung */
-  @Column({ type: 'text', nullable: true })
-  equippedFrame!: string | null;
 
   /** key trong TITLE_CATALOG (title-catalog.ts, mở theo huy hiệu đã đạt), null = không dùng danh hiệu */
   @Column({ type: 'text', nullable: true })

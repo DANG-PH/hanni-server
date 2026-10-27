@@ -52,9 +52,6 @@ export class UserDailyActivity {
   @Column({ type: 'boolean', default: false })
   goalMet!: boolean;
 
-  @Column({ type: 'integer', default: 0 })
-  xp!: number;
-
   @CreateDateColumn({ type: 'timestamp', precision: 3 })
   createdAt!: Date;
 

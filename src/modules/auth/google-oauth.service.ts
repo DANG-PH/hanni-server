@@ -36,11 +36,11 @@ export class GoogleOAuthService {
       payload = ticket.getPayload();
     } catch {
       throw new UnauthorizedException(
-        'Google token không hợp lệ hoặc đã hết hạn',
+        'Đăng nhập Google chưa thành công — thử lại nhé',
       );
     }
     if (!payload?.sub || !payload.email) {
-      throw new UnauthorizedException('Google token thiếu thông tin');
+      throw new UnauthorizedException('Tài khoản Google này chưa cho biết email — thử tài khoản khác nhé');
     }
     return {
       sub: payload.sub,

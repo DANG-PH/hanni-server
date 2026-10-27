@@ -45,9 +45,6 @@ export class RefreshToken {
   @Column({ type: 'timestamp', precision: 3, nullable: true })
   revokedAt!: Date | null;
 
-  @Column({ type: 'uuid', nullable: true })
-  replacedById!: string | null;
-
   @Column({ type: 'text', nullable: true })
   userAgent!: string | null;
 

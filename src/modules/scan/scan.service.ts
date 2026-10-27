@@ -87,7 +87,7 @@ export class ScanService {
     }
     if (!this.genAI) {
       throw new BadRequestException(
-        'Quét ảnh chưa được bật — cần cấu hình GEMINI_API_KEY trước đã.',
+        'Quét ảnh đang tạm đóng — thử lại sau nhé.',
       );
     }
 

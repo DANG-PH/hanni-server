@@ -7,7 +7,6 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { ReviewRating, ReviewType, SrsState } from '../enums';
-import { StudySession } from './study-session.entity';
 import { User } from './user.entity';
 import { UserWordProgress } from './user-word-progress.entity';
 
@@ -50,20 +49,6 @@ export class ReviewLog {
     foreignKeyConstraintName: 'ReviewLog_progressId_fkey',
   })
   progress!: UserWordProgress;
-
-  @Column({ type: 'uuid', nullable: true })
-  studySessionId!: string | null;
-
-  @ManyToOne(() => StudySession, (x) => x.reviewLogs, {
-    onDelete: 'SET NULL',
-    onUpdate: 'CASCADE',
-    nullable: true,
-  })
-  @JoinColumn({
-    name: 'studySessionId',
-    foreignKeyConstraintName: 'ReviewLog_studySessionId_fkey',
-  })
-  studySession!: StudySession | null;
 
   @Column({ type: 'enum', enum: ReviewRating, enumName: 'ReviewRating' })
   rating!: ReviewRating;

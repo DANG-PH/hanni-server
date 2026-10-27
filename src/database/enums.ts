@@ -15,16 +15,6 @@ export const VerificationTokenType = {
 export type VerificationTokenType =
   (typeof VerificationTokenType)[keyof typeof VerificationTokenType];
 
-/** 5 kỹ năng HSK 3.0: 听 说 读 写 译 */
-export const SkillType = {
-  LISTENING: 'LISTENING',
-  SPEAKING: 'SPEAKING',
-  READING: 'READING',
-  WRITING: 'WRITING',
-  TRANSLATION: 'TRANSLATION',
-} as const;
-export type SkillType = (typeof SkillType)[keyof typeof SkillType];
-
 export const HskBand = {
   ELEMENTARY: 'ELEMENTARY',
   INTERMEDIATE: 'INTERMEDIATE',
@@ -103,13 +93,6 @@ export const AchievementCategory = {
 export type AchievementCategory =
   (typeof AchievementCategory)[keyof typeof AchievementCategory];
 
-export const StudySource = {
-  REVIEW: 'REVIEW',
-  LEARN: 'LEARN',
-  QUIZ: 'QUIZ',
-} as const;
-export type StudySource = (typeof StudySource)[keyof typeof StudySource];
-
 export const VideoKind = {
   PODCAST: 'PODCAST',
   STORY: 'STORY',
@@ -121,9 +104,6 @@ export const VideoKind = {
 export type VideoKind = (typeof VideoKind)[keyof typeof VideoKind];
 
 export const NotificationType = {
-  /** Cũ (bình luận, theo dõi — đã gỡ 2026-10-20): còn trong DB, không tạo/hiện nữa. */
-  COMMENT_REPLY: 'COMMENT_REPLY',
-  NEW_FOLLOWER: 'NEW_FOLLOWER',
   ACHIEVEMENT_UNLOCKED: 'ACHIEVEMENT_UNLOCKED',
   CLASS_ASSIGNMENT: 'CLASS_ASSIGNMENT',
   LEAGUE_RESULT: 'LEAGUE_RESULT',
@@ -157,13 +137,6 @@ export const PaymentOrderStatus = {
 } as const;
 export type PaymentOrderStatus =
   (typeof PaymentOrderStatus)[keyof typeof PaymentOrderStatus];
-
-export const PaymentOrderKind = {
-  TOPUP: 'TOPUP',
-  PREMIUM: 'PREMIUM',
-} as const;
-export type PaymentOrderKind =
-  (typeof PaymentOrderKind)[keyof typeof PaymentOrderKind];
 
 export const OnboardingGoal = {
   TRAVEL: 'TRAVEL',

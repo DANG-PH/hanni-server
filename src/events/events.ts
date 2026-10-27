@@ -6,7 +6,6 @@ import type { ReviewRating } from '../database/enums';
  */
 export const AppEvent = {
   WordReviewed: 'word.reviewed',
-  SessionEnded: 'session.ended',
   LevelCompleted: 'level.completed',
   StreakUpdated: 'streak.updated',
   QuizCompleted: 'quiz.completed',
@@ -29,13 +28,6 @@ export interface WordReviewedPayload {
   becameLearned: boolean;
   durationMs?: number;
   at: string; // ISO
-}
-
-export interface SessionEndedPayload {
-  userId: string;
-  studySessionId: string;
-  cardsReviewed: number;
-  cardsCorrect: number;
 }
 
 export interface LevelCompletedPayload {

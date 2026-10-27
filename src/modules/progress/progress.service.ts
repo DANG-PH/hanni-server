@@ -140,7 +140,8 @@ export class ProgressService {
     return { levels: buckets, totals };
   }
 
-  /** Cập nhật cache UserLevelProgress cho 1 cấp sau khi user review. */
+  /** Cập nhật cache UserLevelProgress (số từ đã thuộc / tổng số từ của cấp) sau khi user review — huy hiệu và mốc
+   * "xong cấp" đọc từ cache này thay vì đếm lại cả cấp mỗi lần. */
   async recomputeLevelCache(
     userId: string,
     level: number,
@@ -150,34 +151,16 @@ export class ProgressService {
       this.words.countBy({ hskLevel: level }),
       this.wordProgress.find({
         where: { userId, hskLevel: level },
-        select: {
-          id: true,
-          state: true,
-          learnedAt: true,
-          dueAt: true,
-          intervalDays: true,
-          isSuspended: true,
-        },
+        select: { id: true, state: true, learnedAt: true, intervalDays: true },
       }),
     ]);
 
-    let learnedWords = 0;
-    let reviewingWords = 0;
-    let dueWords = 0;
-    let atRiskWords = 0;
-    const soon = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    for (const r of mine) {
-      const isLearned =
+    const learnedWords = mine.filter(
+      (r) =>
         r.learnedAt != null ||
         (r.state === SrsState.REVIEW &&
-          r.intervalDays >= LEARNED_INTERVAL_DAYS);
-      if (isLearned) learnedWords += 1;
-      else if (r.state !== SrsState.NEW) reviewingWords += 1;
-      if (!r.isSuspended && r.state !== SrsState.NEW && r.dueAt) {
-        if (r.dueAt <= now) dueWords += 1;
-        else if (r.dueAt <= soon) atRiskWords += 1;
-      }
-    }
+          r.intervalDays >= LEARNED_INTERVAL_DAYS),
+    ).length;
 
     const isComplete = totalWords > 0 && learnedWords >= totalWords;
     const prev = await this.levelProgress.findOneBy({
@@ -191,9 +174,6 @@ export class ProgressService {
         hskLevel: level,
         totalWords,
         learnedWords,
-        reviewingWords,
-        dueWords,
-        atRiskWords,
         // Giữ mốc hoàn thành cũ nếu đã có.
         completedAt: isComplete ? (prev?.completedAt ?? now) : null,
       },

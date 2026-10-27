@@ -96,7 +96,7 @@ export class UsersController {
     @CurrentUser() user: AuthUser,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    if (!file) throw new BadRequestException('Thiếu file ảnh');
+    if (!file) throw new BadRequestException('Hãy chọn một ảnh');
     return this.users.setAvatarFile(user.id, file);
   }
 

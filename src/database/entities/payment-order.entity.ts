@@ -8,7 +8,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { PaymentOrderKind, PaymentOrderStatus } from '../enums';
+import { PaymentOrderStatus } from '../enums';
 import { User } from './user.entity';
 
 /**
@@ -45,19 +45,6 @@ export class PaymentOrder {
   @Column({ type: 'integer' })
   amountVnd!: number;
 
-  /** Số xu của đơn nạp xu cũ (1 VNĐ = 1 xu); 0 với đơn Premium. */
-  @Column({ type: 'integer' })
-  xuAmount!: number;
-
-  /** PREMIUM (mua gói Premium) — TOPUP là đơn nạp xu cũ. */
-  @Column({
-    type: 'enum',
-    enum: PaymentOrderKind,
-    enumName: 'PaymentOrderKind',
-    default: 'TOPUP',
-  })
-  kind!: PaymentOrderKind;
-
   /** Key trong PREMIUM_PLANS (premium-plans.ts) — null nếu kind = TOPUP. */
   @Column({ type: 'text', nullable: true })
   premiumPlanKey!: string | null;
@@ -69,9 +56,6 @@ export class PaymentOrder {
     default: 'PENDING',
   })
   status!: PaymentOrderStatus;
-
-  @Column({ type: 'text', nullable: true })
-  payosPaymentLinkId!: string | null;
 
   /** Cổng thanh toán: PAYOS (chuyển khoản/VietQR) | MOMO — đơn trước 2026-10-27 đều là PAYOS. */
   @Column({ type: 'text', default: 'PAYOS' })

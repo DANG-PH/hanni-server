@@ -1,19 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, IsNull, Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { Notification } from '../../database/entities';
 import { NotificationType } from '../../database/enums';
 import { PushService } from '../push/push.service';
 import type { NotificationQueryDto } from './dto/notifications.dto';
 import { NotificationsGateway } from './notifications.gateway';
-
-/** Loại còn hiện trong app. COMMENT_REPLY/NEW_FOLLOWER (bình luận, theo dõi — đã gỡ) vẫn còn dòng cũ trong DB. */
-const SHOWN_TYPES = [
-  NotificationType.ACHIEVEMENT_UNLOCKED,
-  NotificationType.CLASS_ASSIGNMENT,
-  NotificationType.LEAGUE_RESULT,
-  NotificationType.STREAK_SAVED,
-];
 
 /** Thông báo gửi cho client — chỉ những trường cần hiện. */
 function notificationView(n: Notification) {
@@ -90,7 +82,7 @@ export class NotificationsService {
   async list(userId: string, q: NotificationQueryDto) {
     const page = q.page ?? 1;
     const pageSize = q.pageSize ?? 20;
-    const where = { userId, type: In(SHOWN_TYPES) };
+    const where = { userId };
     const [items, total, unreadCount] = await Promise.all([
       this.notifications.find({
         where,

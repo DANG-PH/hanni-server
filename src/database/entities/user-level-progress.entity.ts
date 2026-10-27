@@ -54,15 +54,6 @@ export class UserLevelProgress {
   @Column({ type: 'integer', default: 0 })
   learnedWords!: number;
 
-  @Column({ type: 'integer', default: 0 })
-  reviewingWords!: number;
-
-  @Column({ type: 'integer', default: 0 })
-  dueWords!: number;
-
-  @Column({ type: 'integer', default: 0 })
-  atRiskWords!: number;
-
   @Column({ type: 'timestamp', precision: 3, nullable: true })
   completedAt!: Date | null;
 

@@ -111,17 +111,12 @@ export class AchievementsService {
     });
   }
 
-  private async unlock(
-    userId: string,
-    code: string,
-    progressValue = 0,
-  ): Promise<boolean> {
+  private async unlock(userId: string, code: string): Promise<boolean> {
     const achievement = await this.achievements.findOneBy({ code });
     if (!achievement) return false;
     const unlocked = await insertIfAbsent(this.userAchievements, {
       userId,
       achievementId: achievement.id,
-      progressValue,
     });
     if (!unlocked) return false; // đã có rồi
     this.logger.log(`User ${userId} mở khoá huy hiệu ${code}`);
@@ -145,14 +140,13 @@ export class AchievementsService {
   /** Gọi khi có sự kiện streak.updated. */
   async onStreakUpdated(userId: string, currentStreak: number): Promise<void> {
     for (const t of this.thresholdsOf(AchievementCategory.STREAK)) {
-      if (currentStreak >= t)
-        await this.unlock(userId, `STREAK_${t}`, currentStreak);
+      if (currentStreak >= t) await this.unlock(userId, `STREAK_${t}`);
     }
   }
 
   /** Gọi khi có sự kiện level.completed. */
   async onLevelCompleted(userId: string, hskLevel: number): Promise<void> {
-    await this.unlock(userId, `HSK${hskLevel}_COMPLETE`, hskLevel);
+    await this.unlock(userId, `HSK${hskLevel}_COMPLETE`);
   }
 
   /** Gọi khi có sự kiện word.reviewed — kiểm mốc số từ đã thuộc (VOLUME) VÀ
@@ -165,10 +159,10 @@ export class AchievementsService {
       this.reviewLogs.countBy({ userId }),
     ]);
     for (const t of this.thresholdsOf(AchievementCategory.VOLUME)) {
-      if (learned >= t) await this.unlock(userId, `WORDS_${t}`, learned);
+      if (learned >= t) await this.unlock(userId, `WORDS_${t}`);
     }
     for (const t of this.thresholdsOf(AchievementCategory.MILESTONE)) {
-      if (reviews >= t) await this.unlock(userId, `REVIEWS_${t}`, reviews);
+      if (reviews >= t) await this.unlock(userId, `REVIEWS_${t}`);
     }
   }
 

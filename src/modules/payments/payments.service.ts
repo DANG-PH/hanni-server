@@ -68,8 +68,6 @@ const RECONCILE_WINDOW_MS = 7 * 86_400_000;
  *   chuyển đơn sang CANCELLED để trang Tài khoản báo đúng "đã huỷ" và job đối soát thôi hỏi lại.
  *
  * Để trống `PAYOS_*` / `MOMO_*` thì cổng đó tự tắt (popup không hiện), KHÔNG chặn app khởi động, giống `GEMINI_API_KEY`.
- * Trước 2026-10-20 còn bán xu (nạp tiền lấy xu) — đã bỏ cùng hệ thống xu; bảng `PaymentOrder` vẫn giữ cột
- * `kind`/`xuAmount` của các đơn cũ.
  */
 @Injectable()
 export class PaymentsService {
@@ -84,10 +82,14 @@ export class PaymentsService {
     private readonly momo: MomoService,
   ) {}
 
-  /** Cổng nào đang bật — popup Premium chỉ hiện lựa chọn của cổng đã cấu hình. `configured` giữ cho client cũ. */
+  /**
+   * Cổng nào đang bật — popup Premium chỉ hiện lựa chọn của cổng đã cấu hình. `configured` giữ cho client cũ.
+   * MoMo chỉ hiện khi đơn MoMo cộng được Premium thật: khoá thật, hoặc khoá thử khi chạy local. Trên production mà
+   * mới có khoá thử (chưa có giấy phép kinh doanh để lấy khoá thật) thì ẩn — người dùng thật không gặp cổng tiền ảo.
+   */
   providers() {
     const payos = this.payos.isConfigured();
-    const momo = this.momo.isConfigured();
+    const momo = this.momo.isConfigured() && this.momo.grantsPremium();
     return {
       configured: payos || momo,
       payos,
@@ -108,6 +110,8 @@ export class PaymentsService {
   }> {
     const plan = PREMIUM_PLANS.find((p) => p.key === planKey);
     if (!plan) throw new BadRequestException('Không tìm thấy gói Premium này');
+    if (provider === 'momo' && !this.providers().momo)
+      throw new ServiceUnavailableException('Chưa mở thanh toán qua MoMo');
     return provider === 'momo'
       ? this.createMomoCheckout(userId, plan)
       : this.createPayosCheckout(userId, plan);
@@ -115,12 +119,10 @@ export class PaymentsService {
 
   private async createPayosCheckout(userId: string, plan: PremiumPlan) {
     if (!this.payos.isConfigured())
-      throw new ServiceUnavailableException('Chưa cấu hình payOS');
+      throw new ServiceUnavailableException('Thanh toán đang tạm đóng — thử lại sau nhé');
     const order = await insertAndReturn(this.orders, {
       userId,
       amountVnd: plan.priceVnd,
-      xuAmount: 0,
-      kind: 'PREMIUM',
       premiumPlanKey: plan.key,
       provider: 'PAYOS',
     });
@@ -138,9 +140,7 @@ export class PaymentsService {
         cancelUrl: `${frontendUrl}/account?premium=${order.orderCode}&cancelled=1`,
       });
 
-      await this.orders.update(order.id, {
-        payosPaymentLinkId: link.paymentLinkId,
-      });
+      await this.orders.update(order.id, { providerRef: link.paymentLinkId });
 
       return {
         checkoutUrl: link.checkoutUrl,
@@ -160,12 +160,10 @@ export class PaymentsService {
 
   private async createMomoCheckout(userId: string, plan: PremiumPlan) {
     if (!this.momo.isConfigured())
-      throw new ServiceUnavailableException('Chưa cấu hình MoMo');
+      throw new ServiceUnavailableException('Chưa mở thanh toán qua MoMo');
     const order = await insertAndReturn(this.orders, {
       userId,
       amountVnd: plan.priceVnd,
-      xuAmount: 0,
-      kind: 'PREMIUM',
       premiumPlanKey: plan.key,
       provider: 'MOMO',
     });
@@ -209,8 +207,6 @@ export class PaymentsService {
       premiumPlanKey: order.premiumPlanKey,
       status: order.status,
       provider: order.provider,
-      // MoMo sandbox trên production: đã trả (tiền ảo) nhưng không cộng Premium thật.
-      sandbox: order.provider === 'MOMO' && !this.momo.grantsPremium(),
     };
   }
 
@@ -367,13 +363,7 @@ export class PaymentsService {
     );
     if (!claimed.affected) return;
 
-    if (order.kind !== 'PREMIUM') {
-      // Đơn nạp xu tạo trước khi bỏ hệ thống xu (2026-10-20) — không còn gì để cộng, cần hoàn tiền thủ công.
-      this.logger.error(
-        `Đơn nạp xu cũ #${order.orderCode} vừa được thanh toán (${source}) — cần hoàn tiền thủ công`,
-      );
-      return;
-    }
+    // Phòng hờ đơn MoMo khoá thử tạo trên production trước 28/10 (khi cổng thử còn hiện) — tiền ảo, không cộng.
     if (order.provider === 'MOMO' && !this.momo.grantsPremium()) {
       this.logger.warn(
         `Đơn #${order.orderCode} trả qua MoMo SANDBOX (tiền ảo) trên production — không cộng Premium (${source})`,

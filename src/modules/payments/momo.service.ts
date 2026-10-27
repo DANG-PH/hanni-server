@@ -21,8 +21,9 @@ import {
  * MoMo). Chung 1 bảng PaymentOrder (cột `provider`) và chung bước cộng Premium (PaymentsService.grantPaidOrder).
  *
  * Khoá: MOMO_PARTNER_CODE / MOMO_ACCESS_KEY / MOMO_SECRET_KEY, endpoint MOMO_API_URL (mặc định sandbox). Khoá SANDBOX
- * là khoá công khai (code mẫu của MoMo) và tiền sandbox là tiền ảo → trên production, đơn sandbox KHÔNG cộng Premium
- * (`grantsPremium()`), chỉ để demo trọn luồng. Khoá thật: đăng ký business.momo.vn (hồ sơ doanh nghiệp, hợp đồng).
+ * là khoá công khai (code mẫu của MoMo) và tiền sandbox là tiền ảo → trên production, khoá thử bị ẩn khỏi popup và đơn
+ * sandbox KHÔNG cộng Premium (`grantsPremium()`); chạy local thì cộng để thử trọn luồng. Khoá thật: đăng ký
+ * business.momo.vn (cần giấy phép kinh doanh — hộ kinh doanh hoặc doanh nghiệp, hợp đồng).
  */
 @Injectable()
 export class MomoService {
@@ -69,7 +70,7 @@ export class MomoService {
   }): Promise<{ payUrl: string }> {
     if (!this.isConfigured())
       throw new ServiceUnavailableException(
-        'Chưa cấu hình MoMo — thiếu MOMO_PARTNER_CODE/MOMO_ACCESS_KEY/MOMO_SECRET_KEY',
+        'Chưa mở thanh toán qua MoMo', // thiếu MOMO_PARTNER_CODE/MOMO_ACCESS_KEY/MOMO_SECRET_KEY
       );
     const k = this.keys;
     const fields = {

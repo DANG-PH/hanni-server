@@ -104,7 +104,7 @@ export class AuthService {
     rawToken: string | undefined,
     ctx: RequestCtx,
   ): Promise<IssuedTokens> {
-    if (!rawToken) throw new UnauthorizedException('Thiếu refresh token');
+    if (!rawToken) throw new UnauthorizedException('Phiên đăng nhập đã hết hạn');
     return this.tokens.rotate(rawToken, ctx);
   }
 
@@ -156,7 +156,7 @@ export class AuthService {
       VerificationTokenType.PASSWORD_RESET,
     );
     const user = await this.users.findByEmail(row.identifier);
-    if (!user) throw new BadRequestException('Token không hợp lệ');
+    if (!user) throw new BadRequestException('Liên kết không hợp lệ');
     const hash = await this.passwords.hash(newPassword);
     await this.users.setPassword(user.id, hash);
     // vô hiệu mọi phiên cũ sau khi đổi mật khẩu
@@ -168,10 +168,10 @@ export class AuthService {
       tokenHash: sha256(rawToken),
     });
     if (!row || row.type !== type || row.consumedAt) {
-      throw new BadRequestException('Token không hợp lệ hoặc đã dùng');
+      throw new BadRequestException('Liên kết không hợp lệ hoặc đã được dùng');
     }
     if (row.expiresAt.getTime() < Date.now()) {
-      throw new BadRequestException('Token đã hết hạn');
+      throw new BadRequestException('Liên kết đã hết hạn — hãy yêu cầu gửi lại');
     }
     await this.verificationTokens.update(row.id, { consumedAt: new Date() });
     return row;
@@ -218,9 +218,7 @@ export class AuthService {
       }
     }
 
-    await this.users.linkOAuthAccount(userId, AuthProvider.GOOGLE, {
-      providerAccountId: profile.sub,
-    });
+    await this.users.linkOAuthAccount(userId, AuthProvider.GOOGLE, profile.sub);
 
     const user = await this.users.findById(userId);
     if (!user) throw new UnauthorizedException();

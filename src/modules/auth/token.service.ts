@@ -102,7 +102,7 @@ export class TokenService {
       relations: { user: true },
     });
 
-    if (!row) throw new UnauthorizedException('Refresh token không hợp lệ');
+    if (!row) throw new UnauthorizedException('Phiên đăng nhập không còn hợp lệ');
 
     if (row.revokedAt) {
       // Cửa sổ ÂN HẠN cho refresh trùng nhau, KHÔNG phải token bị đánh cắp.
@@ -133,14 +133,11 @@ export class TokenService {
     }
 
     if (row.expiresAt.getTime() < Date.now()) {
-      throw new UnauthorizedException('Refresh token đã hết hạn');
+      throw new UnauthorizedException('Phiên đăng nhập đã hết hạn');
     }
 
     const next = await this.issueForUser(row.user, ctx, row.familyId);
-    await this.refreshTokens.update(row.id, {
-      revokedAt: new Date(),
-      replacedById: null, // giữ đơn giản; đủ để phát hiện reuse
-    });
+    await this.refreshTokens.update(row.id, { revokedAt: new Date() });
     return next;
   }
 

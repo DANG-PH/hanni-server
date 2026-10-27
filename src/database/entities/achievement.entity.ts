@@ -28,9 +28,6 @@ export class Achievement {
   @Column({ type: 'text' })
   descriptionVi!: string;
 
-  @Column({ type: 'text', nullable: true })
-  iconUrl!: string | null;
-
   @Column({
     type: 'enum',
     enum: AchievementCategory,
