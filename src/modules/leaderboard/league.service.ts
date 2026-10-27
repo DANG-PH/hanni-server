@@ -9,6 +9,7 @@ import {
   ReviewLog,
   User,
 } from '../../database/entities';
+import { TEST_EMAIL_DOMAINS } from '../../common/test-accounts';
 import { findOrCreate, insertAndReturn } from '../../database/repository.util';
 import { AppEvent, type LeagueResultPayload } from '../../events/events';
 import {
@@ -99,17 +100,25 @@ export class LeagueService {
       where: { weekId: week.id, tier: entry.tier },
       select: { id: true, userId: true },
     });
-    const ids = groupEntries.map((e) => e.userId);
+    const allIds = groupEntries.map((e) => e.userId);
+    const users = await this.users.find({
+      where: { id: In(allIds) },
+      select: { id: true, displayName: true, avatarUrl: true, email: true },
+    });
+    const uMap = new Map(users.map((u) => [u.id, u]));
+    // Tài khoản thử (email dùng một lần khi kiểm thử production) không hiện cho người khác — cùng luật với bảng xếp
+    // hạng chính (`notTestAccount`). Trước 2026-10-27 thẻ giải đấu đứng đầu là "Test Mobile". Chỉ ẩn khi HIỂN THỊ:
+    // chốt tuần (`rolloverWeek`) vẫn tính đủ mọi người như cũ.
+    const isTest = (id: string) => {
+      const email = uMap.get(id)?.email?.toLowerCase() ?? '';
+      return TEST_EMAIL_DOMAINS.some((domain) => email.endsWith(domain));
+    };
+    const ids = allIds.filter((id) => id === userId || !isTest(id));
     const points = await this.pointsFor(
       ids,
       weekKeyStart(week.weekKey),
       new Date(Math.min(Date.now(), weekKeyEnd(week.weekKey).getTime())),
     );
-    const users = await this.users.find({
-      where: { id: In(ids) },
-      select: { id: true, displayName: true, avatarUrl: true },
-    });
-    const uMap = new Map(users.map((u) => [u.id, u]));
 
     const ranked = ids
       .map((id) => ({ userId: id, points: points.get(id) ?? 0 }))
