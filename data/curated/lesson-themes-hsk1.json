@@ -33,6 +33,9 @@
   "dong_tu_sinh_hoat": "Động từ sinh hoạt cá nhân",
   "dong_tu_di_lai_cong_viec": "Động từ đi lại & công việc"
  },
+ "curatedOrderThemes": [
+  "chao_hoi_xa_giao"
+ ],
  "wordThemes": [
   {
    "simplified": "你好",

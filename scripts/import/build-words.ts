@@ -52,6 +52,10 @@ interface LessonThemeFile {
   themeOrder: string[];
   themeNames: Record<string, string>;
   wordThemes: { simplified: string; pinyinNumeric: string; theme: string }[];
+  /** Chủ đề xếp từ trong bài theo ĐÚNG thứ tự soạn ở `wordThemes` thay vì tần suất (2026-10-27): bài 1 HSK 1
+   * "Chào hỏi" theo tần suất mở đầu bằng 不客气 còn 你好 đứng cuối — người mới bấm "Học bài đầu tiên" gặp "không có
+   * chi" trước "xin chào". Chỉ dùng cho chủ đề nằm gọn trong 1 bài (tách nhiều bài thì từ sẽ đổi bài → tiến độ lệch). */
+  curatedOrderThemes?: string[];
 }
 
 /** Đọc file chủ đề bài học đã soạn tay cho 1 cấp, nếu có (data/curated/lesson-themes-hsk{level}.json). */
@@ -438,9 +442,27 @@ function main(): void {
       if (!byTheme.has(theme)) byTheme.set(theme, []);
       byTheme.get(theme)!.push(r);
     }
+    const curatedRank = new Map(
+      themeFile.wordThemes.map((w, i) => [
+        `${w.simplified}|${w.pinyinNumeric}`,
+        i,
+      ]),
+    );
     let idx = 0;
     for (const theme of themeFile.themeOrder) {
       const words = byTheme.get(theme) ?? [];
+      if (themeFile.curatedOrderThemes?.includes(theme)) {
+        if (words.length > MAX_THEME_LESSON) {
+          throw new Error(
+            `curatedOrderThemes "${theme}" có ${words.length} từ > ${MAX_THEME_LESSON} — sẽ tách nhiều bài, không dùng được`,
+          );
+        }
+        const rank = (r: Record<string, unknown>) =>
+          curatedRank.get(
+            `${r.simplified as string}|${r.pinyinNumeric as string}`,
+          ) ?? Infinity;
+        words.sort((a, b) => rank(a) - rank(b));
+      }
       const parts = Math.max(1, Math.ceil(words.length / MAX_THEME_LESSON));
       const per = Math.ceil(words.length / parts);
       for (let p = 0; p < parts; p += 1) {

@@ -327,7 +327,7 @@
   "audioUrl": "/media/audio/cmn-不客气.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
   "lessonIndex": 1,
-  "lessonOrder": 1,
+  "lessonOrder": 3,
   "lessonTitle": "Chào hỏi & giao tiếp xã giao"
  },
  {
@@ -2817,7 +2817,7 @@
   "audioUrl": "/media/audio/cmn-没关系.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
   "lessonIndex": 1,
-  "lessonOrder": 7,
+  "lessonOrder": 10,
   "lessonTitle": "Chào hỏi & giao tiếp xã giao"
  },
  {
@@ -3430,7 +3430,7 @@
    }
   ],
   "lessonIndex": 1,
-  "lessonOrder": 10,
+  "lessonOrder": 1,
   "lessonTitle": "Chào hỏi & giao tiếp xã giao"
  },
  {
@@ -3846,7 +3846,7 @@
   "audioUrl": "/media/audio/cmn-请.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
   "lessonIndex": 1,
-  "lessonOrder": 3,
+  "lessonOrder": 5,
   "lessonTitle": "Chào hỏi & giao tiếp xã giao"
  },
  {
@@ -3868,7 +3868,7 @@
   "audioUrl": "/media/audio/cmn-请问.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
   "lessonIndex": 1,
-  "lessonOrder": 8,
+  "lessonOrder": 6,
   "lessonTitle": "Chào hỏi & giao tiếp xã giao"
  },
  {
@@ -5057,7 +5057,7 @@
   "audioUrl": "/media/audio/cmn-喂.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:cvdict",
   "lessonIndex": 1,
-  "lessonOrder": 5,
+  "lessonOrder": 8,
   "lessonTitle": "Chào hỏi & giao tiếp xã giao"
  },
  {
@@ -6338,7 +6338,7 @@
   "audioUrl": "/media/audio/cmn-再见.mp3",
   "source": "krmanik/HSK-3.0@2025-11; vi:curated",
   "lessonIndex": 1,
-  "lessonOrder": 6,
+  "lessonOrder": 7,
   "lessonTitle": "Chào hỏi & giao tiếp xã giao"
  },
  {
