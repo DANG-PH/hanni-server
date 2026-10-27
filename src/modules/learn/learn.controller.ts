@@ -27,6 +27,42 @@ class PathQuery {
   level?: number;
 }
 
+/**
+ * BẢN ĐỒ — giao diện nào gọi các route của file này (sinh từ mã nguồn ngày 27/10/2026; thêm/sửa route thì sửa
+ * khối này cho khớp). Địa chỉ đầy đủ = https://hanni-api.dangpham.id.vn/api + route; chạy local có Swagger ở
+ * http://localhost:8000/api/docs. Quyền: [khách] không cần đăng nhập · [khách+] khách gọi được, đã đăng nhập thì
+ * server biết là ai · [đăng nhập] thiếu cookie phiên là 401 · [admin]. "client:" = file trong hanni-client/ gọi route.
+ *
+ * GET       /learn/start                 [khách]      Nút "Học bài đầu tiên" (trang chủ /) → /bat-dau tra bài 1 của
+ *                                                     cấp
+ *                                                     → start() → LearnService.firstLesson()
+ *                                                     client: app/bat-dau/page.tsx
+ * GET       /learn/placement             [khách]      Bài kiểm tra trình độ /kiem-tra-trinh-do — tải cả đề 1 lần
+ *                                                     → placement() → PlacementService.questions()
+ *                                                     client: components/placement-test.tsx
+ * GET       /learn/lessons/:id/session   [khách]      Phiên học 1 bài /bai-hoc/[id] — server dựng sẵn mọi bước (giới
+ *                                                     thiệu từ → trắc nghiệm → ghép cặp → điền câu)
+ *                                                     → session() → LessonSessionService.session()
+ *                                                     client: app/bai-hoc/[lessonId]/page.tsx
+ * POST      /learn/lessons/:id/complete  [đăng nhập]  Màn "Hoàn thành bài" ở /bai-hoc/[id] — đưa từ vừa học vào lịch
+ *                                                     ôn SRS (khách: nộp sau khi đăng ký)
+ *                                                     → complete() → LessonSessionService.complete()
+ *                                                     client: components/lesson-session/session-runner.tsx ·
+ *                                                             lib/pending-lessons.ts (drainPendingLessons)
+ * GET       /learn/path                  [khách+]     Thẻ "Học tiếp" + lộ trình chủ đề ở trang chủ /learn; chọn bài
+ *                                                     khi giao bài ở /lop-hoc/[id]
+ *                                                     → path() → LearnService.path()
+ *                                                     client: app/(site)/tu-dien/page.tsx · lib/hooks.ts
+ *                                                             (preloadLearnHome) · lib/hooks.ts (useLearnPath)
+ * GET       /learn/current               [đăng nhập]  "Bài đang học" để luyện nghe / phát âm / viết / ôn tập mặc định
+ *                                                     bám đúng bài đó
+ *                                                     → current() → LearnService.currentLesson()
+ *                                                     client: lib/hooks.ts (useCurrentLesson)
+ * GET       /learn/lessons/:id           [khách+]     Trang chi tiết bài /learn/[id] (danh sách từ, ngữ pháp liên
+ *                                                     quan); từ của bài ở khung chủ đề
+ *                                                     → lesson() → LearnService.lesson()
+ *                                                     client: app/(app)/study/page.tsx · lib/hooks.ts (useLesson)
+ */
 @ApiTags('learn')
 @ApiBearerAuth()
 @Controller('learn')

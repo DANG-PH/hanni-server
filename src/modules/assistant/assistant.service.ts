@@ -549,6 +549,18 @@ export class AssistantService implements OnModuleInit {
   }
 
   /**
+   * LUỒNG "GÕ CÂU HỎI → AI TRẢ LỜI HIỆN DẦN" (GET /assistant/ask/stream — client: components/assistant-widget.tsx
+   * send() → lib/hooks.ts streamAssistant() mở EventSource):
+   *   1. checkDailyAskQuota(): thường FREE_ASK_DAILY_LIMIT lượt/ngày, Premium không giới hạn.
+   *   2. buildPromptContents(): ghép (a) 16 tin gần nhất của cuộc trò chuyện, (b) RAG — embed câu hỏi rồi tìm 4 đoạn
+   *      gần nhất trong vector store (235 điểm ngữ pháp + FAQ, đánh index lúc khởi động), (c) tra thẳng từ điển các
+   *      chữ Hán có trong câu hỏi (cấp HSK, nghĩa — không để AI đoán), (d) dữ kiện của người hỏi (chuỗi ngày, bài
+   *      đang học dở…).
+   *   3. Gemini sinh chữ dạng stream → mỗi đoạn đẩy về trình duyệt 1 sự kiện SSE `{delta}`; model có thể gọi tool
+   *      navigate_to_page/open_video → sự kiện cuối `{done, action}` để client hiện nút "Mở: …".
+   *   4. persistTurn(): lưu câu hỏi + câu trả lời vào ChatMessage.
+   * Không có GEMINI_API_KEY thì trả 1 câu "chưa bật" thay vì lỗi. Gói Gemini miễn phí ~20 lượt/ngày MỖI model.
+   *
    * Bản streaming của `ask()` — dùng SSE (`@Sse()` route ở controller) để
    * đẩy từng đoạn chữ về ngay khi Gemini sinh ra, thay vì bắt người dùng
    * đợi toàn bộ câu trả lời xong mới thấy gì. Chỉ thử 1 model đầu tiên

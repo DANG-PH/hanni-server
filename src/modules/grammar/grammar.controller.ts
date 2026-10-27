@@ -14,6 +14,24 @@ class GrammarQuery {
   level?: number;
 }
 
+/**
+ * BẢN ĐỒ — giao diện nào gọi các route của file này (sinh từ mã nguồn ngày 27/10/2026; thêm/sửa route thì sửa
+ * khối này cho khớp). Địa chỉ đầy đủ = https://hanni-api.dangpham.id.vn/api + route; chạy local có Swagger ở
+ * http://localhost:8000/api/docs. Quyền: [khách] không cần đăng nhập · [khách+] khách gọi được, đã đăng nhập thì
+ * server biết là ai · [đăng nhập] thiếu cookie phiên là 401 · [admin]. "client:" = file trong hanni-client/ gọi route.
+ *
+ * GET       /grammar/levels  [khách]      Số điểm ngữ pháp theo cấp — hiện KHÔNG trang nào gọi
+ *                                         → levels() → GrammarService.levels()
+ * GET       /grammar         [khách]      Danh sách ngữ pháp /ngu-phap (+ sitemap)
+ *                                         → list() → GrammarService.list()
+ *                                         client: app/(site)/ngu-phap/page.tsx · app/sitemap.ts
+ * GET       /grammar/search  [khách]      Tab "Ngữ pháp" của kết quả tra /tu-dien?q=…&tab=ngu-phap
+ *                                         → search() → GrammarService.search()
+ *                                         client: app/(site)/tu-dien/page.tsx
+ * GET       /grammar/:slug   [khách]      Trang 1 điểm ngữ pháp /ngu-phap/[slug]
+ *                                         → get() → GrammarService.get()
+ *                                         client: app/(site)/ngu-phap/[slug]/page.tsx
+ */
 @ApiTags('grammar')
 @ApiBearerAuth()
 @Controller('grammar')

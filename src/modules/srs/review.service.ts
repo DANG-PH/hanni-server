@@ -59,6 +59,19 @@ export class ReviewService {
 
   // ---------- nộp 1 lượt review ----------
 
+  /**
+   * LUỒNG "BẤM 1 TRONG 4 NÚT DƯỚI FLASHCARD" (POST /study/review — client: app/(app)/study/page.tsx; phiên học bài
+   * cũng đi qua đây khi đưa từ mới vào lịch ôn, xem LessonSessionService.complete):
+   *   1. Đọc tiến độ hiện tại của từ (UserWordProgress) — chưa có thì coi là NEW.
+   *   2. Thuật toán người dùng chọn ở /settings (SM-2 mặc định | FSRS, SchedulerRegistry) tính lịch mới từ mức bấm
+   *      (AGAIN "Quên" / HARD "Khó" / GOOD "Nhớ" / EASY "Dễ"): trạng thái, khoảng cách ngày, ngày đến hạn `dueAt`.
+   *      Công thức SM-2: scheduler/sm2.scheduler.ts · FSRS: scheduler/fsrs.scheduler.ts.
+   *   3. Trong 1 transaction: ghi tiến độ mới (upsert) + 1 dòng ReviewLog (nhật ký từng lượt ôn — giải đấu tuần, nhiệm
+   *      vụ ngày, báo cáo đều đếm từ bảng này) + cộng vào buổi học (StudySession).
+   *   4. Phát sự kiện WordReviewed → listener tự chạy nền: chuỗi ngày + huy hiệu (gamification.listener.ts), tiến độ
+   *      bài (progress.listener.ts). Muốn thêm "phần thưởng khi ôn" thì nghe sự kiện này, đừng sửa hàm này.
+   * "Đã thuộc" = trạng thái REVIEW với khoảng cách ≥ LEARNED_INTERVAL_DAYS (21 ngày) — đổi ngưỡng ở đầu file.
+   */
   async review(userId: string, dto: ReviewDto) {
     const [user, word] = await Promise.all([
       this.userWithSettings(userId),

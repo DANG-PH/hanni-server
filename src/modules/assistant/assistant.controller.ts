@@ -17,6 +17,39 @@ import type { AuthUser } from '../../common/types';
 import { AssistantService } from './assistant.service';
 import { AskAssistantDto } from './dto/ask-assistant.dto';
 
+/**
+ * BẢN ĐỒ — giao diện nào gọi các route của file này (sinh từ mã nguồn ngày 27/10/2026; thêm/sửa route thì sửa
+ * khối này cho khớp). Địa chỉ đầy đủ = https://hanni-api.dangpham.id.vn/api + route; chạy local có Swagger ở
+ * http://localhost:8000/api/docs. Quyền: [khách] không cần đăng nhập · [khách+] khách gọi được, đã đăng nhập thì
+ * server biết là ai · [đăng nhập] thiếu cookie phiên là 401 · [admin]. "client:" = file trong hanni-client/ gọi route.
+ *
+ * GET       /assistant/sessions                      [đăng nhập]  Bong bóng trợ lý AI (góc dưới phải) → nút đồng hồ:
+ *                                                                 danh sách cuộc trò chuyện
+ *                                                                 → sessions() → AssistantService.listSessions()
+ *                                                                 client: lib/hooks.ts (useAssistantSessions)
+ * POST      /assistant/sessions                      [đăng nhập]  Bong bóng trợ lý AI → nút "+" tạo cuộc trò chuyện
+ *                                                                 mới
+ *                                                                 → newSession() → AssistantService.createSession()
+ *                                                                 client: lib/hooks.ts (createAssistantSession)
+ * GET       /assistant/sessions/:sessionId/messages  [đăng nhập]  Bong bóng trợ lý AI → mở lại 1 cuộc trò chuyện cũ
+ *                                                                 → messages() → AssistantService.getMessages()
+ *                                                                 client: lib/hooks.ts (useAssistantMessages)
+ * DELETE    /assistant/sessions/:sessionId           [đăng nhập]  Bong bóng trợ lý AI → xoá 1 cuộc trò chuyện
+ *                                                                 → deleteSession() →
+ *                                                                   AssistantService.deleteSession()
+ *                                                                 client: lib/hooks.ts (deleteAssistantSession)
+ * POST      /assistant/ask                           [đăng nhập]  Hỏi trợ lý không streaming — client hiện KHÔNG dùng
+ *                                                                 (dùng bản stream bên dưới)
+ *                                                                 → ask() → AssistantService.ask()
+ * GET·SSE   /assistant/ask/stream                    [đăng nhập]  Bong bóng trợ lý AI → gửi câu hỏi; câu trả lời hiện
+ *                                                                 dần từng chữ (SSE)
+ *                                                                 → askStream() → AssistantService.askStream()
+ *                                                                 client: lib/hooks.ts (streamAssistant)
+ * GET       /assistant/status                        [đăng nhập]  Chẩn đoán trợ lý (đã bật Gemini chưa, đã đánh index
+ *                                                                 bao nhiêu đoạn) — gọi tay bằng curl, không có giao
+ *                                                                 diện
+ *                                                                 → status() → AssistantService.getStatus()
+ */
 @ApiTags('assistant')
 @ApiBearerAuth()
 @Controller('assistant')

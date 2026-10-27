@@ -29,6 +29,43 @@ import {
 import { UsersService } from '../users/users.service';
 import { TokenService, type IssuedTokens } from './token.service';
 
+/**
+ * BẢN ĐỒ — giao diện nào gọi các route của file này (sinh từ mã nguồn ngày 27/10/2026; thêm/sửa route thì sửa
+ * khối này cho khớp). Địa chỉ đầy đủ = https://hanni-api.dangpham.id.vn/api + route; chạy local có Swagger ở
+ * http://localhost:8000/api/docs. Quyền: [khách] không cần đăng nhập · [khách+] khách gọi được, đã đăng nhập thì
+ * server biết là ai · [đăng nhập] thiếu cookie phiên là 401 · [admin]. "client:" = file trong hanni-client/ gọi route.
+ *
+ * POST      /auth/register         [khách]      Form "Tạo tài khoản" ở /register (và màn đăng ký sau khi học thử)
+ *                                               → register() → AuthService.register()
+ *                                               client: components/auth-form-card.tsx
+ * POST      /auth/login            [khách]      Form "Đăng nhập" ở /login
+ *                                               → login() → AuthService.login()
+ *                                               client: components/auth-form-card.tsx
+ * GET       /auth/session          [khách+]     Mỗi lần mở app: hỏi "ai đang đăng nhập" (AuthProvider ở lib/auth.tsx)
+ *                                               — khách nhận { user: null }
+ *                                               → session() → UsersService.getProfile()
+ *                                               client: lib/api.ts (apiFetch) · lib/auth.tsx (AuthProvider)
+ * POST      /auth/refresh          [khách]      Tự động khi access token hết hạn (lib/api.ts gộp chung 1 lượt cho mọi
+ *                                               request đang chờ)
+ *                                               → refresh() → AuthService.refresh()
+ *                                               client: lib/api.ts (refreshSession)
+ * POST      /auth/logout           [khách]      Nút "Đăng xuất" ở chân menu
+ *                                               → logout() → AuthService.logout()
+ *                                               client: lib/auth.tsx (AuthProvider)
+ * POST      /auth/google           [khách]      Nút "Đăng nhập bằng Google" ở /login, /register
+ *                                               → google() → AuthService.loginWithGoogle()
+ *                                               client: components/google-button.tsx
+ * POST      /auth/verify-email     [khách]      Bấm link xác minh trong email → trang /auth/verify-email
+ *                                               → verifyEmail() → AuthService.verifyEmail()
+ *                                               client: app/auth/verify-email/page.tsx
+ * POST      /auth/forgot-password  [khách]      Form "Quên mật khẩu" ở /forgot-password (cần MAIL_HOST mới gửi được
+ *                                               email thật)
+ *                                               → forgotPassword() → AuthService.forgotPassword()
+ *                                               client: app/forgot-password/page.tsx
+ * POST      /auth/reset-password   [khách]      Form đặt mật khẩu mới ở /reset-password (mở từ link trong email)
+ *                                               → resetPassword() → AuthService.resetPassword()
+ *                                               client: app/reset-password/page.tsx
+ */
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {

@@ -20,6 +20,63 @@ import {
   UpdateClassroomDto,
 } from './dto/classroom.dto';
 
+/**
+ * BẢN ĐỒ — giao diện nào gọi các route của file này (sinh từ mã nguồn ngày 27/10/2026; thêm/sửa route thì sửa
+ * khối này cho khớp). Địa chỉ đầy đủ = https://hanni-api.dangpham.id.vn/api + route; chạy local có Swagger ở
+ * http://localhost:8000/api/docs. Quyền: [khách] không cần đăng nhập · [khách+] khách gọi được, đã đăng nhập thì
+ * server biết là ai · [đăng nhập] thiếu cookie phiên là 401 · [admin]. "client:" = file trong hanni-client/ gọi route.
+ *
+ * POST      /classrooms                                [đăng nhập]  Form "Tạo lớp" ở /lop-hoc
+ *                                                                   → create() → ClassroomsService.create()
+ *                                                                   client: lib/classrooms.ts (createClassroom)
+ * GET       /classrooms/mine                           [đăng nhập]  Danh sách lớp tôi dạy / lớp tôi học ở /lop-hoc,
+ *                                                                   thẻ Lớp học ở /account
+ *                                                                   → mine() → ClassroomsService.mine()
+ *                                                                   client: lib/classrooms.ts (useMyClassrooms)
+ * GET       /classrooms/assignments/me                 [đăng nhập]  Thẻ "Bài tập của lớp" trên trang chủ /learn (bài
+ *                                                                   giáo viên giao chưa làm)
+ *                                                                   → myAssignments() →
+ *                                                                     ClassroomsService.myAssignments()
+ *                                                                   client: lib/classrooms.ts (useMyAssignments)
+ * GET       /classrooms/code/:code                     [khách+]     Trang mời vào lớp /lop/[mã] — xem trước tên lớp +
+ *                                                                   giáo viên (khách cũng xem được)
+ *                                                                   → preview() → ClassroomsService.preview()
+ *                                                                   client: lib/classrooms.ts (useClassPreview)
+ * POST      /classrooms/code/:code/join                [đăng nhập]  Nút "Vào lớp" ở /lop/[mã] (hoặc ô nhập mã ở
+ *                                                                   /lop-hoc, /account)
+ *                                                                   → join() → ClassroomsService.join()
+ *                                                                   client: lib/classrooms.ts (joinClassroom)
+ * GET       /classrooms/:id                            [đăng nhập]  Trang 1 lớp /lop-hoc/[id] — giáo viên: bảng tiến
+ *                                                                   độ học viên + bài giao; học viên: bài tập
+ *                                                                   → detail() → ClassroomsService.detail()
+ *                                                                   client: lib/classrooms.ts (useClassroom)
+ * PATCH     /classrooms/:id                            [đăng nhập]  Đổi tên lớp — hàm renameClassroom có sẵn ở
+ *                                                                   lib/classrooms.ts nhưng CHƯA có nút trên giao
+ *                                                                   diện
+ *                                                                   → update() → ClassroomsService.update()
+ *                                                                   client: lib/classrooms.ts (renameClassroom)
+ * DELETE    /classrooms/:id                            [đăng nhập]  Nút "Xoá lớp này" cuối trang /lop-hoc/[id] (giáo
+ *                                                                   viên)
+ *                                                                   → remove() → ClassroomsService.remove()
+ *                                                                   client: lib/classrooms.ts (deleteClassroom)
+ * POST      /classrooms/:id/leave                      [đăng nhập]  Nút "Rời lớp" ở /lop-hoc/[id] (học viên)
+ *                                                                   → leave() → ClassroomsService.leave()
+ *                                                                   client: lib/classrooms.ts (leaveClassroom)
+ * DELETE    /classrooms/:id/members/:userId            [đăng nhập]  Nút xoá 1 học viên khỏi lớp ở bảng tiến độ
+ *                                                                   /lop-hoc/[id] (giáo viên)
+ *                                                                   → removeMember() →
+ *                                                                     ClassroomsService.removeMember()
+ *                                                                   client: lib/classrooms.ts (removeMember)
+ * POST      /classrooms/:id/assignments                [đăng nhập]  Khối "Giao bài" ở /lop-hoc/[id] — chọn bài học
+ *                                                                   hoặc đề thi + hạn nộp
+ *                                                                   → addAssignment() →
+ *                                                                     ClassroomsService.addAssignment()
+ *                                                                   client: lib/classrooms.ts (addAssignment)
+ * DELETE    /classrooms/:id/assignments/:assignmentId  [đăng nhập]  Nút xoá 1 bài đã giao ở /lop-hoc/[id]
+ *                                                                   → removeAssignment() →
+ *                                                                     ClassroomsService.removeAssignment()
+ *                                                                   client: lib/classrooms.ts (removeAssignment)
+ */
 @ApiTags('classrooms')
 @ApiBearerAuth()
 @Controller('classrooms')

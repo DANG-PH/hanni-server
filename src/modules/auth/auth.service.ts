@@ -73,6 +73,20 @@ export class AuthService {
     return this.tokens.issueForUser(user, ctx);
   }
 
+  /**
+   * LUỒNG ĐĂNG NHẬP + GIỮ PHIÊN (thầy hay hỏi "token lưu ở đâu, hết hạn thì sao"):
+   *   1. Form /login (client components/auth-form-card.tsx) → POST /auth/login → hàm này: so mật khẩu với bản băm
+   *      (password.service.ts: scrypt có salt riêng từng người, so bằng timingSafeEqual chống đo thời gian) →
+   *      TokenService.issueForUser(): access token JWT (JWT_ACCESS_TTL, mặc định 15 phút)
+   *      + refresh token ngẫu nhiên (lưu BĂM sha256 ở bảng RefreshToken, JWT_REFRESH_TTL mặc định 30 ngày).
+   *   2. Controller đặt 2 cookie httpOnly (cookies.ts setAuthCookies): JavaScript của trang KHÔNG đọc được token →
+   *      chống XSS lấy trộm; SameSite=Lax chống request giả từ trang khác.
+   *   3. Mỗi request sau: trình duyệt tự gửi cookie → JwtAuthGuard (guards/jwt-auth.guard.ts, gắn cho MỌI route ở
+   *      app.module.ts) kiểm chữ ký JWT; route mở cho khách thì gắn @Public() / @OptionalAuth().
+   *   4. Access token hết hạn → server trả 401 → client lib/api.ts gọi POST /auth/refresh (gộp 1 lượt cho mọi
+   *      request đang chờ) → TokenService.rotate(): đổi refresh token cũ lấy cặp mới; token cũ bị dùng lại sau 30 giây
+   *      (REUSE_GRACE_MS) = dấu hiệu bị đánh cắp → huỷ cả "family" token, buộc đăng nhập lại.
+   */
   async login(
     email: string,
     password: string,

@@ -20,6 +20,46 @@ import {
 import { ReviewService } from './review.service';
 import { StudySessionService } from './study-session.service';
 
+/**
+ * BẢN ĐỒ — giao diện nào gọi các route của file này (sinh từ mã nguồn ngày 27/10/2026; thêm/sửa route thì sửa
+ * khối này cho khớp). Địa chỉ đầy đủ = https://hanni-api.dangpham.id.vn/api + route; chạy local có Swagger ở
+ * http://localhost:8000/api/docs. Quyền: [khách] không cần đăng nhập · [khách+] khách gọi được, đã đăng nhập thì
+ * server biết là ai · [đăng nhập] thiếu cookie phiên là 401 · [admin]. "client:" = file trong hanni-client/ gọi route.
+ *
+ * GET       /study/queue                  [đăng nhập]  Buổi ôn flashcard /study?review=1 hoặc /study?lesson=<id> —
+ *                                                      hàng đợi thẻ đến hạn
+ *                                                      → queue() → ReviewService.getQueue()
+ *                                                      client: app/(app)/study/page.tsx
+ * GET       /study/stats                  [đăng nhập]  Số từ cần ôn (huy hiệu cạnh mục Ôn tập ở menu), thẻ "Từ cần
+ *                                                      ôn" ở /learn, màn chọn bộ thẻ /study
+ *                                                      → stats() → ReviewService.getStats()
+ *                                                      client: lib/hooks.ts (useStudyStats)
+ * GET       /study/leeches                [đăng nhập]  Mục "Từ khó nhớ" ở /progress; buổi ôn riêng /study?leeches=1
+ *                                                      → leeches() → ReviewService.getLeeches()
+ *                                                      client: app/(app)/study/page.tsx · lib/hooks.ts (useLeeches)
+ * POST      /study/review                 [đăng nhập]  Bấm 1 trong 4 nút đánh giá dưới flashcard ở /study (Quên / Khó
+ *                                                      / Nhớ / Dễ)
+ *                                                      → review() → ReviewService.review()
+ *                                                      client: app/(app)/study/page.tsx
+ * GET       /study/suspended              [đăng nhập]  Mục "Từ đã ẩn" ở /progress
+ *                                                      → suspended() → ReviewService.getSuspended()
+ *                                                      client: lib/hooks.ts (useSuspendedWords)
+ * POST      /study/words/:wordId/suspend  [đăng nhập]  Nút "Tôi đã biết từ này" (flashcard, trang từ) / "Học lại"
+ *                                                      (/progress)
+ *                                                      → suspend() → ReviewService.setSuspended()
+ *                                                      client: lib/hooks.ts (suspendWord)
+ * POST      /study/add-word               [đăng nhập]  Nút "Lưu để ôn tập" ở trang từ, video, quét ảnh, chữa bài thi
+ *                                                      thử
+ *                                                      → addWord() → ReviewService.addWord()
+ *                                                      client: lib/hooks.ts (addWordToSrs)
+ * POST      /study/session                [đăng nhập]  Mở buổi ôn ở /study — ghi lại thời điểm bắt đầu để tính phút
+ *                                                      học
+ *                                                      → startSession() → StudySessionService.start()
+ *                                                      client: app/(app)/study/page.tsx
+ * POST      /study/session/:id/end        [đăng nhập]  Kết thúc / rời buổi ôn ở /study — chốt số phút học
+ *                                                      → endSession() → StudySessionService.end()
+ *                                                      client: app/(app)/study/page.tsx
+ */
 @ApiTags('study')
 @ApiBearerAuth()
 @Controller('study')

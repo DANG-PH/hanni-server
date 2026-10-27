@@ -30,6 +30,44 @@ import {
 import { UserSettingsService } from './user-settings.service';
 import { UsersService } from './users.service';
 
+/**
+ * BẢN ĐỒ — giao diện nào gọi các route của file này (sinh từ mã nguồn ngày 27/10/2026; thêm/sửa route thì sửa
+ * khối này cho khớp). Địa chỉ đầy đủ = https://hanni-api.dangpham.id.vn/api + route; chạy local có Swagger ở
+ * http://localhost:8000/api/docs. Quyền: [khách] không cần đăng nhập · [khách+] khách gọi được, đã đăng nhập thì
+ * server biết là ai · [đăng nhập] thiếu cookie phiên là 401 · [admin]. "client:" = file trong hanni-client/ gọi route.
+ *
+ * GET       /users/me           [đăng nhập]  Hồ sơ của chính mình — client đã chuyển sang GET /auth/session, hiện
+ *                                            KHÔNG trang nào gọi
+ *                                            → me() → UsersService.getProfile()
+ * PATCH     /users/me           [đăng nhập]  Nút "Lưu" ở /settings khi đổi múi giờ
+ *                                            → updateMe() → UsersService.updateProfile()
+ *                                            client: app/(app)/settings/page.tsx
+ * POST      /users/me/avatar    [đăng nhập]  Tải ảnh đại diện lên ở /account, /settings
+ *                                            → uploadAvatar() → UsersService.setAvatarFile()
+ *                                            client: components/avatar-editor.tsx
+ * DELETE    /users/me/avatar    [đăng nhập]  Nút "Xoá ảnh" đại diện ở /account, /settings
+ *                                            → removeAvatar() → UsersService.clearAvatar()
+ *                                            client: components/avatar-editor.tsx
+ * POST      /users/me/password  [đăng nhập]  Form "Đổi mật khẩu" ở /account
+ *                                            → changePassword() → UsersService.changePassword()
+ *                                            client: app/(app)/account/page.tsx
+ * GET       /users/me/settings  [đăng nhập]  Form cài đặt /settings (mục tiêu ngày, thuật toán SRS, giờ nhắc học…)
+ *                                            → getSettings() → UserSettingsService.get()
+ *                                            client: app/(app)/settings/page.tsx
+ * DELETE    /users/me           [đăng nhập]  "Vùng nguy hiểm" → Xoá tài khoản ở /account
+ *                                            → deleteMe() → UsersService.deleteAccount()
+ *                                            client: app/(app)/account/page.tsx
+ * GET       /users/:id/profile  [đăng nhập]  Hồ sơ công khai /u/[id] (bấm tên ở bảng xếp hạng)
+ *                                            → getPublicProfile() → UsersService.getPublicProfile()
+ *                                            client: lib/hooks.ts (usePublicProfile)
+ * PATCH     /users/me/settings  [đăng nhập]  Nút "Lưu" ở /settings; đổi cấp HSK ở /learn; /bat-dau lưu cấp; nộp kết
+ *                                            quả khách sau khi đăng ký
+ *                                            → updateSettings() → UserSettingsService.update()
+ *                                            client: app/(app)/learn/page.tsx · app/(app)/settings/page.tsx ·
+ *                                                    app/bat-dau/page.tsx · lib/pending-lessons.ts
+ *                                                    (drainPendingCourseLevel) · lib/pending-lessons.ts
+ *                                                    (drainPendingLessons)
+ */
 @ApiTags('users')
 @ApiBearerAuth()
 @Controller('users')

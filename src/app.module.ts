@@ -44,6 +44,46 @@ import { SrsModule } from './modules/srs/srs.module';
 import { UsersModule } from './modules/users/users.module';
 import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
 
+/**
+ * MỤC LỤC SERVER — thấy 1 lời gọi API trên giao diện (DevTools → Network, hoặc chuỗi "/xxx/…" trong hanni-client)
+ * thì tìm code ở đâu. Mọi route có tiền tố /api (main.ts). Mỗi controller có khối "BẢN ĐỒ" ở đầu file ghi route nào
+ * do nút/trang nào gọi; logic nằm ở service mà handler gọi (bấm F12 vào `this.xxx.method()`).
+ *
+ *   URL bắt đầu bằng              → thư mục src/modules/…      (khác tên thư mục: đánh dấu ★)
+ *   /auth                         → auth/            đăng ký, đăng nhập, Google, refresh token, quên mật khẩu
+ *   /users                        → users/           hồ sơ, ảnh đại diện, mật khẩu, cài đặt, xoá tài khoản
+ *   /words /dictionary /levels  ★ → vocabulary/      từ điển, tra từ có xếp hạng (word-search.util.ts), cấp HSK
+ *   /learn                        → learn/           lộ trình, phiên học 1 bài, kiểm tra trình độ
+ *   /study                      ★ → srs/             ôn tập flashcard: hàng đợi, chấm thẻ (SM-2 / FSRS)
+ *   /streak /achievements /quiz ★ → gamification/    chuỗi ngày, huy hiệu, quiz cuối buổi ôn
+ *   /mock-exams                   → mock-exams/      đề thi thử HSK (đề viết bằng TS ở papers/), chấm, chữa bài
+ *   /grammar                      → grammar/         ngữ pháp
+ *   /pinyin                       → pinyin/          bảng phiên âm
+ *   /practice                     → practice/        lượt luyện nghe / phát âm
+ *   /videos                       → videos/          học qua video (phụ đề, bấm từ để tra)
+ *   /leaderboard                  → leaderboard/     bảng xếp hạng + giải đấu tuần (league.service.ts)
+ *   /quests                       → quests/          nhiệm vụ hằng ngày
+ *   /minigame                     → minigame/        4 trò chơi
+ *   /progress                     → progress/        tổng quan tiến độ
+ *   /insights                     → insights/        báo cáo tuần/tháng/quý + Hanni Coach (AI)
+ *   /onboarding                   → onboarding/      khảo sát đầu vào
+ *   /classrooms                   → classrooms/      lớp học của giáo viên
+ *   /partners                     → partners/        form liên hệ "Dành cho giáo viên"
+ *   /assistant                    → assistant/       trợ lý AI (RAG + Gemini, trả lời dạng stream)
+ *   /roleplay                     → roleplay/        luyện nói với AI theo tình huống
+ *   /ai                         ★ → ai-tools/        mẹo nhớ, chấm câu, phân tích câu, bài đọc AI
+ *   /scan                         → scan/            quét ảnh học từ (Gemini vision)
+ *   /payments /premium            → payments/ premium/  thanh toán payOS + trạng thái Premium
+ *   /shop                       ★ → shop/            CHỈ còn danh hiệu (tên thư mục cũ từ thời bán đồ bằng xu)
+ *   /push /notifications /mail    → push/ notifications/ mail/  thông báo đẩy, chuông thông báo, email
+ *   /referrals                    → referrals/       mời bạn bè
+ *   /health                       → src/health/      giám sát (GitHub Actions gọi)
+ *
+ * Chạy NGẦM, không có giao diện gọi: mỗi giờ — push/reminder.service.ts (nhắc học, sắp mất chuỗi), mail/weekly-
+ * digest.service.ts (email tuần), leaderboard/league.service.ts checkRollover (chốt giải đấu tuần). WebSocket chuông
+ * thông báo: notifications/notifications.gateway.ts (namespace /notifications). Sự kiện nội bộ (src/events/events.ts)
+ * do các *.listener.ts nghe: gamification (huy hiệu), progress (tiến độ bài), notifications (tạo thông báo), referrals.
+ */
 @Module({
   imports: [
     ConfigModule.forRoot({

@@ -86,7 +86,18 @@ export class WordsService {
   }
 
   /** Tra từ có xếp hạng (ô tra từ điển + gợi ý khi gõ) — trùng mặt chữ, âm Hán
-   * Việt, pinyin không dấu lên trước; nghĩa tiếng Anh xuống cuối. */
+   * Việt, pinyin không dấu lên trước; nghĩa tiếng Anh xuống cuối.
+   *
+   * LUỒNG (GET /words?q=… — client: components/dictionary/dictionary-search.tsx gợi ý khi gõ,
+   * app/(site)/tu-dien/page.tsx trang kết quả):
+   *   1. getSearchIndex(): ~11k từ, chỉ các cột cần so khớp, đọc DB 1 lần rồi giữ trong RAM 1 giờ
+   *      (SEARCH_INDEX_TTL_MS) — không truy vấn LIKE trên DB mỗi phím gõ.
+   *   2. prepareQuery(q) (word-search.util.ts): bỏ dấu tiếng Việt + dấu thanh pinyin, viết liền pinyin,
+   *      nhận ra người dùng gõ có dấu hay không, 1 âm tiết hay cả cụm.
+   *   3. rankWords(): scoreWord() chấm BẬC khớp từng từ (0 trùng mặt chữ … 7 chứa trong nghĩa tiếng Anh,
+   *      bảng bậc ở đầu word-search.util.ts), rồi xếp: bậc → cấp HSK thấp → từ thông dụng.
+   *   4. Cắt đúng trang (skip/take từ pageSize), nạp đủ cột của các từ trong trang rồi trả về.
+   * Sửa thứ tự kết quả = sửa scoreWord()/bảng bậc; có test ở word-search.util.spec.ts. */
   private async search(query: WordQueryDto): Promise<Paginated<unknown>> {
     const ranked = rankWords(
       await this.getSearchIndex(),

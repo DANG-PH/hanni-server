@@ -137,7 +137,14 @@ export class MockExamsService {
   }
 
   /** Chấm điểm phía server (đề gửi xuống không kèm đáp án). Khách vẫn được
-   * chấm + chữa bài; chỉ người đăng nhập mới lưu lịch sử và giữ chuỗi ngày. */
+   * chấm + chữa bài; chỉ người đăng nhập mới lưu lịch sử và giữ chuỗi ngày.
+   *
+   * LUỒNG "NỘP BÀI" (POST /mock-exams/:slug/submit — client components/mock-exam/exam-runner.tsx, nút Nộp bài hoặc
+   * hết giờ): đề nằm trong code (papers/hsk1.ts … hsk4.ts, KHÔNG ở DB) → scorePaper() (mock-exam.content.ts) so từng
+   * câu bằng isCorrect(): chọn đáp án so số, sắp xếp câu bỏ dấu câu rồi so (nhận cả `alternatives`), đặt câu HSK 4
+   * chấm tối thiểu acceptableSentence() → điểm mỗi phần quy về 100, đạt khi tổng ≥ 60% → đã đăng nhập thì lưu
+   * MockExamAttempt + giữ chuỗi ngày → trả chữa bài reviewOf(): đáp án, lời thoại có pinyin, bản dịch, từ vựng từng
+   * câu kèm âm Hán Việt. Đáp án KHÔNG bao giờ gửi xuống trước khi nộp (publicPaper() lọc bỏ — có test). */
   async submit(
     slug: string,
     answers: (AnswerValue | null)[],

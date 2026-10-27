@@ -208,6 +208,15 @@ function matchable(words: SessionWordInput[]): SessionWordInput[] {
   return picked;
 }
 
+/**
+ * LUỒNG DỰNG 1 PHIÊN HỌC (GET /learn/lessons/:id/session → LessonSessionService.session() → hàm này; client chạy
+ * từng bước ở components/lesson-session/session-runner.tsx, học xong POST /learn/lessons/:id/complete):
+ *   cứ mỗi nhóm CHUNK (4) từ theo thứ tự trong bài: `intro` từng từ (pinyin, âm Hán Việt, mẹo thanh điệu) → `choice`
+ *   luyện ngay nhóm đó (xoay vòng hỏi theo nghĩa / nghe / Hán tự) → hết bài thì `match` ghép cặp → ôn trộn bằng dạng
+ *   KHÁC lần đầu + `sentence` điền từ vào câu ví dụ (từ nào có câu). Phương án nhiễu lấy theo luật chống "2 đáp án
+ *   cùng đúng" (clashesWith: không đồng âm, không cùng nghĩa ngắn, không dùng chung chữ Hán) — có test ở
+ *   lesson-session.util.spec.ts. Đổi số từ mỗi nhóm = CHUNK, số phương án = OPTION_COUNT (đầu file).
+ */
 export function buildLessonSession(
   words: SessionWordInput[],
   distractors: DistractorInput[],

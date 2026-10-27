@@ -12,6 +12,57 @@ import { WordQueryDto } from './dto/word-query.dto';
 import { HskLevelsService } from './hsk-levels.service';
 import { WordsService } from './words.service';
 
+/**
+ * BẢN ĐỒ — giao diện nào gọi các route của file này (sinh từ mã nguồn ngày 27/10/2026; thêm/sửa route thì sửa
+ * khối này cho khớp). Địa chỉ đầy đủ = https://hanni-api.dangpham.id.vn/api + route; chạy local có Swagger ở
+ * http://localhost:8000/api/docs. Quyền: [khách] không cần đăng nhập · [khách+] khách gọi được, đã đăng nhập thì
+ * server biết là ai · [đăng nhập] thiếu cookie phiên là 401 · [admin]. "client:" = file trong hanni-client/ gọi route.
+ *
+ * GET       /levels               [khách]      Thông tin 7 cấp HSK (số từ mỗi cấp): tab cấp ở /learn, /tu-dien, /hsk,
+ *                                              /progress
+ *                                              → listLevels() → HskLevelsService.list()
+ *                                              client: app/(site)/hsk/page.tsx · app/(site)/tu-dien/page.tsx ·
+ *                                                      lib/hooks.ts (preloadLearnHome) · lib/hooks.ts (useLevels)
+ * GET       /levels/:level        [khách]      Chi tiết 1 cấp HSK — hiện KHÔNG trang nào gọi
+ *                                              → getLevel() → HskLevelsService.get()
+ * GET       /words                [khách]      Ô tra từ: gợi ý khi gõ (trang chủ /, /tu-dien) + kết quả tra + danh
+ *                                              sách từ theo cấp; luyện nghe/phát âm theo bài
+ *                                              → listWords() → WordsService.list()
+ *                                              client: app/(site)/hoc-thu/page.tsx · app/(site)/tu-dien/page.tsx ·
+ *                                                      components/dictionary/dictionary-search.tsx · lib/hooks.ts
+ *                                                      (useWords)
+ * GET       /words/of-the-day     [khách]      Thẻ "Từ vựng hôm nay" ở /learn và trang chủ từ điển
+ *                                              → getWordOfTheDay() → WordsService.ofTheDay()
+ *                                              client: components/word-of-the-day.tsx
+ * GET       /words/stats          [khách]      Con số "N từ · M từ có âm Hán Việt" ở trang chủ /, /gioi-thieu,
+ *                                              /hop-tac, /tu-dien
+ *                                              → getWordStats() → WordsService.stats()
+ *                                              client: app/(site)/gioi-thieu/page.tsx · app/(site)/hop-tac/page.tsx ·
+ *                                                      app/(site)/tu-dien/page.tsx · lib/hooks.ts (useWordStats)
+ * GET       /words/familiar       [khách]      Trang "Từ bạn đã biết sẵn" /tu-da-biet
+ *                                              → getFamiliarWords() → WordsService.familiarWords()
+ *                                              client: app/(site)/tu-da-biet/page.tsx
+ * GET       /words/trial          [khách]      8 thẻ học thử /hoc-thu
+ *                                              → getTrialWords() → WordsService.trialWords()
+ *                                              client: app/(site)/hoc-thu/page.tsx
+ * GET       /dictionary/slugs     [khách]      Không phải giao diện: sitemap.xml liệt kê mọi trang từ cho Google
+ *                                              → getDictionarySlugs() → WordsService.publicSlugs()
+ *                                              client: app/sitemap.ts
+ * GET       /dictionary/char/:c   [khách]      Tab "Hán tự" của kết quả tra /tu-dien?q=…&tab=han-tu (bộ thủ, số nét,
+ *                                              từ chứa chữ)
+ *                                              → lookupChar() → WordsService.charLookup()
+ *                                              client: app/(site)/tu-dien/page.tsx
+ * GET       /dictionary/examples  [khách]      Tab "Ví dụ" của kết quả tra /tu-dien?q=…&tab=vi-du
+ *                                              → searchExamples() → WordsService.searchExamples()
+ *                                              client: app/(site)/tu-dien/page.tsx
+ * GET       /dictionary/:slug     [khách]      Trang 1 từ /tu-dien/[slug] (nghĩa, Hán Việt, phân tích từng chữ, lượng
+ *                                              từ, câu ví dụ, video)
+ *                                              → lookupWord() → WordsService.lookup()
+ *                                              client: app/(site)/tu-dien/[slug]/page.tsx
+ * GET       /words/:id            [đăng nhập]  Chi tiết 1 từ theo id — hiện KHÔNG trang nào gọi (trang từ dùng
+ *                                              /dictionary/:slug)
+ *                                              → getWord() → WordsService.get()
+ */
 @ApiTags('vocabulary')
 @ApiBearerAuth()
 @Controller()
