@@ -52,6 +52,32 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   /partners/leads` (admin đọc liên hệ), webhook payOS. Có sẵn từ trước, chưa sửa: `lessonTotal` không dùng ở `build-words.ts`.
   `.env.example` giờ đủ mọi biến của `env.validation.ts` (thêm GEMINI_API_KEY, AI_SYSTEM_PROMPT, PAYOS_*) kèm cách lấy giá trị.
 
+## Thanh toán: payOS + MoMo, 3 đường xác nhận (2026-10-27)
+Lỗi thật: user trả 2 đơn trên payOS (19k, 89k) mà Premium không lên — chưa khai Webhook URL ở kênh payOS, còn server CHỈ xác nhận
+qua webhook. Giờ (`payments.service.ts`, đầu file có khối "Luồng 1 lần mua"):
+- **3 đường, cùng gọi `grantPaidOrder()`**: (a) webhook — payOS `POST /payments/webhook/payos` (`webhooks.verify()`, chỉ nhận
+  `data.code === '00'` như mẫu webhook ở payos.vn/docs), MoMo `POST /payments/webhook/momo` (IPN, `@HttpCode(204)`); (b) `GET
+  /payments/orders/:mã` (trang `/account?premium=` hỏi) — đơn PENDING thì `syncOrder()` hỏi lại cổng ngay; (c) `@Cron(EVERY_5_MINUTES)
+  reconcilePending()` — đơn PENDING ≤ 7 ngày (`RECONCILE_WINDOW_MS`), cũ trước, 50 đơn/lượt (payOS khuyến nghị đồng bộ trạng thái).
+  `grantPaidOrder`: số tiền trả < giá đơn thì không cộng; `UPDATE … WHERE status = PENDING` nên 3 đường chạy cùng lúc vẫn cộng 1 lần;
+  đơn TOPUP cũ chỉ log. payOS báo CANCELLED/EXPIRED/FAILED → huỷ đơn. Lỗi mạng khi hỏi payOS chỉ `warn`, lượt sau thử lại (đã gặp
+  `ConnectionError` 1 lần, lượt sau được).
+- **MoMo** (`momo.util.ts` hàm thuần + spec có chữ ký mẫu tính bằng openssl, `momo.service.ts`): API v2 `payWithMethod` (ví / thẻ ATM /
+  thẻ quốc tế). Chữ ký HMAC-SHA256 theo ĐÚNG thứ tự trường MoMo quy định; chữ ký IPN có `transId` ở CUỐI (repo mẫu bên thứ ba user gửi
+  bỏ sót trường này nên không bao giờ khớp). `orderId` gửi MoMo = `HN<mã>T<thời điểm>` (sandbox dùng chung partnerCode "MOMO" với mọi
+  người, chỉ số mã đơn sẽ trùng), lưu ở `PaymentOrder.providerRef`; cột `provider` PAYOS/MOMO (migration `1792670000000-PaymentProvider`).
+  `MOMO_API_URL` mặc định sandbox; **sandbox trên production chạy trọn luồng nhưng KHÔNG cộng Premium** (`grantsPremium()` — khoá +
+  thẻ thử công khai), `getOrderStatus` trả `sandbox: true` để client nói rõ. VPS đang dùng khoá sandbox công khai.
+- **Đã thử thật trên production 27/10**: job đối soát cộng 2 đơn của user (Premium tới 27/05/2027); webhook/IPN giả bị từ chối ("Data
+  not integrity" / chữ ký sai); MoMo sandbox bằng thẻ ATM test 9704 0000 0000 0018 → MoMo đưa về `/account?premium=8&partnerCode=…
+  &resultCode=0` (nối bằng `&`), đơn PAID + `sandbox: true`, không cộng Premium. **IPN của MoMo sandbox không tới** trong 2 lần thử
+  (nginx không có request) — đơn vẫn xác nhận nhờ (b)/(c); khi có khoá thật phải thử lại IPN ở bước UAT của MoMo.
+- `APP_URL` (dựng `ipnUrl` MoMo) trên VPS = `https://hanni-api.dangpham.id.vn` — bản cũ `api.hanni.dangpham.id.vn` không phân giải.
+- **Còn làm tay**: khai Webhook URL `https://hanni-api.dangpham.id.vn/api/payments/webhook/payos` ở my.payos.vn (chưa khai thì Premium
+  vẫn lên, chậm tối đa 5 phút); khoá MoMo thật: business.momo.vn (hồ sơ doanh nghiệp, hợp đồng, phí theo giao dịch) → đổi 3 khoá +
+  `MOMO_API_URL=https://payment.momo.vn`. Test: `payments.service.spec.ts` (8 ca), `momo.util.spec.ts` (4 ca).
+- Route: 132 (thêm webhook MoMo); 5 route cố ý không có giao diện: `/health`, `/assistant/status`, `GET /partners/leads`, 2 webhook.
+
 ## Convention
 - Mỗi domain = 1 module NestJS (controller / service / module / dto). Business logic ở service.
 - Validate input bằng `class-validator` trên DTO. `ValidationPipe` bật `whitelist` + `transform` toàn cục.
