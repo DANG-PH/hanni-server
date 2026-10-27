@@ -44,8 +44,13 @@ scripts/import/  ETL nguồn mở → data/processed/words.seed.json
   đủ); payOS `description` = `HN<mã đơn>` (≤ 9 ký tự — tài khoản ngân hàng không liên kết qua payOS chỉ nhận 9, bản cũ 18 ký tự bị từ
   chối); bài 1 HSK 1 theo thứ tự soạn tay (`curatedOrderThemes` ở `lesson-themes-hsk1.json`, ETL chỉ áp cho chủ đề gọn 1 bài, migration
   `1792662000000-GreetingsLessonOrder` chỉ đổi 7 dòng khi giá trị cũ khớp — chạy thử trên PGlite: đúng, chạy lại không đổi, `down` trả về).
-  Có sẵn từ trước, chưa sửa: `lessonTotal` không dùng ở `build-words.ts` (eslint báo lỗi); route không ai gọi: `GET /users/me`,
-  `/words/:id`, `/levels/:level`, `/grammar/levels`, `POST /assistant/ask`, `PATCH /classrooms/:id` (client có hàm nhưng chưa có nút).
+  **Gỡ 7 route không giao diện nào gọi** (user: "route nào client không gọi thì xoá cho bớt loãng"): `GET /users/me` (client đã dùng
+  `/auth/session`; test e2e đổi sang `/users/me/settings`), `GET /words/:id` (`WordsService.get` giữ `private` cho `ofTheDay`),
+  `GET /levels/:level`, `GET /grammar/levels`, `POST /assistant/ask` (+ `ask()`/`generateReply()`, client chỉ dùng bản stream),
+  `GET /ai/usage`, `PATCH /classrooms/:id` (+ `UpdateClassroomDto`) — cùng hàm client `useAiUsage`, `renameClassroom`. 131 route còn
+  lại đều có người gọi; 4 route CỐ Ý không có giao diện: `/health` (giám sát), `/assistant/status` (chẩn đoán AI), `GET
+  /partners/leads` (admin đọc liên hệ), webhook payOS. Có sẵn từ trước, chưa sửa: `lessonTotal` không dùng ở `build-words.ts`.
+  `.env.example` giờ đủ mọi biến của `env.validation.ts` (thêm GEMINI_API_KEY, AI_SYSTEM_PROMPT, PAYOS_*) kèm cách lấy giá trị.
 
 ## Convention
 - Mỗi domain = 1 module NestJS (controller / service / module / dto). Business logic ở service.

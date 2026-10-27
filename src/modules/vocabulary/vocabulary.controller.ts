@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  ParseIntPipe,
-  ParseUUIDPipe,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { WordQueryDto } from './dto/word-query.dto';
@@ -23,8 +16,6 @@ import { WordsService } from './words.service';
  *                                              → listLevels() → HskLevelsService.list()
  *                                              client: app/(site)/hsk/page.tsx · app/(site)/tu-dien/page.tsx ·
  *                                                      lib/hooks.ts (preloadLearnHome) · lib/hooks.ts (useLevels)
- * GET       /levels/:level        [khách]      Chi tiết 1 cấp HSK — hiện KHÔNG trang nào gọi
- *                                              → getLevel() → HskLevelsService.get()
  * GET       /words                [khách]      Ô tra từ: gợi ý khi gõ (trang chủ /, /tu-dien) + kết quả tra + danh
  *                                              sách từ theo cấp; luyện nghe/phát âm theo bài
  *                                              → listWords() → WordsService.list()
@@ -59,9 +50,6 @@ import { WordsService } from './words.service';
  *                                              từ, câu ví dụ, video)
  *                                              → lookupWord() → WordsService.lookup()
  *                                              client: app/(site)/tu-dien/[slug]/page.tsx
- * GET       /words/:id            [đăng nhập]  Chi tiết 1 từ theo id — hiện KHÔNG trang nào gọi (trang từ dùng
- *                                              /dictionary/:slug)
- *                                              → getWord() → WordsService.get()
  */
 @ApiTags('vocabulary')
 @ApiBearerAuth()
@@ -82,12 +70,6 @@ export class VocabularyController {
   @Get('levels')
   listLevels() {
     return this.levels.list();
-  }
-
-  @Public()
-  @Get('levels/:level')
-  getLevel(@Param('level', ParseIntPipe) level: number) {
-    return this.levels.get(level);
   }
 
   @Public()
@@ -154,10 +136,5 @@ export class VocabularyController {
   @Get('dictionary/:slug')
   lookupWord(@Param('slug') slug: string) {
     return this.words.lookup(slug);
-  }
-
-  @Get('words/:id')
-  getWord(@Param('id', ParseUUIDPipe) id: string) {
-    return this.words.get(id);
   }
 }

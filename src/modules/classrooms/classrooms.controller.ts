@@ -5,7 +5,6 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
-  Patch,
   Post,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -14,11 +13,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { OptionalAuth } from '../../common/decorators/public.decorator';
 import type { AuthUser } from '../../common/types';
 import { ClassroomsService } from './classrooms.service';
-import {
-  CreateAssignmentDto,
-  CreateClassroomDto,
-  UpdateClassroomDto,
-} from './dto/classroom.dto';
+import { CreateAssignmentDto, CreateClassroomDto } from './dto/classroom.dto';
 
 /**
  * BẢN ĐỒ — giao diện nào gọi các route của file này (sinh từ mã nguồn ngày 27/10/2026; thêm/sửa route thì sửa
@@ -50,11 +45,6 @@ import {
  *                                                                   độ học viên + bài giao; học viên: bài tập
  *                                                                   → detail() → ClassroomsService.detail()
  *                                                                   client: lib/classrooms.ts (useClassroom)
- * PATCH     /classrooms/:id                            [đăng nhập]  Đổi tên lớp — hàm renameClassroom có sẵn ở
- *                                                                   lib/classrooms.ts nhưng CHƯA có nút trên giao
- *                                                                   diện
- *                                                                   → update() → ClassroomsService.update()
- *                                                                   client: lib/classrooms.ts (renameClassroom)
  * DELETE    /classrooms/:id                            [đăng nhập]  Nút "Xoá lớp này" cuối trang /lop-hoc/[id] (giáo
  *                                                                   viên)
  *                                                                   → remove() → ClassroomsService.remove()
@@ -118,15 +108,6 @@ export class ClassroomsController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.classrooms.detail(id, user.id);
-  }
-
-  @Patch(':id')
-  update(
-    @CurrentUser() user: AuthUser,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateClassroomDto,
-  ) {
-    return this.classrooms.update(id, user.id, dto);
   }
 
   @Delete(':id')

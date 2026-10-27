@@ -36,9 +36,6 @@ import { UsersService } from './users.service';
  * http://localhost:8000/api/docs. Quyền: [khách] không cần đăng nhập · [khách+] khách gọi được, đã đăng nhập thì
  * server biết là ai · [đăng nhập] thiếu cookie phiên là 401 · [admin]. "client:" = file trong hanni-client/ gọi route.
  *
- * GET       /users/me           [đăng nhập]  Hồ sơ của chính mình — client đã chuyển sang GET /auth/session, hiện
- *                                            KHÔNG trang nào gọi
- *                                            → me() → UsersService.getProfile()
  * PATCH     /users/me           [đăng nhập]  Nút "Lưu" ở /settings khi đổi múi giờ
  *                                            → updateMe() → UsersService.updateProfile()
  *                                            client: app/(app)/settings/page.tsx
@@ -83,11 +80,6 @@ export class UsersController {
       domain: this.config.get('COOKIE_DOMAIN', { infer: true }),
       secure: this.config.get('COOKIE_SECURE', { infer: true }),
     };
-  }
-
-  @Get('me')
-  me(@CurrentUser() user: AuthUser) {
-    return this.users.getProfile(user.id);
   }
 
   @Patch('me')

@@ -179,7 +179,9 @@ export class WordsService {
     return paginate(items, total, query);
   }
 
-  async get(id: string) {
+  /** 1 từ kèm câu ví dụ + ảnh — dùng cho "Từ vựng hôm nay" (`ofTheDay`). Route GET /words/:id đã xoá
+   * 2026-10-27 (không giao diện nào gọi; trang từ dùng `lookup()` qua /dictionary/:slug). */
+  private async get(id: string) {
     const word = await this.words.findOne({
       where: { id },
       relations: { examples: true },

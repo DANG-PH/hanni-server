@@ -38,7 +38,6 @@ import {
 import type {
   CreateAssignmentDto,
   CreateClassroomDto,
-  UpdateClassroomDto,
 } from './dto/classroom.dto';
 
 /** Người trong lớp: chỉ tên + ảnh (không lộ email…). */
@@ -242,20 +241,6 @@ export class ClassroomsService {
   async leave(classroomId: string, userId: string) {
     await this.members.delete({ classroomId, userId });
     return { ok: true };
-  }
-
-  async update(classroomId: string, ownerId: string, dto: UpdateClassroomDto) {
-    await this.ownedOrThrow(classroomId, ownerId);
-    const changes = {
-      ...(dto.name !== undefined && { name: dto.name.trim() }),
-      ...(dto.hskLevel !== undefined && { hskLevel: dto.hskLevel }),
-    };
-    if (Object.keys(changes).length)
-      await this.classrooms.update(classroomId, changes);
-    return this.classrooms.findOneOrFail({
-      where: { id: classroomId },
-      select: { id: true, name: true, code: true, hskLevel: true },
-    });
   }
 
   async remove(classroomId: string, ownerId: string) {

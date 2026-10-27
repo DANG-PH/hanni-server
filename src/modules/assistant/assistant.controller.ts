@@ -38,9 +38,6 @@ import { AskAssistantDto } from './dto/ask-assistant.dto';
  *                                                                 → deleteSession() →
  *                                                                   AssistantService.deleteSession()
  *                                                                 client: lib/hooks.ts (deleteAssistantSession)
- * POST      /assistant/ask                           [đăng nhập]  Hỏi trợ lý không streaming — client hiện KHÔNG dùng
- *                                                                 (dùng bản stream bên dưới)
- *                                                                 → ask() → AssistantService.ask()
  * GET·SSE   /assistant/ask/stream                    [đăng nhập]  Bong bóng trợ lý AI → gửi câu hỏi; câu trả lời hiện
  *                                                                 dần từng chữ (SSE)
  *                                                                 → askStream() → AssistantService.askStream()
@@ -82,17 +79,11 @@ export class AssistantController {
     return this.assistant.deleteSession(user.id, sessionId);
   }
 
-  // Đã bỏ @Throttle theo yêu cầu (chặn cả lúc test lẫn dùng thật) — giới hạn
-  // spam ngắn hạn giờ không còn, nhưng `AssistantService.checkDailyAskQuota()`
-  // đã chặn LẠM DỤNG DÀI HẠN qua hạn mức lượt hỏi/ngày cho user miễn phí
-  // (Premium không giới hạn), xem TODO(scale) ở assistant.service.ts.
-  @Post('ask')
-  ask(@CurrentUser() user: AuthUser, @Body() dto: AskAssistantDto) {
-    return this.assistant.ask(user.id, dto.message, dto.sessionId);
-  }
-
   // SSE (EventSource) chỉ hỗ trợ GET nên nhận message/sessionId qua query
   // thay vì body — message tối đa 1000 ký tự nên URL không quá dài.
+  // Không @Throttle: `AssistantService.checkDailyAskQuota()` chặn lạm dụng
+  // bằng hạn mức lượt hỏi/ngày (Premium không giới hạn).
+  // (POST /assistant/ask — bản không streaming — đã xoá 2026-10-27: client chỉ dùng route này.)
   @Sse('ask/stream')
   askStream(
     @CurrentUser() user: AuthUser,

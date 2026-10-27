@@ -104,17 +104,6 @@ export class AiToolsService {
     this.cutoffHour = config.get('STREAK_DAY_CUTOFF_HOUR', { infer: true });
   }
 
-  async usage(userId: string) {
-    const { key, limit, premium } = await this.quotaOf(userId);
-    const used = Number(await this.redis.client.get(key)) || 0;
-    return {
-      used: Math.min(used, limit),
-      limit,
-      premium,
-      enabled: !!this.genAI,
-    };
-  }
-
   /** Mẹo nhớ theo âm Hán Việt — tạo 1 lần cho mỗi từ rồi lưu `Word.mnemonicVi`,
    * ai mở trang từ cũng thấy (không tốn thêm lượt nào). */
   async mnemonic(userId: string, wordId: string) {

@@ -29,8 +29,10 @@ describe('Hanni API (e2e)', () => {
       });
   });
 
-  it('/api/users/me (GET) yêu cầu đăng nhập', () => {
-    return request(app.getHttpServer()).get('/api/users/me').expect(401);
+  it('/api/users/me/settings (GET) yêu cầu đăng nhập', () => {
+    return request(app.getHttpServer())
+      .get('/api/users/me/settings')
+      .expect(401);
   });
 
   afterAll(async () => {

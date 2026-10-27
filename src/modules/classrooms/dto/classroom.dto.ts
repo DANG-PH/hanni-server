@@ -28,21 +28,6 @@ export class CreateClassroomDto {
   hskLevel?: number;
 }
 
-export class UpdateClassroomDto {
-  @IsOptional()
-  @IsString()
-  @MinLength(2)
-  @MaxLength(60)
-  name?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(7)
-  hskLevel?: number;
-}
-
 export class CreateAssignmentDto {
   @IsIn(['LESSON', 'MOCK_EXAM'])
   kind!: 'LESSON' | 'MOCK_EXAM';

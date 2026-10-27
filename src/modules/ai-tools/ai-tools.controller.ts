@@ -25,10 +25,6 @@ import {
  * http://localhost:8000/api/docs. Quyền: [khách] không cần đăng nhập · [khách+] khách gọi được, đã đăng nhập thì
  * server biết là ai · [đăng nhập] thiếu cookie phiên là 401 · [admin]. "client:" = file trong hanni-client/ gọi route.
  *
- * GET       /ai/usage              [đăng nhập]  Số lượt AI đã dùng hôm nay — hook useAiUsage có sẵn nhưng hiện CHƯA
- *                                               trang nào hiện
- *                                               → usage() → AiToolsService.usage()
- *                                               client: lib/ai-tools.ts (useAiUsage)
  * POST      /ai/mnemonic/:wordId   [đăng nhập]  Nút "Tạo mẹo nhớ" (AI) ở trang từ /tu-dien/[slug] — tạo 1 lần, lưu
  *                                               Word.mnemonicVi cho mọi người
  *                                               → mnemonic() → AiToolsService.mnemonic()
@@ -56,11 +52,6 @@ import {
 @Controller('ai')
 export class AiToolsController {
   constructor(private readonly ai: AiToolsService) {}
-
-  @Get('usage')
-  usage(@CurrentUser() user: AuthUser) {
-    return this.ai.usage(user.id);
-  }
 
   /** Mẹo nhớ theo âm Hán Việt cho 1 từ (đã có thì trả luôn, không tốn lượt). */
   @Post('mnemonic/:wordId')

@@ -521,33 +521,6 @@ export class AssistantService implements OnModuleInit {
     return { ok: true };
   }
 
-  async ask(
-    userId: string,
-    message: string,
-    sessionId?: string,
-  ): Promise<{ message: string; sessionId: string; action?: AssistantAction }> {
-    await this.checkDailyAskQuota(userId);
-    const session = sessionId
-      ? await this.requireOwnSession(userId, sessionId)
-      : await this.getOrCreateLatestSession(userId);
-
-    const priorCount = await this.messages.countBy({ sessionId: session.id });
-    const { text: replyText, action } = await this.generateReply(
-      userId,
-      message,
-      session.id,
-    );
-    await this.persistTurn(
-      session.id,
-      session.title,
-      message,
-      replyText,
-      priorCount,
-    );
-
-    return { message: replyText, sessionId: session.id, action };
-  }
-
   /**
    * LUỒNG "GÕ CÂU HỎI → AI TRẢ LỜI HIỆN DẦN" (GET /assistant/ask/stream — client: components/assistant-widget.tsx
    * send() → lib/hooks.ts streamAssistant() mở EventSource):
@@ -561,7 +534,7 @@ export class AssistantService implements OnModuleInit {
    *   4. persistTurn(): lưu câu hỏi + câu trả lời vào ChatMessage.
    * Không có GEMINI_API_KEY thì trả 1 câu "chưa bật" thay vì lỗi. Gói Gemini miễn phí ~20 lượt/ngày MỖI model.
    *
-   * Bản streaming của `ask()` — dùng SSE (`@Sse()` route ở controller) để
+   * Trả lời dạng streaming — dùng SSE (`@Sse()` route ở controller) để
    * đẩy từng đoạn chữ về ngay khi Gemini sinh ra, thay vì bắt người dùng
    * đợi toàn bộ câu trả lời xong mới thấy gì. Chỉ thử 1 model đầu tiên
    * trong `CHAT_MODELS` (streaming dở giữa chừng thì không "đổi model giữa
@@ -695,8 +668,7 @@ export class AssistantService implements OnModuleInit {
     });
   }
 
-  /** Lưu 2 lượt (người hỏi + model) + cập nhật session — dùng chung cho cả
-   * ask() và askStream(). */
+  /** Lưu 2 lượt (người hỏi + model) + cập nhật session (askStream). */
   private async persistTurn(
     sessionId: string,
     existingTitle: string | null,
@@ -740,76 +712,8 @@ export class AssistantService implements OnModuleInit {
     });
   }
 
-  private async generateReply(
-    userId: string,
-    message: string,
-    sessionId: string,
-  ): Promise<{ text: string; action?: AssistantAction }> {
-    if (!this.genAI) {
-      return {
-        text: 'Trợ lý AI chưa được bật — cần cấu hình GEMINI_API_KEY trước đã.',
-      };
-    }
-
-    let contents: Content[];
-    try {
-      contents = await this.buildPromptContents(userId, message, sessionId);
-    } catch (err) {
-      this.lastError = (err as Error).message;
-      this.logger.error(`[Assistant] ask lỗi: ${(err as Error).message}`);
-      return { text: 'Có lỗi xảy ra, thử lại nhé.' };
-    }
-
-    try {
-      const first = await this.genAI.models.generateContent({
-        model: CHAT_MODELS[0],
-        contents,
-        config: { tools: TOOLS },
-      });
-      const call = first.functionCalls?.[0];
-      if (call) {
-        const { resultForModel, action } = await this.executeTool(call);
-        const followUpContents: Content[] = [
-          ...contents,
-          { role: 'model', parts: [{ functionCall: call }] },
-          {
-            role: 'user',
-            parts: [
-              {
-                functionResponse: {
-                  name: call.name,
-                  response: { result: resultForModel },
-                },
-              },
-            ],
-          },
-        ];
-        const second = await this.genAI.models.generateContent({
-          model: CHAT_MODELS[0],
-          contents: followUpContents,
-        });
-        return {
-          text: second.text ?? this.pickRandom(this.OVERLOADED_REPLIES),
-          action,
-        };
-      }
-      if (first.text) return { text: first.text };
-    } catch (err) {
-      this.logger.warn(
-        `[Assistant] model chính lỗi, rơi về generateWithFallback: ${(err as Error).message}`,
-      );
-    }
-
-    const fallback = await this.generateWithFallback(contents);
-    return {
-      text: fallback?.text ?? this.pickRandom(this.OVERLOADED_REPLIES),
-      action: fallback?.action,
-    };
-  }
-
   /** Ghép lịch sử hội thoại + RAG (ngữ pháp/FAQ) + tra từ vựng theo Hán tự +
-   * dữ kiện cá nhân thành `contents` gửi Gemini — dùng chung cho `ask()`
-   * (không streaming) và `askStream()`. */
+   * dữ kiện cá nhân thành `contents` gửi Gemini (askStream). */
   private async buildPromptContents(
     userId: string,
     message: string,

@@ -23,8 +23,7 @@ import { StreakService } from './streak/streak.service';
  *
  * GET       /streak          [đăng nhập]  Chip chuỗi ngày 🔥 + số lá chắn trên thanh trên; thẻ chuỗi ngày ở /learn
  *                                         → getStreak() → StreakService.getStreak()
- *                                         client: components/lesson-session/session-runner.tsx · lib/hooks.ts
- *                                                 (useStreak)
+ *                                         client: lib/hooks.ts (useStreak)
  * GET       /streak/history  [đăng nhập]  Dải tuần T2–CN ở thẻ chuỗi ngày /learn; lịch hoạt động 30 ngày ở /progress
  *                                         → streakHistory() → StreakService.history()
  *                                         client: lib/hooks.ts (useStreakHistory)

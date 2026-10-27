@@ -32,17 +32,6 @@ export class GrammarService {
     }));
   }
 
-  /** Các cấp HSK đang có điểm ngữ pháp + số lượng mỗi cấp. */
-  async levels() {
-    return this.points
-      .createQueryBuilder('point')
-      .select('point.hskLevel', 'level')
-      .addSelect('COUNT(*)::int', 'count')
-      .groupBy('point.hskLevel')
-      .orderBy('point.hskLevel', 'ASC')
-      .getRawMany<{ level: number; count: number }>();
-  }
-
   /** Tab "Ngữ pháp" của ô tra từ điển: điểm CÓ giải thích thật mà tên, chữ Hán hay mẫu câu chứa từ
    * khoá (gõ 把, "so sánh", "vừa…vừa"). Mục đại cương rút gọn mở ra là ngõ cụt nên bỏ. */
   async search(raw: string) {

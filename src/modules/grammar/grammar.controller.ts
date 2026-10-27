@@ -20,8 +20,6 @@ class GrammarQuery {
  * http://localhost:8000/api/docs. Quyền: [khách] không cần đăng nhập · [khách+] khách gọi được, đã đăng nhập thì
  * server biết là ai · [đăng nhập] thiếu cookie phiên là 401 · [admin]. "client:" = file trong hanni-client/ gọi route.
  *
- * GET       /grammar/levels  [khách]      Số điểm ngữ pháp theo cấp — hiện KHÔNG trang nào gọi
- *                                         → levels() → GrammarService.levels()
  * GET       /grammar         [khách]      Danh sách ngữ pháp /ngu-phap (+ sitemap)
  *                                         → list() → GrammarService.list()
  *                                         client: app/(site)/ngu-phap/page.tsx · app/sitemap.ts
@@ -42,12 +40,6 @@ export class GrammarController {
    * sản hiếm nhất của Hanni, cạnh tranh SEO lại thấp hơn từ vựng nhiều
    * ("cách dùng 把", "phân biệt 了 và 过" ít trang tiếng Việt chất lượng).
    * Giấu sau đăng nhập thì Google không bao giờ thấy. */
-  @Public()
-  @Get('levels')
-  levels() {
-    return this.grammar.levels();
-  }
-
   @Public()
   @Get()
   list(@Query() q: GrammarQuery) {
