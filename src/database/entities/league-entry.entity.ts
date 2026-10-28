@@ -12,9 +12,9 @@ import { User } from './user.entity';
 
 /**
  * 1 người trong 1 tuần — `tier` mang từ tuần trước sang (thăng/giáng đúng
- * 1 bậc mỗi lần rollover), `finalPoints`/`movement` chỉ có giá trị SAU khi
- * tuần đó đã kết thúc (null trong lúc tuần đang diễn ra — điểm tính trực
- * tiếp từ `ReviewLog` lúc hiển thị, không lưu trùng).
+ * 1 bậc mỗi lần rollover), `movement` chỉ có giá trị SAU khi tuần đó đã kết
+ * thúc (null trong lúc tuần đang diễn ra). Điểm tuần không lưu — luôn tính
+ * trực tiếp từ `ReviewLog`.
  */
 @Entity('LeagueEntry')
 @Index('LeagueEntry_weekId_tier_idx', ['weekId', 'tier'])
@@ -54,9 +54,6 @@ export class LeagueEntry {
   /** chỉ số vào LEAGUE_TIERS (0 = thấp nhất) */
   @Column({ type: 'integer' })
   tier!: number;
-
-  @Column({ type: 'integer', nullable: true })
-  finalPoints!: number | null;
 
   /** "up" | "down" | "stay" — chỉ set lúc rollover */
   @Column({ type: 'text', nullable: true })

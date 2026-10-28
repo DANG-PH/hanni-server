@@ -14,7 +14,7 @@ import { User } from './user.entity';
 /**
  * Đơn thanh toán (payOS hoặc MoMo, cột `provider`) — mua gói Premium (mô hình A2A, tiền về THẲNG tài khoản ngân hàng của Hanni, không qua
  * ví trung gian giữ tiền hộ). `orderCode` là số nguyên RIÊNG (không phải `id` UUID) vì payOS yêu cầu mã đơn
- * dạng số. Đơn `kind = TOPUP` (nạp xu) là của thời còn hệ thống xu (trước 2026-10-20).
+ * dạng số. Đơn nạp xu cũ (trước 2026-10-20, khi còn hệ thống xu) có `premiumPlanKey = null`.
  */
 @Entity('PaymentOrder')
 @Index('PaymentOrder_orderCode_key', ['orderCode'], { unique: true })
@@ -45,7 +45,7 @@ export class PaymentOrder {
   @Column({ type: 'integer' })
   amountVnd!: number;
 
-  /** Key trong PREMIUM_PLANS (premium-plans.ts) — null nếu kind = TOPUP. */
+  /** Key trong PREMIUM_PLANS (premium-plans.ts) — null ở đơn nạp xu cũ. */
   @Column({ type: 'text', nullable: true })
   premiumPlanKey!: string | null;
 

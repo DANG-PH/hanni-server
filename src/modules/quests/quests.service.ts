@@ -113,7 +113,6 @@ export class QuestsService {
         userId,
         localDate,
         questKey: ALL_DONE_KEY,
-        xu: 0,
       });
       if (rewardClaimed)
         justEarnedFreeze = await this.streak.grantFreeze(userId);

@@ -187,7 +187,6 @@ export class LeagueService {
     await this.dataSource.transaction(async (db) => {
       for (const e of entries) {
         await db.update(LeagueEntry, e.id, {
-          finalPoints: points.get(e.userId) ?? 0,
           movement: plan.get(e.userId)?.movement ?? 'stay',
         });
       }

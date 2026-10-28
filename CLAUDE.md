@@ -49,6 +49,11 @@ bản sao lưu trước khi chạy: `/root/backups/hanni-truoc-don-bang-20261028
   `Word.imageUrl` (migration `1792710000000-DropWordImageUrl`, chạy 2 lần trên PGlite: không lỗi, cột khác giữ nguyên). Rà lại toàn server
   sau đợt này: export không ai dùng 0 (86 mục báo ra chỉ là kiểu/hằng dùng trong chính file), cột không ai đọc/ghi 0 (15 mục báo ra là
   quan hệ 2 chiều TypeORM), route không giao diện nào gọi đúng 5 cố ý, 0 vòng import giữa module/service (46 vòng chỉ giữa entity).
+- **Đợt 4 (cùng ngày)**: bộ dò cũ tính chỗ GHI là "đang dùng" nên sót 2 cột CHỈ GHI — `DailyQuestClaim.xu` (luôn 0 từ khi bỏ xu) và
+  `LeagueEntry.finalPoints` (điểm tuần ghi lúc chốt, không hiện ở đâu, tính lại được từ ReviewLog) → migration
+  `1792720000000-DropWriteOnlyColumns` (sao lưu trước: `/root/backups/hanni-truoc-xoa-cot-chi-ghi-*.dump`). Dò lại theo CHỖ ĐỌC (truy cập
+  `.cột`, select/where/order, client có nhắc tên): còn đúng các cột giữ có chủ đích — 12 trường trước/sau của `ReviewLog` (tối ưu FSRS sau
+  này) và `PaymentOrder.paidAt` (dấu vết kế toán khi đối soát/hoàn tiền tay).
 
 ## Stack
 - NestJS 11 + TypeScript (CommonJS, `module: nodenext`)
