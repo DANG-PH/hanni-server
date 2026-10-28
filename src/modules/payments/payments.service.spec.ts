@@ -32,6 +32,7 @@ function setup(
     amountPaid?: number;
     momoGrants?: boolean;
     momoResultCode?: number;
+    payosStatusAfterCancel?: string;
   } = {},
 ) {
   const order: Order = {
@@ -88,6 +89,12 @@ function setup(
       amountPaid: opts.amountPaid ?? order.amountVnd,
     })),
     verifyWebhook: jest.fn(async (p: { data: unknown }) => p.data),
+    // payOS không huỷ được link đã trả: trả về PAID kèm số tiền đã nhận
+    cancelPaymentLink: jest.fn(async () =>
+      opts.payosStatusAfterCancel === 'PAID'
+        ? { status: 'PAID', amountPaid: order.amountVnd }
+        : { status: 'CANCELLED', amountPaid: 0 },
+    ),
   };
   const momo = {
     isConfigured: () => true,
@@ -111,6 +118,37 @@ function setup(
 }
 
 describe('PaymentsService — xác nhận đơn', () => {
+  it('thoát trang payOS giữa chừng: đơn quá hạn vẫn PENDING → server huỷ link → CANCELLED (không chờ mãi)', async () => {
+    const { svc, order, payos } = setup({
+      payosStatus: 'PENDING',
+      order: { createdAt: new Date(Date.now() - 30 * 60_000) },
+    });
+    await svc.reconcilePending();
+    expect(payos.cancelPaymentLink).toHaveBeenCalledWith(
+      2,
+      'Quá hạn thanh toán',
+    );
+    expect(order.status).toBe(PaymentOrderStatus.CANCELLED);
+  });
+
+  it('đơn payOS mới tạo, còn trong hạn → để nguyên chờ người dùng trả', async () => {
+    const { svc, order, payos } = setup({ payosStatus: 'PENDING' });
+    await svc.reconcilePending();
+    expect(payos.cancelPaymentLink).not.toHaveBeenCalled();
+    expect(order.status).toBe(PaymentOrderStatus.PENDING);
+  });
+
+  it('huỷ link quá hạn đúng lúc tiền vừa về (payOS trả PAID) → vẫn cộng Premium', async () => {
+    const { svc, order, userUpdates } = setup({
+      payosStatus: 'PENDING',
+      payosStatusAfterCancel: 'PAID',
+      order: { createdAt: new Date(Date.now() - 30 * 60_000) },
+    });
+    await svc.reconcilePending();
+    expect(order.status).toBe(PaymentOrderStatus.PAID);
+    expect(userUpdates).toHaveLength(1);
+  });
+
   it('đối soát: payOS báo PAID → đơn PAID + cộng Premium (lỗi thật: chưa khai webhook mà đã trả tiền)', async () => {
     const { svc, order, userUpdates } = setup();
     await svc.reconcilePending();

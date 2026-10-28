@@ -102,7 +102,8 @@ export class TokenService {
       relations: { user: true },
     });
 
-    if (!row) throw new UnauthorizedException('Phiên đăng nhập không còn hợp lệ');
+    if (!row)
+      throw new UnauthorizedException('Phiên đăng nhập không còn hợp lệ');
 
     if (row.revokedAt) {
       // Cửa sổ ÂN HẠN cho refresh trùng nhau, KHÔNG phải token bị đánh cắp.

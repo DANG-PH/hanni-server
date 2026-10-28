@@ -12,13 +12,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { createHash } from 'node:crypto';
 import { pinyin as toPinyin } from 'pinyin-pro';
 import { IsNull, Repository } from 'typeorm';
-import { localStudyDate } from '../../common/time.util';
 import type { Env } from '../../config/env.validation';
 import { isUniqueViolation } from '../../database/db-errors';
-import { Lesson, LessonReading, User, Word } from '../../database/entities';
+import { Lesson, LessonReading, Word } from '../../database/entities';
+import { DailyQuotaService } from '../../infra/redis/daily-quota.service';
 import { RedisService } from '../../infra/redis/redis.service';
 import { CHAT_MODELS } from '../assistant/gemini-models';
-import { isPremiumActive } from '../premium/premium-plans';
 import type { PinyinOverrides } from '../mock-exams/mock-exam.content';
 import { segmentLine } from '../videos/word-match.util';
 import {
@@ -56,7 +55,11 @@ import {
 } from './ai-tools.util';
 
 /** Bộ đếm lượt sống qua hết "ngày học" kể cả lệch múi giờ, rồi tự xoá. */
-const QUOTA_TTL_SEC = 48 * 3600;
+const AI_TOOLS_QUOTA = {
+  name: 'aitools',
+  free: FREE_AI_TOOLS_DAILY_LIMIT,
+  premium: PREMIUM_AI_TOOLS_DAILY_LIMIT,
+};
 /** Câu đã chấm / đã phân tích giữ 30 ngày — gõ lại đúng câu đó không tốn lượt. */
 const CACHE_TTL_SEC = 30 * 24 * 3600;
 
@@ -78,7 +81,6 @@ interface IndexWord {
 export class AiToolsService {
   private readonly logger = new Logger(AiToolsService.name);
   private readonly genAI: GoogleGenAI | null;
-  private readonly cutoffHour: number;
   private index: Map<string, IndexWord> | null = null;
   private indexAt = 0;
   /** Bảng chữ/từ theo cấp + bảng đọc pinyin cho bài đọc — dữ liệu từ điển gần như không đổi. */
@@ -95,13 +97,12 @@ export class AiToolsService {
     @InjectRepository(Lesson) private readonly lessons: Repository<Lesson>,
     @InjectRepository(LessonReading)
     private readonly readings: Repository<LessonReading>,
-    @InjectRepository(User) private readonly users: Repository<User>,
     private readonly redis: RedisService,
+    private readonly quota: DailyQuotaService,
     private readonly words: WordsService,
   ) {
     const apiKey = config.get('GEMINI_API_KEY', { infer: true });
     this.genAI = apiKey ? new GoogleGenAI({ apiKey }) : null;
-    this.cutoffHour = config.get('STREAK_DAY_CUTOFF_HOUR', { infer: true });
   }
 
   /** Mẹo nhớ theo âm Hán Việt — tạo 1 lần cho mỗi từ rồi lưu `Word.mnemonicVi`,
@@ -405,42 +406,24 @@ export class AiToolsService {
     return null;
   }
 
+  /** 1 lượt AI (chung mẹo nhớ, chấm câu, phân tích câu, bài đọc) — hết lượt thì báo, AI lỗi thì `refund()`. */
   private async take(userId: string) {
     if (!this.genAI)
       throw new BadRequestException(
         'Tính năng AI đang tạm đóng — thử lại sau nhé.',
       );
-    const { key, limit, premium } = await this.quotaOf(userId);
-    const used = await this.redis.client.incr(key);
-    if (used === 1) await this.redis.client.expire(key, QUOTA_TTL_SEC);
-    if (used > limit) {
-      await this.redis.client.decr(key);
+    const q = await this.quota.take(userId, AI_TOOLS_QUOTA);
+    if (!q.ok)
       throw new ForbiddenException(
-        premium
-          ? `Hôm nay bạn đã dùng đủ ${limit} lượt AI — mai dùng tiếp nhé.`
-          : `Bạn đã dùng hết ${limit} lượt AI miễn phí hôm nay (mẹo nhớ, chấm câu, phân tích câu). Nâng cấp Premium để dùng ${PREMIUM_AI_TOOLS_DAILY_LIMIT} lượt mỗi ngày.`,
+        q.premium
+          ? `Hôm nay bạn đã dùng đủ ${q.limit} lượt AI — mai dùng tiếp nhé.`
+          : `Bạn đã dùng hết ${q.limit} lượt AI miễn phí hôm nay (mẹo nhớ, chấm câu, phân tích câu). Nâng cấp Premium để dùng ${PREMIUM_AI_TOOLS_DAILY_LIMIT} lượt mỗi ngày.`,
       );
-    }
-    return { used, limit, premium };
+    return q;
   }
 
-  private async refund(userId: string) {
-    const { key } = await this.quotaOf(userId);
-    await this.redis.client.decr(key).catch(() => undefined);
-  }
-
-  private async quotaOf(userId: string) {
-    const user = await this.users.findOneOrFail({
-      where: { id: userId },
-      select: { id: true, premiumUntil: true, timezone: true },
-    });
-    const premium = isPremiumActive(user.premiumUntil);
-    const day = localStudyDate(new Date(), user.timezone, this.cutoffHour);
-    return {
-      key: `aitools:${userId}:${day}`,
-      limit: premium ? PREMIUM_AI_TOOLS_DAILY_LIMIT : FREE_AI_TOOLS_DAILY_LIMIT,
-      premium,
-    };
+  private refund(userId: string) {
+    return this.quota.refund(userId, AI_TOOLS_QUOTA);
   }
 
   /** Bảng từ trong tiến trình (như `ScanService`) — khớp cả phồn thể, giản thể

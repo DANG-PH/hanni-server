@@ -5,6 +5,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { OptionalAuth } from '../../common/decorators/public.decorator';
 import type { AuthUser } from '../../common/types';
 import {
+  LEADERBOARD_METRICS,
   LeaderboardService,
   type LeaderboardMetric,
 } from './leaderboard.service';
@@ -12,7 +13,7 @@ import { LeagueService } from './league.service';
 
 class LeaderboardQuery {
   @IsOptional()
-  @IsIn(['learned', 'streak', 'longest', 'lessons'])
+  @IsIn(LEADERBOARD_METRICS)
   metric?: LeaderboardMetric;
 }
 
@@ -22,9 +23,6 @@ class LeaderboardQuery {
  * http://localhost:8000/api/docs. Quyền: [khách] không cần đăng nhập · [khách+] khách gọi được, đã đăng nhập thì
  * server biết là ai · [đăng nhập] thiếu cookie phiên là 401 · [admin]. "client:" = file trong hanni-client/ gọi route.
  *
- * GET       /leaderboard/metrics  [khách+]     Các tab tiêu chí (Chuỗi hiện tại / Bài đã xong) ở /leaderboard
- *                                              → metrics() → LeaderboardService.metrics()
- *                                              client: lib/hooks.ts (useLeaderboardMetrics)
  * GET       /leaderboard/league   [đăng nhập]  Thẻ "Giải đấu tuần" đầu trang /leaderboard
  *                                              → myLeague() → LeagueService.getMyLeague()
  *                                              client: lib/hooks.ts (useWeeklyLeague)
@@ -40,12 +38,6 @@ export class LeaderboardController {
     private readonly leaderboard: LeaderboardService,
     private readonly league: LeagueService,
   ) {}
-
-  @OptionalAuth()
-  @Get('metrics')
-  metrics() {
-    return this.leaderboard.metrics();
-  }
 
   /** Giải đấu học tập theo tuần — xem league.service.ts. */
   @Get('league')

@@ -33,9 +33,6 @@ import { WordsService } from './words.service';
  * GET       /words/familiar       [khách]      Trang "Từ bạn đã biết sẵn" /tu-da-biet
  *                                              → getFamiliarWords() → WordsService.familiarWords()
  *                                              client: app/(site)/tu-da-biet/page.tsx
- * GET       /words/trial          [khách]      8 thẻ học thử /hoc-thu
- *                                              → getTrialWords() → WordsService.trialWords()
- *                                              client: app/(site)/hoc-thu/page.tsx
  * GET       /dictionary/slugs     [khách]      Không phải giao diện: sitemap.xml liệt kê mọi trang từ cho Google
  *                                              → getDictionarySlugs() → WordsService.publicSlugs()
  *                                              client: app/sitemap.ts
@@ -101,13 +98,6 @@ export class VocabularyController {
   getFamiliarWords(@Query('level') level?: string) {
     const lv = Number(level);
     return this.words.familiarWords(lv >= 1 && lv <= 9 ? lv : undefined);
-  }
-
-  /** 8 từ cho bộ thẻ học thử ở `/hoc-thu` — xem WordsService.trialWords(). */
-  @Public()
-  @Get('words/trial')
-  getTrialWords() {
-    return this.words.trialWords();
   }
 
   /** Từ điển công khai (SEO) — xem WordsService.lookup(). Đặt dưới

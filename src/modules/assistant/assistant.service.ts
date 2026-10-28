@@ -552,8 +552,7 @@ export class AssistantService implements OnModuleInit {
           if (!this.genAI) {
             subscriber.next({
               data: JSON.stringify({
-                delta:
-                  'Trợ lý AI đang tạm đóng — bạn thử lại sau nhé.',
+                delta: 'Trợ lý AI đang tạm đóng — bạn thử lại sau nhé.',
               }),
             });
             subscriber.next({ data: JSON.stringify({ done: true }) });

@@ -32,6 +32,11 @@ export type PaymentProvider = 'payos' | 'momo';
 
 /** Đơn PENDING tạo trong ngần này ngày được job đối soát hỏi lại cổng thanh toán (link payOS mặc định hết hạn sau 1 ngày). */
 const RECONCILE_WINDOW_MS = 7 * 86_400_000;
+/** Link thanh toán payOS có hiệu lực 15 phút. Người dùng thoát trang payOS giữa chừng (không bấm Huỷ) thì đơn KHÔNG chờ
+ * mãi: quá hạn payOS báo EXPIRED → đơn CANCELLED. Link tạo trước khi có hạn (hoặc payOS chưa kịp đổi trạng thái) quá
+ * hạn + 5 phút mà vẫn PENDING thì server tự huỷ link trên payOS (`syncOrder`). */
+export const PAYMENT_LINK_TTL_MS = 15 * 60_000;
+const STALE_PENDING_MS = PAYMENT_LINK_TTL_MS + 5 * 60_000;
 
 /**
  * ĐƠN HÀNG PREMIUM — tạo đơn, xác nhận đã trả, cộng hạn Premium. Bán qua 2 cổng, chung 1 bảng `PaymentOrder` (cột
@@ -66,6 +71,7 @@ const RECONCILE_WINDOW_MS = 7 * 86_400_000;
  *      `User.premiumUntil` (nối tiếp hạn cũ, `extendPremiumUntil`).
  *   Cổng báo huỷ / hết hạn / thất bại (payOS CANCELLED·EXPIRED·FAILED, MoMo mã trong `MOMO_FAILED_CODES`) → `cancelOrder()`
  *   chuyển đơn sang CANCELLED để trang Tài khoản báo đúng "đã huỷ" và job đối soát thôi hỏi lại.
+ *   Bỏ dở (thoát trang thanh toán, không bấm Huỷ): link payOS hết hạn sau `PAYMENT_LINK_TTL_MS` (15 phút) → CANCELLED.
  *
  * Để trống `PAYOS_*` / `MOMO_*` thì cổng đó tự tắt (popup không hiện), KHÔNG chặn app khởi động, giống `GEMINI_API_KEY`.
  */
@@ -119,7 +125,9 @@ export class PaymentsService {
 
   private async createPayosCheckout(userId: string, plan: PremiumPlan) {
     if (!this.payos.isConfigured())
-      throw new ServiceUnavailableException('Thanh toán đang tạm đóng — thử lại sau nhé');
+      throw new ServiceUnavailableException(
+        'Thanh toán đang tạm đóng — thử lại sau nhé',
+      );
     const order = await insertAndReturn(this.orders, {
       userId,
       amountVnd: plan.priceVnd,
@@ -138,6 +146,7 @@ export class PaymentsService {
         description: `HN${order.orderCode}`,
         returnUrl: `${frontendUrl}/account?premium=${order.orderCode}`,
         cancelUrl: `${frontendUrl}/account?premium=${order.orderCode}&cancelled=1`,
+        expiredAt: Math.floor((Date.now() + PAYMENT_LINK_TTL_MS) / 1000),
       });
 
       await this.orders.update(order.id, { providerRef: link.paymentLinkId });
@@ -312,7 +321,16 @@ export class PaymentsService {
         return;
       }
       if (!this.payos.isConfigured()) return;
-      const link = await this.payos.getPaymentStatus(order.orderCode);
+      let link = await this.payos.getPaymentStatus(order.orderCode);
+      if (
+        link.status === 'PENDING' &&
+        Date.now() - order.createdAt.getTime() > STALE_PENDING_MS
+      ) {
+        link = await this.payos.cancelPaymentLink(
+          order.orderCode,
+          'Quá hạn thanh toán',
+        );
+      }
       if (link.status === 'PAID') {
         await this.grantPaidOrder(order, link.amountPaid, 'đối soát payOS');
       } else if (['CANCELLED', 'EXPIRED', 'FAILED'].includes(link.status)) {

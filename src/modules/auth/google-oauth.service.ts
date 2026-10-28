@@ -40,7 +40,9 @@ export class GoogleOAuthService {
       );
     }
     if (!payload?.sub || !payload.email) {
-      throw new UnauthorizedException('Tài khoản Google này chưa cho biết email — thử tài khoản khác nhé');
+      throw new UnauthorizedException(
+        'Tài khoản Google này chưa cho biết email — thử tài khoản khác nhé',
+      );
     }
     return {
       sub: payload.sub,

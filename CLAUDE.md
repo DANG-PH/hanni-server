@@ -27,6 +27,21 @@ bản sao lưu trước khi chạy: `/root/backups/hanni-truoc-don-bang-20261028
 - **Câu báo lỗi dễ hiểu**: lỗi người dùng nhìn thấy không còn tên biến/thuật ngữ ("cần cấu hình GEMINI_API_KEY", "Google token…",
   "Token đã hết hạn", "thiếu PAYOS_CLIENT_ID…") → "Tính năng AI đang tạm đóng…", "Liên kết đã hết hạn — hãy yêu cầu gửi lại"…
   Tên biến cấu hình chỉ ghi trong comment/log.
+- **Đợt 2 cùng ngày (user: "tính năng xàm thì xoá", "logic trùng lặp", "MoMo để Sắp ra mắt", "thoát trang payOS có chờ mãi không")**:
+  - **Gỡ danh hiệu** (trang trí, Duolingo/Hanzii/Hanbeego không có — huy hiệu đã đủ ghi nhận): xoá module `shop/` (`GET /shop/titles`,
+    `POST /shop/titles/equip`), cột `UserSettings.equippedTitle` (cùng migration), danh hiệu ở bảng xếp hạng + hồ sơ công khai.
+  - **Gỡ `GET /words/trial`** (+ `trialWords()`): chỉ trang `/hoc-thu` dùng — trang đó trùng học thử bài 1 nên client đã bỏ.
+  - **Bảng xếp hạng còn đúng 2 tiêu chí** client hiện (`LEADERBOARD_METRICS` = streak, lessons): bỏ nhánh "từ đã thuộc", "chuỗi dài nhất"
+    và route `GET /leaderboard/metrics` (client dùng thẳng danh sách 2 tab; client cũ gặp 404 thì tự rơi về danh sách đó).
+  - **`ReviewType` bỏ CRAM, QUIZ** (không code nào ghi, 0 dòng) — dựng lại enum trong migration như `NotificationType`.
+  - **Hạn mức lượt/ngày dùng chung** `src/infra/redis/daily-quota.service.ts` (`DailyQuotaService.take/refund/peek`, luật `{name, free,
+    premium}`, có spec): tiện ích AI + quét ảnh trước đây chép 2 bản y hệt (Redis INCR/EXPIRE/DECR + tra Premium/múi giờ). Trợ lý AI và
+    luyện nói vẫn đếm thẳng tin nhắn đã lưu trong DB (không cần bộ đếm riêng). Không còn `forwardRef` (phụ thuộc vòng) nào trong server.
+  - **Link payOS có hạn 15 phút** (`PAYMENT_LINK_TTL_MS`, `expiredAt`): trước đó thoát trang payOS giữa chừng (không bấm Huỷ) thì đơn chờ
+    mãi — đơn #16 trên production PENDING từ 18:08 27/10, mã QR vẫn trả được, sau 7 ngày job đối soát thôi hỏi. Giờ quá hạn payOS báo
+    EXPIRED → huỷ đơn; link cũ không có hạn mà PENDING quá hạn + 5 phút thì `syncOrder` gọi `payos.cancelPaymentLink()` rồi xử lý theo
+    trạng thái payOS trả về (PAID đúng lúc tiền về → vẫn cộng Premium). 3 test mới trong `payments.service.spec.ts`.
+  - Server: 181 test, 126 route REST (29 module tính năng + health). Đã chạy lại migration trên bản sao cấu trúc production: khớp 42 entity.
 
 ## Stack
 - NestJS 11 + TypeScript (CommonJS, `module: nodenext`)
@@ -103,7 +118,7 @@ qua webhook. Giờ (`payments.service.ts`, đầu file có khối "Luồng 1 l�
 - **Còn làm tay**: khai Webhook URL `https://hanni-api.dangpham.id.vn/api/payments/webhook/payos` ở my.payos.vn (chưa khai thì Premium
   vẫn lên, chậm tối đa 5 phút); khoá MoMo thật: business.momo.vn (hồ sơ doanh nghiệp, hợp đồng, phí theo giao dịch) → đổi 3 khoá +
   `MOMO_API_URL=https://payment.momo.vn`. Test: `payments.service.spec.ts` (11 ca), `momo.util.spec.ts` (5 ca).
-- Route: 132 (thêm webhook MoMo); 5 route cố ý không có giao diện: `/health`, `/assistant/status`, `GET /partners/leads`, 2 webhook.
+- Route: 132 lúc thêm webhook MoMo (126 sau đợt dọn 28/10); 5 route cố ý không có giao diện: `/health`, `/assistant/status`, `GET /partners/leads`, 2 webhook.
 - **Hoàn thiện + tách file (2026-10-27 tối, user: "tích hợp momo hoàn thiện", "source server dễ tìm, dễ đọc, dễ sửa")**:
   `payments/` giờ mỗi file 1 việc — `payments.service.ts` = nghiệp vụ đơn hàng chung mọi cổng (tạo đơn, 3 đường xác nhận,
   `grantPaidOrder`, `cancelOrder`), `payos.service.ts` = gọi payOS (`createPaymentLink`, `getPaymentStatus`, `verifyWebhook`),

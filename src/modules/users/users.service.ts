@@ -21,7 +21,6 @@ import {
 import { AuthProvider, SrsState } from '../../database/enums';
 import { insertIfAbsent } from '../../database/repository.util';
 import { PasswordService } from '../auth/password.service';
-import { TITLE_CATALOG } from '../shop/title-catalog';
 import { isPremiumActive } from '../premium/premium-plans';
 import { LEARNED_INTERVAL_DAYS } from '../srs/srs.constants';
 
@@ -107,14 +106,12 @@ export class UsersService {
     ] = await Promise.all([
       this.users.findOne({
         where: { id: targetId },
-        relations: { settings: true },
         select: {
           id: true,
           displayName: true,
           avatarUrl: true,
           createdAt: true,
           premiumUntil: true,
-          settings: { userId: true, equippedTitle: true },
         },
       }),
       this.streaks.findOneBy({ userId: targetId }),
@@ -140,16 +137,12 @@ export class UsersService {
       }),
     ]);
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
-    const equippedTitle = TITLE_CATALOG.find(
-      (t) => t.key === user.settings?.equippedTitle,
-    );
 
     return {
       id: user.id,
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
       isPremium: isPremiumActive(user.premiumUntil),
-      equippedTitle: equippedTitle?.label ?? null,
       joinedAt: user.createdAt,
       currentStreak: streak?.currentStreak ?? 0,
       longestStreak: streak?.longestStreak ?? 0,

@@ -104,7 +104,8 @@ export class AuthService {
     rawToken: string | undefined,
     ctx: RequestCtx,
   ): Promise<IssuedTokens> {
-    if (!rawToken) throw new UnauthorizedException('Phiên đăng nhập đã hết hạn');
+    if (!rawToken)
+      throw new UnauthorizedException('Phiên đăng nhập đã hết hạn');
     return this.tokens.rotate(rawToken, ctx);
   }
 
@@ -171,7 +172,9 @@ export class AuthService {
       throw new BadRequestException('Liên kết không hợp lệ hoặc đã được dùng');
     }
     if (row.expiresAt.getTime() < Date.now()) {
-      throw new BadRequestException('Liên kết đã hết hạn — hãy yêu cầu gửi lại');
+      throw new BadRequestException(
+        'Liên kết đã hết hạn — hãy yêu cầu gửi lại',
+      );
     }
     await this.verificationTokens.update(row.id, { consumedAt: new Date() });
     return row;

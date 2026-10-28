@@ -72,8 +72,6 @@ export const ReviewType = {
   LEARN: 'LEARN',
   REVIEW: 'REVIEW',
   RELEARN: 'RELEARN',
-  CRAM: 'CRAM',
-  QUIZ: 'QUIZ',
 } as const;
 export type ReviewType = (typeof ReviewType)[keyof typeof ReviewType];
 

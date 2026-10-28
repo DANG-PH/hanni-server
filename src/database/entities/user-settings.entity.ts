@@ -58,10 +58,6 @@ export class UserSettings {
   @Column({ type: 'boolean', default: true })
   weeklyDigestEnabled!: boolean;
 
-  /** key trong TITLE_CATALOG (title-catalog.ts, mở theo huy hiệu đã đạt), null = không dùng danh hiệu */
-  @Column({ type: 'text', nullable: true })
-  equippedTitle!: string | null;
-
   /** cấp HSK người học CHỌN theo (1-7, 7 = HSK7-9); null = tự suy từ tiến độ */
   @Column({ type: 'integer', nullable: true })
   courseLevel!: number | null;

@@ -49,6 +49,8 @@ export class PayosService {
     description: string;
     returnUrl: string;
     cancelUrl: string;
+    /** Hạn dùng link (giây Unix) — quá hạn payOS báo EXPIRED, mã QR không trả được nữa. */
+    expiredAt: number;
   }): Promise<{ checkoutUrl: string; qrCode: string; paymentLinkId: string }> {
     const link = await this.getClient().paymentRequests.create(p);
     return {
@@ -63,6 +65,19 @@ export class PayosService {
     orderCode: number,
   ): Promise<{ status: string; amountPaid: number }> {
     const link = await this.getClient().paymentRequests.get(orderCode);
+    return { status: link.status, amountPaid: link.amountPaid };
+  }
+
+  /** Huỷ link đang chờ (người dùng bỏ dở quá hạn) để mã QR không trả được nữa → trạng thái sau khi huỷ. Link đã trả
+   * thì payOS không huỷ — trả về đúng trạng thái PAID để vẫn cộng Premium. */
+  async cancelPaymentLink(
+    orderCode: number,
+    reason: string,
+  ): Promise<{ status: string; amountPaid: number }> {
+    const link = await this.getClient().paymentRequests.cancel(
+      orderCode,
+      reason,
+    );
     return { status: link.status, amountPaid: link.amountPaid };
   }
 

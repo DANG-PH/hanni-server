@@ -10,12 +10,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { GoogleGenAI } from '@google/genai';
 import { pinyin } from 'pinyin-pro';
 import { In, Repository } from 'typeorm';
-import { localStudyDate } from '../../common/time.util';
 import type { Env } from '../../config/env.validation';
-import { User, UserWordProgress, Word } from '../../database/entities';
-import { RedisService } from '../../infra/redis/redis.service';
+import { UserWordProgress, Word } from '../../database/entities';
+import { DailyQuotaService } from '../../infra/redis/daily-quota.service';
 import { CHAT_MODELS } from '../assistant/gemini-models';
-import { isPremiumActive } from '../premium/premium-plans';
 import { segmentLine } from '../videos/word-match.util';
 import { hanVietMatchesMeaning } from '../vocabulary/words.service';
 import {
@@ -42,7 +40,11 @@ interface ScanWord {
 }
 
 /** Bộ đếm lượt sống qua hết "ngày học" kể cả lệch múi giờ, rồi tự xoá. */
-const QUOTA_TTL_SEC = 48 * 3600;
+const SCAN_QUOTA = {
+  name: 'scan',
+  free: FREE_SCAN_DAILY_LIMIT,
+  premium: PREMIUM_SCAN_DAILY_LIMIT,
+};
 
 /**
  * Quét ảnh (OCR + nhận diện đồ vật) bằng Gemini — xem `SCAN_PROMPT`. Ảnh
@@ -53,32 +55,23 @@ const QUOTA_TTL_SEC = 48 * 3600;
 export class ScanService {
   private readonly logger = new Logger(ScanService.name);
   private readonly genAI: GoogleGenAI | null;
-  private readonly cutoffHour: number;
   private index: Map<string, ScanWord> | null = null;
   private indexAt = 0;
 
   constructor(
     config: ConfigService<Env, true>,
-    @InjectRepository(User) private readonly users: Repository<User>,
     @InjectRepository(Word) private readonly words: Repository<Word>,
     @InjectRepository(UserWordProgress)
     private readonly progress: Repository<UserWordProgress>,
-    private readonly redis: RedisService,
+    private readonly quota: DailyQuotaService,
   ) {
     const apiKey = config.get('GEMINI_API_KEY', { infer: true });
     this.genAI = apiKey ? new GoogleGenAI({ apiKey }) : null;
-    this.cutoffHour = config.get('STREAK_DAY_CUTOFF_HOUR', { infer: true });
   }
 
   async usage(userId: string) {
-    const { key, limit, premium } = await this.quotaOf(userId);
-    const used = Number(await this.redis.client.get(key)) || 0;
-    return {
-      used: Math.min(used, limit),
-      limit,
-      premium,
-      enabled: !!this.genAI,
-    };
+    const q = await this.quota.peek(userId, SCAN_QUOTA);
+    return { ...q, enabled: !!this.genAI };
   }
 
   async scan(userId: string, file: Express.Multer.File) {
@@ -91,22 +84,23 @@ export class ScanService {
       );
     }
 
-    const { key, limit, premium } = await this.quotaOf(userId);
-    let used = await this.redis.client.incr(key);
-    if (used === 1) await this.redis.client.expire(key, QUOTA_TTL_SEC);
-    if (used > limit) {
-      await this.redis.client.decr(key);
+    const q = await this.quota.take(userId, SCAN_QUOTA);
+    if (!q.ok) {
       throw new ForbiddenException(
-        premium
-          ? `Hôm nay bạn đã quét đủ ${limit} ảnh — mai quét tiếp nhé.`
-          : `Bạn đã dùng hết ${limit} lượt quét ảnh miễn phí hôm nay. Nâng cấp Premium để quét ${PREMIUM_SCAN_DAILY_LIMIT} ảnh mỗi ngày.`,
+        q.premium
+          ? `Hôm nay bạn đã quét đủ ${q.limit} ảnh — mai quét tiếp nhé.`
+          : `Bạn đã dùng hết ${q.limit} lượt quét ảnh miễn phí hôm nay. Nâng cấp Premium để quét ${PREMIUM_SCAN_DAILY_LIMIT} ảnh mỗi ngày.`,
       );
     }
+    let { used } = q;
+    const { limit, premium } = q;
 
     const parsed = await this.read(file);
     // Đọc lỗi, hoặc ảnh không có chữ Hán/đồ vật nào: không tính lượt.
-    if (!parsed?.lines.length && !parsed?.objects.length)
-      used = await this.redis.client.decr(key);
+    if (!parsed?.lines.length && !parsed?.objects.length) {
+      await this.quota.refund(userId, SCAN_QUOTA);
+      used -= 1;
+    }
     if (!parsed) {
       throw new ServiceUnavailableException(
         'Chưa đọc được ảnh lúc này, thử lại sau ít phút nhé.',
@@ -185,20 +179,6 @@ export class ScanService {
       }
     }
     return null;
-  }
-
-  private async quotaOf(userId: string) {
-    const user = await this.users.findOneOrFail({
-      where: { id: userId },
-      select: { id: true, premiumUntil: true, timezone: true },
-    });
-    const premium = isPremiumActive(user.premiumUntil);
-    const day = localStudyDate(new Date(), user.timezone, this.cutoffHour);
-    return {
-      key: `scan:${userId}:${day}`,
-      limit: premium ? PREMIUM_SCAN_DAILY_LIMIT : FREE_SCAN_DAILY_LIMIT,
-      premium,
-    };
   }
 
   /** Cache trong tiến trình như phụ đề video (`VideosService`) — bảng từ ít

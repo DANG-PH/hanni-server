@@ -1,23 +1,15 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { notTestAccount } from '../../common/test-accounts';
-import {
-  User,
-  UserLessonProgress,
-  UserStreak,
-  UserWordProgress,
-} from '../../database/entities';
-import { SrsState } from '../../database/enums';
-import { TITLE_CATALOG } from '../shop/title-catalog';
-import { LEARNED_INTERVAL_DAYS } from '../srs/srs.constants';
+import { User, UserLessonProgress, UserStreak } from '../../database/entities';
 
-export type LeaderboardMetric = 'learned' | 'streak' | 'longest' | 'lessons';
-
+/** 2 tiêu chí xếp hạng (bỏ "Từ đã thuộc" — cần ~21 ngày ôn mới có, trống với mọi người — và "Chuỗi dài nhất" — trùng
+ * ý "Chuỗi hiện tại"). Mô tả + nút của từng tab nằm ở client (`components/leaderboard.tsx`). */
+export const LEADERBOARD_METRICS = ['streak', 'lessons'] as const;
+export type LeaderboardMetric = (typeof LEADERBOARD_METRICS)[number];
 const METRICS: Record<LeaderboardMetric, { label: string; unit: string }> = {
-  learned: { label: 'Từ đã thuộc', unit: 'từ' },
   streak: { label: 'Chuỗi hiện tại', unit: 'ngày' },
-  longest: { label: 'Chuỗi dài nhất', unit: 'ngày' },
   lessons: { label: 'Bài đã xong', unit: 'bài' },
 };
 
@@ -26,8 +18,6 @@ export interface LeaderboardRow {
   userId: string;
   displayName: string;
   avatarUrl: string | null;
-  /** Danh hiệu đang dùng (mở theo huy hiệu đã đạt) — null nếu chưa chọn. */
-  title: string | null;
   value: number;
   currentStreak: number;
   isMe: boolean;
@@ -39,25 +29,13 @@ export class LeaderboardService {
     @InjectRepository(User) private readonly users: Repository<User>,
     @InjectRepository(UserStreak)
     private readonly streaks: Repository<UserStreak>,
-    @InjectRepository(UserWordProgress)
-    private readonly wordProgress: Repository<UserWordProgress>,
     @InjectRepository(UserLessonProgress)
     private readonly lessonProgress: Repository<UserLessonProgress>,
   ) {}
 
-  metrics() {
-    return (Object.keys(METRICS) as LeaderboardMetric[]).map((key) => ({
-      key,
-      ...METRICS[key],
-    }));
-  }
-
   /** Bảng xếp hạng theo `metric`, kèm hạng của user hiện tại.
    * `userId` null = khách xem bảng chung (không có hạng của mình). */
   async top(userId: string | null, metric: LeaderboardMetric, limit = 50) {
-    if (!METRICS[metric])
-      throw new BadRequestException('Tiêu chí không hợp lệ');
-
     const ranked = await this.rankedPairs(metric);
     const myIndex = ranked.findIndex((r) => r.userId === userId);
     const me = {
@@ -71,13 +49,7 @@ export class LeaderboardService {
     const [users, streaks] = await Promise.all([
       this.users.find({
         where: { id: In(ids) },
-        relations: { settings: true },
-        select: {
-          id: true,
-          displayName: true,
-          avatarUrl: true,
-          settings: { userId: true, equippedTitle: true },
-        },
+        select: { id: true, displayName: true, avatarUrl: true },
       }),
       this.streaks.find({
         where: { userId: In(ids) },
@@ -93,10 +65,6 @@ export class LeaderboardService {
         userId: r.userId,
         displayName: uMap.get(r.userId)?.displayName ?? 'Người học ẩn danh',
         avatarUrl: uMap.get(r.userId)?.avatarUrl ?? null,
-        title:
-          TITLE_CATALOG.find(
-            (t) => t.key === uMap.get(r.userId)?.settings?.equippedTitle,
-          )?.label ?? null,
         value: r.value,
         currentStreak: sMap.get(r.userId) ?? 0,
         isMe: r.userId === userId,
@@ -110,23 +78,6 @@ export class LeaderboardService {
   private async rankedPairs(
     metric: LeaderboardMetric,
   ): Promise<{ userId: string; value: number }[]> {
-    if (metric === 'learned') {
-      // Số từ "đã thuộc" mỗi người — cùng định nghĩa với ProgressService.
-      return this.wordProgress
-        .createQueryBuilder('p')
-        .innerJoin('p.user', 'u')
-        .select('p.userId', 'userId')
-        .addSelect('COUNT(*)::int', 'value')
-        .where(
-          '(p.learnedAt IS NOT NULL OR (p.state = :review AND p.intervalDays >= :days))',
-          { review: SrsState.REVIEW, days: LEARNED_INTERVAL_DAYS },
-        )
-        .andWhere(notTestAccount('u'))
-        .groupBy('p.userId')
-        .orderBy('COUNT(*)', 'DESC')
-        .getRawMany<{ userId: string; value: number }>();
-    }
-
     if (metric === 'lessons') {
       return this.lessonProgress
         .createQueryBuilder('p')
@@ -140,16 +91,14 @@ export class LeaderboardService {
         .getRawMany<{ userId: string; value: number }>();
     }
 
-    // streak / longest
-    const field = metric === 'streak' ? 'currentStreak' : 'longestStreak';
     return this.streaks
       .createQueryBuilder('s')
       .innerJoin('s.user', 'u')
       .select('s.userId', 'userId')
-      .addSelect(`s.${field}`, 'value')
-      .where(`s.${field} > 0`)
+      .addSelect('s.currentStreak', 'value')
+      .where('s.currentStreak > 0')
       .andWhere(notTestAccount('u'))
-      .orderBy(`s.${field}`, 'DESC')
+      .orderBy('s.currentStreak', 'DESC')
       .getRawMany<{ userId: string; value: number }>();
   }
 }

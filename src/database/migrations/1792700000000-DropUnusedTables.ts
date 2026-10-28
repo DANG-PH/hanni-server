@@ -14,8 +14,11 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  * PaymentOrder.xuAmount/kind, Achievement.iconUrl), cache không ai đọc (UserLevelProgress.reviewingWords/dueWords/
  * atRiskWords), số liệu HSK bản nháp 2021 không hiện ở đâu (HskLevel.isSharedBand/newWords2021/cumulative2021/skills),
  * RefreshToken.replacedById (luôn null), User.lastActiveAt (không chỗ nào ghi — hoạt động thật nằm ở UserDailyActivity), UserAchievement.progressValue, UserWordProgress.lastRating,
- * QuizAttempt.format/studySessionId, ReviewLog.studySessionId, UserSettings.newCardsPerDay (ô "từ mới mỗi ngày" không
+ * QuizAttempt.format/studySessionId, ReviewLog.studySessionId, UserSettings.equippedTitle (danh hiệu — tính năng trang trí đã
+ * gỡ), UserSettings.newCardsPerDay (ô "từ mới mỗi ngày" không
  * còn điều khiển gì — từ mới chỉ đến từ bài học).
+ *
+ * Enum: ReviewType bỏ CRAM/QUIZ, NotificationType bỏ 2 loại của tính năng đã gỡ.
  *
  * Gộp: PaymentOrder.payosPaymentLinkId → providerRef (mã giao dịch phía cổng, dùng chung cho payOS và MoMo).
  *
@@ -75,7 +78,7 @@ export class DropUnusedTables1792700000000 implements MigrationInterface {
       UserAchievement: ['progressValue'],
       UserDailyActivity: ['xp'],
       UserLevelProgress: ['reviewingWords', 'dueWords', 'atRiskWords'],
-      UserSettings: ['equippedFrame', 'newCardsPerDay'],
+      UserSettings: ['equippedFrame', 'equippedTitle', 'newCardsPerDay'],
       UserWordProgress: ['lastRating'],
     };
     for (const [table, cols] of Object.entries(columns)) {
@@ -104,6 +107,18 @@ export class DropUnusedTables1792700000000 implements MigrationInterface {
       `ALTER TABLE "Notification" ALTER COLUMN "type" TYPE "NotificationType" USING "type"::text::"NotificationType"`,
     );
     await queryRunner.query(`DROP TYPE "NotificationType_old"`);
+
+    // 6. ReviewType bỏ CRAM, QUIZ (không code nào ghi, DB không có dòng nào) — cùng cách dựng lại enum như trên.
+    await queryRunner.query(
+      `ALTER TYPE "ReviewType" RENAME TO "ReviewType_old"`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "ReviewType" AS ENUM ('LEARN', 'REVIEW', 'RELEARN')`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "ReviewLog" ALTER COLUMN "reviewType" TYPE "ReviewType" USING "reviewType"::text::"ReviewType"`,
+    );
+    await queryRunner.query(`DROP TYPE "ReviewType_old"`);
   }
 
   down(): Promise<void> {

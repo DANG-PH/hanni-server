@@ -8,7 +8,6 @@ import {
   ILike,
   In,
   IsNull,
-  LessThanOrEqual,
   Like,
   Not,
   Repository,
@@ -563,34 +562,6 @@ export class WordsService {
    * tách các nghĩa theo `;`) rồi xem có nghĩa nào trùng đúng âm Hán Việt
    * không. CHỈ nhận trùng khớp CHÍNH XÁC — "chứa" thôi thì ra nhiều từ mà
    * người đọc không thấy giống, làm mất tính thuyết phục của cả danh sách. */
-  /**
-   * 8 từ cho bộ thẻ "học thử" ở `/hoc-thu` — trang đích của phễu SEO.
-   *
-   * TRƯỚC 2026-09-22 trang đó lấy thẳng `/words?level=1&pageSize=8`, tức 8 từ
-   * HSK1 THÔNG DỤNG NHẤT: 的, 我, 你, 是, 了, 不, 在, 他 — toàn hư từ, không
-   * ảnh, và âm Hán Việt chẳng gợi được gì ("đích", "liễu"). Trong khi chính
-   * trang đó hứa "âm Hán Việt — cách người Việt nhớ chữ Hán nhanh nhất". Thẻ
-   * đầu tiên người lạ nhìn thấy lại là thứ phản chứng cho lời hứa.
-   *
-   * Giờ lấy từ nhóm "đã biết sẵn" (âm Hán Việt TRÙNG KHỚP nghĩa tiếng Việt,
-   * cùng luật với `familiarWords()`) ở HSK1-3: 时间 = "thời gian", 电话 =
-   * "điện thoại", 机会 = "cơ hội"... — đọc phát hiểu ngay, đúng thứ khiến
-   * người Việt nhận ra mình đã biết sẵn hàng nghìn từ.
-   */
-  async trialWords(count = 8) {
-    const rows = await this.words.find({
-      where: {
-        hskLevel: LessThanOrEqual(3),
-        hanViet: Not(IsNull()),
-        meaningVi: Not(IsNull()),
-        frequencyRank: Not(IsNull()),
-      },
-      relations: { examples: true },
-      order: { frequencyRank: 'ASC', examples: { orderIndex: 'ASC' } },
-    });
-    return rows.filter((w) => hanVietMatchesMeaning(w)).slice(0, count);
-  }
-
   async familiarWords(level?: number) {
     const rows = await this.words.find({
       where: {
@@ -667,8 +638,7 @@ export class WordsService {
 }
 
 /** Âm Hán Việt TRÙNG KHỚP một nghĩa tiếng Việt của từ đó — luật dùng chung
- * cho `/words/familiar` (trang "từ bạn đã biết sẵn"), `/words/trial` (bộ
- * thẻ học thử), quét ảnh và báo cáo học tập. Chuẩn hoá `meaningVi`: bỏ phần
+ * cho `/words/familiar` (trang "từ bạn đã biết sẵn"), quét ảnh và báo cáo học tập. Chuẩn hoá `meaningVi`: bỏ phần
  * trong ngoặc rồi tách theo `;`/`,`, so CHÍNH XÁC chứ không "chứa" — nhận cả
  * "chứa" thì lọt nhiều từ người đọc không thấy giống, mất tính thuyết phục
  * của cả danh sách. */

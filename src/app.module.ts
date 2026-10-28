@@ -39,7 +39,6 @@ import { QuestsModule } from './modules/quests/quests.module';
 import { ReferralsModule } from './modules/referrals/referrals.module';
 import { RoleplayModule } from './modules/roleplay/roleplay.module';
 import { ScanModule } from './modules/scan/scan.module';
-import { ShopModule } from './modules/shop/shop.module';
 import { SrsModule } from './modules/srs/srs.module';
 import { UsersModule } from './modules/users/users.module';
 import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
@@ -75,7 +74,6 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
  *   /scan                         → scan/            quét ảnh học từ (Gemini vision)
  *   /payments /premium            → payments/ premium/  thanh toán payOS + MoMo (đơn hàng ở payments.service.ts,
  *                                                     gọi cổng ở payos.service.ts / momo.service.ts) + trạng thái Premium
- *   /shop                       ★ → shop/            CHỈ còn danh hiệu (tên thư mục cũ từ thời bán đồ bằng xu)
  *   /push /notifications /mail    → push/ notifications/ mail/  thông báo đẩy, chuông thông báo, email
  *   /referrals                    → referrals/       mời bạn bè
  *   /health                       → src/health/      giám sát (GitHub Actions gọi)
@@ -89,7 +87,8 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
  * THAM SỐ HAY ĐỔI — sửa đúng 1 hằng số (đường dẫn trong src/modules/), server dev tự nạp lại; chạy `npx jest` nếu có test:
  *   Hạn mức AI miễn phí / ngày   assistant/assistant.service.ts FREE_ASK_DAILY_LIMIT (15) · roleplay/roleplay.service.ts
  *                                FREE_ROLEPLAY_DAILY_LIMIT (15) · ai-tools/ai-tools.util.ts FREE_/PREMIUM_AI_TOOLS_DAILY_LIMIT
- *                                (10/200) · scan/scan.util.ts FREE_/PREMIUM_SCAN_DAILY_LIMIT (3/100)
+ *                                (10/200) · scan/scan.util.ts FREE_/PREMIUM_SCAN_DAILY_LIMIT (3/100) · cách đếm chung (ngày học,
+ *                                trả lượt khi AI lỗi): src/infra/redis/daily-quota.service.ts
  *   Giá gói Premium              premium/premium-plans.ts PREMIUM_PLANS (priceVnd)
  *   Phiên học 1 bài              learn/lesson-session.util.ts CHUNK (4 từ/nhóm), OPTION_COUNT (4 phương án)
  *   Kiểm tra trình độ            learn/placement.service.ts PER_LEVEL (4 câu/cấp), PASS_PER_LEVEL (đúng 3 là qua)
@@ -100,7 +99,8 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
  *   Nhiệm vụ hằng ngày           quests/quest.util.ts QUEST_POOL (tên + chỉ tiêu)
  *   Nhắc học                     push/push.service.ts DEFAULT_REMINDER_HOUR (20h) · push/reminder.service.ts STREAK_RISK_HOUR
  *   Tra từ (chỉ mục trong RAM)   vocabulary/words.service.ts SEARCH_INDEX_TTL_MS · xếp hạng: vocabulary/word-search.util.ts
- *   Thanh toán                   payments/payments.service.ts RECONCILE_WINDOW_MS (7 ngày đối soát) · mã kết quả MoMo:
+ *   Thanh toán                   payments/payments.service.ts PAYMENT_LINK_TTL_MS (15 phút hạn mã QR), RECONCILE_WINDOW_MS
+ *                                (7 ngày đối soát) · mã kết quả MoMo:
  *                                payments/momo.util.ts MOMO_PENDING_CODES / MOMO_FAILED_CODES
  *   Biến môi trường (.env)       config/env.validation.ts — THROTTLE_LIMIT, STREAK_DAY_CUTOFF_HOUR, khoá payOS/MoMo/Gemini…
  */
@@ -159,7 +159,6 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
     RoleplayModule,
     ReferralsModule,
     QuestsModule,
-    ShopModule,
     MinigameModule,
     PaymentsModule,
     PremiumModule,
