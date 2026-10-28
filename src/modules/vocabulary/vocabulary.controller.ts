@@ -19,7 +19,7 @@ import { WordsService } from './words.service';
  * GET       /words                [khách]      Ô tra từ: gợi ý khi gõ (trang chủ /, /tu-dien) + kết quả tra + danh
  *                                              sách từ theo cấp; luyện nghe/phát âm theo bài
  *                                              → listWords() → WordsService.list()
- *                                              client: app/(site)/hoc-thu/page.tsx · app/(site)/tu-dien/page.tsx ·
+ *                                              client: app/(site)/tu-dien/page.tsx ·
  *                                                      components/dictionary/dictionary-search.tsx · lib/hooks.ts
  *                                                      (useWords)
  * GET       /words/of-the-day     [khách]      Thẻ "Từ vựng hôm nay" ở /learn và trang chủ từ điển
