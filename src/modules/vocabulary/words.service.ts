@@ -20,7 +20,6 @@ import {
   Word,
   WordExample,
 } from '../../database/entities';
-import { WordPos } from '../../database/enums';
 import { likeEscape } from '../../database/repository.util';
 import type { WordQueryDto } from './dto/word-query.dto';
 import { radicalOf } from './radicals';
@@ -30,15 +29,6 @@ import {
   toSearchRow,
   type SearchRow,
 } from './word-search.util';
-import {
-  imageQueryFrom,
-  searchCommonsImage,
-  searchWikipediaImage,
-} from './word-image.util';
-
-/** Cấp HSK cao nhất còn tự lấy ảnh minh hoạ — xem lý do ở `attachImage()`. */
-const IMAGE_MAX_HSK_LEVEL = 5;
-
 /** Bảng tìm kiếm trong bộ nhớ sống bao lâu — từ vựng chỉ đổi khi deploy (pm2 khởi động lại). */
 const SEARCH_INDEX_TTL_MS = 3_600_000;
 
@@ -114,32 +104,6 @@ export class WordsService {
     return paginate(items, ranked.length, query);
   }
 
-  /** Lấy ảnh minh hoạ nếu chưa có sẵn — chỉ cho danh từ cụ thể (Wikimedia
-   * Commons, miễn phí, không cần key). Không chặn caller lâu nếu lỗi/chậm. */
-  private async attachImage<T extends Word>(word: T): Promise<T> {
-    if (word.imageUrl) return word;
-    if (!word.pos.includes(WordPos.NOUN)) return word;
-    // CHỈ lấy ảnh tới HSK5. Đo thật 2026-09-22 trên 15 danh từ HSK6 lấy thử:
-    // khoảng MỘT NỬA ra ảnh sai lệch hẳn nghĩa — 真相 (sự thật) ra que diêm,
-    // 著作 (viết) ra cái đầm phá, 线索 (manh mối) ra sân điền kinh. Lý do: từ
-    // càng lên cao càng TRỪU TƯỢNG, mà ảnh lấy từ ảnh đại diện bài Wikipedia
-    // của chính Hán tự đó — với vật thể cụ thể thì đúng (HSK1-5: 1.650/1.662
-    // danh từ có ảnh, kiểm tra tay thấy chuẩn), với khái niệm trừu tượng thì
-    // gần như tuỳ hứng. Gắn ảnh sai vào một từ là DẠY SAI liên tưởng, hại hơn
-    // là không có ảnh — cùng nguyên tắc "thà thiếu còn hơn sai" đã áp dụng
-    // cho âm Hán Việt và cho việc KHÔNG trích câu thoại video làm ví dụ.
-    if (word.hskLevel > IMAGE_MAX_HSK_LEVEL) return word;
-    // Wikipedia tiếng Trung TRƯỚC (tra theo chính Hán tự nên không phải đoán
-    // nghĩa), Commons chỉ là dự phòng — xem searchWikipediaImage().
-    const query = word.meaningEn ? imageQueryFrom(word.meaningEn) : null;
-    const imageUrl =
-      (await searchWikipediaImage(word.simplified)) ??
-      (query ? await searchCommonsImage(query) : null);
-    if (!imageUrl) return word;
-    await this.words.update(word.id, { imageUrl }).catch(() => undefined);
-    return { ...word, imageUrl };
-  }
-
   async list(query: WordQueryDto): Promise<Paginated<unknown>> {
     if (query.q?.trim() && !query.lessonId && !query.needsReview)
       return this.search(query);
@@ -178,7 +142,7 @@ export class WordsService {
     return paginate(items, total, query);
   }
 
-  /** 1 từ kèm câu ví dụ + ảnh — dùng cho "Từ vựng hôm nay" (`ofTheDay`). Route GET /words/:id đã xoá
+  /** 1 từ kèm câu ví dụ — dùng cho "Từ vựng hôm nay" (`ofTheDay`). Route GET /words/:id đã xoá
    * 2026-10-27 (không giao diện nào gọi; trang từ dùng `lookup()` qua /dictionary/:slug). */
   private async get(id: string) {
     const word = await this.words.findOne({
@@ -187,7 +151,7 @@ export class WordsService {
       order: { examples: { orderIndex: 'ASC' } },
     });
     if (!word) throw new NotFoundException('Không tìm thấy từ');
-    return this.attachImage(word);
+    return word;
   }
 
   /** Thống kê công khai cho trang chủ (chưa đăng nhập) — "bạn đã biết trước
@@ -206,9 +170,7 @@ export class WordsService {
    * gì", "âm Hán Việt của 时间"). Trước đây toàn bộ 10.9k từ nằm sau đăng
    * nhập nên hoàn toàn vô hình với công cụ tìm kiếm.
    *
-   * Trả về MẢNG vì 1 Hán tự có thể ứng với nhiều mục từ khác pinyin (đa âm).
-   * KHÔNG gọi attachImage() — trang công khai có thể bị bot quét hàng loạt,
-   * không nên kéo theo hàng nghìn request sang Wikimedia. */
+   * Trả về MẢNG vì 1 Hán tự có thể ứng với nhiều mục từ khác pinyin (đa âm). */
   async lookup(slug: string) {
     const words = await this.words.find({
       where: { simplified: slug },

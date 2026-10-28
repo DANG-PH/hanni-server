@@ -42,6 +42,13 @@ bản sao lưu trước khi chạy: `/root/backups/hanni-truoc-don-bang-20261028
     EXPIRED → huỷ đơn; link cũ không có hạn mà PENDING quá hạn + 5 phút thì `syncOrder` gọi `payos.cancelPaymentLink()` rồi xử lý theo
     trạng thái payOS trả về (PAID đúng lúc tiền về → vẫn cộng Premium). 3 test mới trong `payments.service.spec.ts`.
   - Server: 181 test, 126 route REST (29 module tính năng + health). Đã chạy lại migration trên bản sao cấu trúc production: khớp 42 entity.
+- **Đợt 3 (cùng ngày, user: "tính năng xàm, trang trí, tác dụng không nhiều thì bỏ")**: gỡ **ảnh minh hoạ từ vựng** — đo 60 ảnh của từ
+  HSK 1–3 (API công khai) thì khoảng một nửa sai nghĩa (妈妈 → tranh "Placid death", 哥哥 → logo Big Brother, 雪 → bản đồ đường đi bão,
+  可能 → chân dung Richelieu "probably") mà ảnh hiện ngay ở thẻ giới thiệu từ + flashcard. Xoá `word-image.util.ts`, `attachImage()` (tự
+  gọi Wikipedia/Commons khi mở "Từ vựng hôm nay"), `scripts/fetch-word-images.ts`, `imageUrl` ở select phiên học/video, cột
+  `Word.imageUrl` (migration `1792710000000-DropWordImageUrl`, chạy 2 lần trên PGlite: không lỗi, cột khác giữ nguyên). Rà lại toàn server
+  sau đợt này: export không ai dùng 0 (86 mục báo ra chỉ là kiểu/hằng dùng trong chính file), cột không ai đọc/ghi 0 (15 mục báo ra là
+  quan hệ 2 chiều TypeORM), route không giao diện nào gọi đúng 5 cố ý, 0 vòng import giữa module/service (46 vòng chỉ giữa entity).
 
 ## Stack
 - NestJS 11 + TypeScript (CommonJS, `module: nodenext`)
@@ -351,7 +358,7 @@ class có chú thích tiếng Việt từng cột thay vì 1 file `schema.prisma
   UTC), giống nhau cho mọi user, không lưu DB — xoay vòng theo `frequencyRank` (chỉ từ có nghĩa
   + có `frequencyRank`, tránh rơi vào từ hiếm) bằng `dayIndex % tổng số từ hợp lệ`. `?level=`
   (từ 2026-10-17) giới hạn đúng cấp đang học — trước đó người HSK 1 nhận cả từ HSK 4.
-- **Ảnh minh hoạ từ vựng** (`word-image.util.ts`, `WordsService.attachImage()`, từ 2026-09-18) —
+- **[LỊCH SỬ — ĐÃ GỠ 2026-10-28, xem "Dọn cơ sở dữ liệu" Đợt 3] Ảnh minh hoạ từ vựng** (`word-image.util.ts`, `WordsService.attachImage()`, từ 2026-09-18) —
   research xác nhận KHÔNG có dataset ảnh mở nào sẵn có cho từ vựng HSK (giống tình huống dataset
   hội thoại trước đó). Giải pháp: lấy DẦN qua **Wikimedia Commons** (API tìm kiếm, `action=query
   &generator=search&gsrnamespace=6` kết hợp `prop=imageinfo`) — **KHÔNG cần đăng ký API key**

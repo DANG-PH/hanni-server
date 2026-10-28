@@ -63,7 +63,6 @@ export class LessonSessionService {
           meaningVi: true,
           meaningEn: true,
           audioUrl: true,
-          imageUrl: true,
           mnemonicVi: true,
           pos: true,
         },

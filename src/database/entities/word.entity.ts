@@ -108,14 +108,6 @@ export class Word {
   audioUrl!: string | null;
 
   /**
-   * ảnh minh hoạ — lấy dần từ Pexels (chỉ danh từ cụ thể), cache lại chứ
-   * không tự lấy lại; null = chưa lấy HOẶC không hợp để lấy (hư từ, PEXELS
-   * chưa cấu hình...). Xem WordsService.getOrFetchImage().
-   */
-  @Column({ type: 'text', nullable: true })
-  imageUrl!: string | null;
-
-  /**
    * mẹo nhớ theo âm Hán Việt do AI viết — tạo 1 lần khi có người bấm "Tạo mẹo
    * nhớ" rồi dùng chung cho mọi người (xem src/modules/ai-tools)
    */
