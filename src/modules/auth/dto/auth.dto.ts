@@ -61,7 +61,7 @@ export class VerifyEmailDto {
 }
 
 export class GoogleLoginDto {
-  /** id_token do frontend lấy qua Google Identity Services */
+  /** id_token do web (Google Identity Services) hoặc mobile (Google Sign-In) lấy */
   @IsString()
   @MinLength(20)
   idToken!: string;

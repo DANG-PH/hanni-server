@@ -52,6 +52,26 @@ Sau bước này, mọi push lên `main` sẽ tự động: lint + test + build 
 `node dist/src/database/migrate.js` (migration TypeORM) → `pm2 restart hanni-server --update-env` → chờ
 `/api/health`. Không cần lặp lại các bước thủ công ở trên.
 
+## Audience Google cho ứng dụng Hanni mobile
+
+`POST /api/auth/google` dùng chung cho web và mobile, body `{ "idToken": "..." }`.
+Server kiểm chữ ký, issuer, thời hạn và audience bằng `google-auth-library`; token không hợp lệ trả HTTP 401.
+
+Giữ `GOOGLE_CLIENT_ID` hiện tại của web Hanni. Thêm dòng sau vào `.env` **trên VPS**:
+
+```dotenv
+GOOGLE_MOBILE_CLIENT_IDS=977963570920-h0qat6jqr0j309m1326blhmu7516g0rj.apps.googleusercontent.com
+```
+
+Đây là OAuth client loại Web application dùng làm server client ID của Android, bằng
+`EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` trong app. Không dùng Desktop client ID của game.
+Nhiều audience mobile (ví dụ thêm iOS) phân tách bằng dấu phẩy. Sau khi deploy code, chạy
+`pm2 restart hanni-server --update-env`. File `.env.production.local` trên máy dev chỉ là bản cấu hình để copy;
+CI không tự đồng bộ các biến này lên VPS.
+
+Google Cloud còn cần client loại Android trong cùng project, khai package `com.hanni.app` + SHA-1 đúng khóa ký
+APK. Xem `hanni-mobile/.env.example` và README mobile để cấu hình EAS và kiểm thử trên thiết bị.
+
 ## Domain backend: đang chuyển từ `api.hanni.dangpham.id.vn` sang `hanni-api.dangpham.id.vn`
 
 `api.hanni.dangpham.id.vn` (2 cấp con: `api` + `hanni`) không bao giờ hoạt động được vì

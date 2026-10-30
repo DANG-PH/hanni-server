@@ -30,7 +30,9 @@ export const envSchema = z.object({
     .transform((v) => v === 'true'),
 
   // Chỉ cần Client ID (công khai) — luồng verify id_token không dùng client secret.
-  GOOGLE_CLIENT_ID: z.string().min(1),
+  GOOGLE_CLIENT_ID: z.string().trim().min(1),
+  // Web server client ID của Android và client ID iOS; phân tách bằng dấu phẩy.
+  GOOGLE_MOBILE_CLIENT_IDS: z.string().default(''),
 
   MAIL_HOST: z.string().default(''),
   MAIL_PORT: z.coerce.number().int().default(587),
