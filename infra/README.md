@@ -58,6 +58,17 @@ scripts/do-gian-doan.sh k6/ket-qua/su-co.csv   # cửa sổ 1: dò mỗi giây, 
 scripts/chaos.sh api                           # cửa sổ 2: api, redis, db, node, node-back
 ```
 
+## Chạy thử các giải pháp cho quy mô lớn hơn
+
+```bash
+scripts/failover.sh            # mất leader: đưa bản sao lên, in thời gian và số dòng mất. Xong phải make down để dựng lại
+scripts/pitr.sh                # khôi phục theo thời điểm từ bản sao vật lý + WAL
+scripts/do-phan-manh.sh        # sinh 1 triệu dòng ReviewLog giả, đo truy vấn trước và sau khi chia theo tháng
+scripts/k6.sh dang-nhap.js -e PASS=... -e RATE=5   # đăng nhập đồng loạt
+```
+
+`kb3-thi-thu.js` cứ 10 lượt gửi lại 1 lần với cùng `Idempotency-Key`. Sau khi chạy, số dòng `MockExamAttempt` phải bằng số người, không bằng số request.
+
 ## Sao lưu, khôi phục
 
 ```bash
@@ -76,6 +87,9 @@ Mặc định giữ nguyên hành vi 1 tiến trình như trên VPS, đặt ở 
 | `TRUST_PROXY` | `10.42.0.0/16` | Tin ingress để lấy đúng IP khách |
 | `METRICS_ENABLED` | `true` | Bật `/api/metrics` và log JSON. Ingress chặn đường này từ ngoài |
 | `DB_POOL_MAX` | `10` | Số kết nối tối đa mỗi bản |
+| `DATABASE_REPLICA_URL` | qua PgBouncer đọc | Truy vấn gọi `onReplica()` đọc từ bản sao, còn lại về leader |
+| `CRON_LEASE` | `true` | Nhiều worker, mỗi chu kỳ cron chỉ 1 bản làm |
+| `OUTBOX_ENABLED` | `true` | Việc phụ sau khi nộp bài đi qua outbox, do worker làm |
 | `RESOURCES_MANIFEST`, `RESOURCE_BASE_URL`, `RESOURCE_LINK_SECRET` | | Danh sách học liệu và ký liên kết có hạn |
 
 ## Giới hạn

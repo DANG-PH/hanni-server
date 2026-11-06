@@ -6,6 +6,7 @@ resources:
   - namespace.yaml
   - prometheus.yaml
   - alertmanager.yaml
+  - blackbox.yaml
   - kube-state-metrics.yaml
   - loki.yaml
   - alloy.yaml

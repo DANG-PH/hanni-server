@@ -7,6 +7,14 @@ data:
     -- PgBouncer bỏ qua tham số options lúc kết nối nên múi giờ phải đặt ở vai trò, không đặt ở phía app.
     ALTER ROLE hanni SET timezone = 'UTC';
     CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+  20-replication.sh: |
+    #!/bin/sh
+    # Vai trò riêng chỉ để sao chép, và slot giữ WAL cho bản sao. Dòng pg_hba có hiệu lực khi Postgres khởi động thật.
+    set -e
+    psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+      -c "CREATE ROLE replicator WITH REPLICATION LOGIN PASSWORD '$REPLICATION_PASSWORD'" \
+      -c "SELECT pg_create_physical_replication_slot('hanni_replica')"
+    echo 'host replication replicator all scram-sha-256' >> "$PGDATA/pg_hba.conf"
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -42,6 +50,15 @@ spec:
             - shared_preload_libraries=pg_stat_statements
             - -c
             - log_min_duration_statement=500
+            # WAL lưu ra ngoài để khôi phục theo thời điểm. Tối đa 60 giây lại đóng 1 đoạn, đó là RPO.
+            - -c
+            - archive_mode=on
+            - -c
+            - archive_command=test ! -f /wal-archive/%f && cp %p /wal-archive/%f
+            - -c
+            - archive_timeout=60
+            - -c
+            - max_slot_wal_keep_size=512MB
           ports:
             - name: postgres
               containerPort: 5432
@@ -55,11 +72,18 @@ spec:
                 secretKeyRef:
                   name: hanni-secrets
                   key: POSTGRES_PASSWORD
+            - name: REPLICATION_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hanni-secrets
+                  key: REPLICATION_PASSWORD
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
+            - name: wal-archive
+              mountPath: /wal-archive
             - name: init
               mountPath: /docker-entrypoint-initdb.d
               readOnly: true
@@ -108,6 +132,13 @@ spec:
   volumeClaimTemplates:
     - metadata:
         name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 2Gi
+    - metadata:
+        name: wal-archive
       spec:
         accessModes: [ReadWriteOnce]
         resources:

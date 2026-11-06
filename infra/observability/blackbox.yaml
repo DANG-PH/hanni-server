@@ -1,0 +1,67 @@
+# Dò từ phía người dùng, đi qua ingress như 1 khách thật. Số đo trong API không thấy được lúc mất hết pod, vì khi đó không
+# còn tiến trình nào để đếm lỗi. Đây là SLI gần người dùng nhất mà lab đo được.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blackbox-config
+data:
+  blackbox.yml: |
+    modules:
+      api_ready:
+        prober: http
+        timeout: 5s
+        http:
+          preferred_ip_protocol: ip4
+          valid_status_codes: [200]
+          headers:
+            Host: api.hanni.localhost
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blackbox
+  labels:
+    app: blackbox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: blackbox
+  template:
+    metadata:
+      labels:
+        app: blackbox
+    spec:
+      containers:
+        - name: blackbox
+          image: prom/blackbox-exporter:v0.26.0
+          args: [--config.file=/etc/blackbox/blackbox.yml]
+          ports:
+            - name: http
+              containerPort: 9115
+          volumeMounts:
+            - name: config
+              mountPath: /etc/blackbox
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 48Mi
+      volumes:
+        - name: config
+          configMap:
+            name: blackbox-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blackbox
+spec:
+  selector:
+    app: blackbox
+  ports:
+    - name: http
+      port: 9115
+      targetPort: http

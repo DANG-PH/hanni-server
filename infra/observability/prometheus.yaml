@@ -83,6 +83,20 @@ data:
           - source_labels: [namespace]
             action: keep
             regex: hanni
+      # Dò từ ngoài vào qua ingress: còn thấy được khi mọi pod API đã chết.
+      - job_name: blackbox
+        metrics_path: /probe
+        params:
+          module: [api_ready]
+        static_configs:
+          - targets: [http://traefik.kube-system.svc/api/health/ready]
+        relabel_configs:
+          - source_labels: [__address__]
+            target_label: __param_target
+          - source_labels: [__param_target]
+            target_label: instance
+          - target_label: __address__
+            replacement: blackbox:9115
       - job_name: kube-state-metrics
         static_configs:
           - targets: [kube-state-metrics:8080]

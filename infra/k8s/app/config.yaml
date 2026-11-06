@@ -19,6 +19,10 @@ data:
   # Ingress nằm trong dải IP pod của k3s: không tin dải này thì mọi khách đều mang IP của Traefik.
   TRUST_PROXY: 10.42.0.0/16
   METRICS_ENABLED: "true"
+  # 2 worker cùng chạy: mỗi chu kỳ cron chỉ 1 bản làm.
+  CRON_LEASE: "true"
+  # Việc phụ sau khi nộp bài do worker làm, nộp bài chỉ còn 1 giao dịch.
+  OUTBOX_ENABLED: "true"
   # 10 kết nối/bản API × tối đa 6 bản + 10 của worker = 70 khách tới PgBouncer, PgBouncer gom về 20 kết nối thật.
   DB_POOL_MAX: "10"
   RESOURCES_MANIFEST: /etc/hanni/resources/manifest.json

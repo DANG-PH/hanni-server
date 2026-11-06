@@ -5,6 +5,7 @@ namespace: hanni
 resources:
   - namespace.yaml
   - data/postgres.yaml
+  - data/postgres-replica.yaml
   - data/pgbouncer.yaml
   - data/redis.yaml
   - app/config.yaml

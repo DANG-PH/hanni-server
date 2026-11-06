@@ -48,7 +48,7 @@ spec:
     matchExpressions:
       - key: app
         operator: In
-        values: [hanni-pgbouncer, hanni-redis]
+        values: [hanni-pgbouncer, hanni-pgbouncer-ro, hanni-redis]
   ingress:
     - from:
         - podSelector:
@@ -74,3 +74,24 @@ spec:
         - podSelector:
             matchLabels:
               app: hanni-backup
+        - podSelector:
+            matchLabels:
+              app: hanni-postgres-replica
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-postgres-replica
+spec:
+  podSelector:
+    matchLabels:
+      app: hanni-postgres-replica
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: hanni-pgbouncer-ro
+        # Lúc diễn tập failover, PgBouncer ghi trỏ sang đây.
+        - podSelector:
+            matchLabels:
+              app: hanni-pgbouncer

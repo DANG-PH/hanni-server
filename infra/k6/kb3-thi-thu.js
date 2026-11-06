@@ -1,6 +1,7 @@
 // KB3 thi thử đồng loạt: USERS người mở đề trong 60 giây, nghỉ, rồi nộp bài trong 30 giây. Đây là đợt ghi nặng nhất.
 // Mặc định 600 người theo bảng tính: 10 req/s mở đề, 20 req/s nộp bài. GAP là quãng nghỉ thay cho thời gian làm bài.
 //   docker run ... grafana/k6 run -e USERS=600 /k6/kb3-thi-thu.js
+import { check } from 'k6';
 import { get, post, ok, session, SLO_THRESHOLDS } from './lib.js';
 
 const USERS = Number(__ENV.USERS || 600);
@@ -38,7 +39,7 @@ export function setup() {
   const list = Array.isArray(exams) ? exams : exams.items || exams.exams;
   const slug = list.find((e) => e.level === 1).slug;
   const paper = get(`/mock-exams/${slug}`).json();
-  return { slug, total: paper.totalQuestions || 40 };
+  return { slug, total: paper.totalQuestions || 40, run: Date.now() };
 }
 
 export function openPaper(data) {
@@ -47,11 +48,19 @@ export function openPaper(data) {
 
 export function submit(data) {
   const answers = Array.from({ length: data.total }, () => Math.floor(Math.random() * 3));
-  const res = post(
-    `/mock-exams/${data.slug}/submit`,
-    { answers, durationSec: 2000 },
-    { ...session(), tags: { kind: 'write' } },
-    '/mock-exams/:slug/submit',
-  );
-  ok(res, 'nộp bài', 201);
+  const s = session();
+  const params = {
+    ...s,
+    headers: { ...s.headers, 'Idempotency-Key': `${data.run}-${__VU}-${__ITER}` },
+    tags: { kind: 'write' },
+  };
+  const send = () => post(`/mock-exams/${data.slug}/submit`, { answers, durationSec: 2000 }, params, '/mock-exams/:slug/submit');
+  const first = send();
+  ok(first, 'nộp bài', 201);
+  // Cứ 10 lượt có 1 lượt gửi lại như mạng chập chờn: số dòng trong CSDL phải bằng số người, không bằng số request.
+  if (__ITER % 10 === 0) {
+    const again = send();
+    ok(again, 'gửi lại', 201);
+    check(again, { 'gửi lại ra đúng lượt cũ': (r) => r.json('attemptId') === first.json('attemptId') });
+  }
 }

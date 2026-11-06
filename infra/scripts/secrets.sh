@@ -15,6 +15,8 @@ if ! kubectl -n hanni get secret hanni-secrets >/dev/null 2>&1; then
     --from-literal=POSTGRES_PASSWORD="$pg" \
     --from-literal=DATABASE_URL="postgresql://hanni:$pg@hanni-pgbouncer:5432/hanni" \
     --from-literal=DATABASE_URL_DIRECT="postgresql://hanni:$pg@hanni-postgres:5432/hanni" \
+    --from-literal=DATABASE_REPLICA_URL="postgresql://hanni:$pg@hanni-pgbouncer-ro:5432/hanni" \
+    --from-literal=REPLICATION_PASSWORD="$(rand)" \
     --from-literal=REDIS_URL="redis://hanni-redis:6379" \
     --from-literal=JWT_ACCESS_SECRET="$(rand)" \
     --from-literal=JWT_REFRESH_SECRET="$(rand)" \

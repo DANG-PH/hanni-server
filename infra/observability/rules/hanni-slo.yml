@@ -64,6 +64,27 @@ groups:
           severity: page
         annotations:
           summary: Không còn bản API nào trả lời
+      - alert: HanniEdgeDown
+        expr: avg_over_time(probe_success{job="blackbox"}[1m]) < 0.5
+        for: 30s
+        labels:
+          severity: page
+        annotations:
+          summary: Từ ngoài vào không gọi được API
+      - alert: HanniReplicationLagHigh
+        expr: pg_replication_lag_seconds{app="hanni-postgres-replica"} > 30
+        for: 2m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "Bản sao đọc trễ {{ $value | humanizeDuration }}, mất leader lúc này sẽ mất phần dữ liệu đó"
+      - alert: HanniOutboxBacklog
+        expr: max(outbox_pending) > 500
+        for: 5m
+        labels:
+          severity: ticket
+        annotations:
+          summary: Worker không theo kịp việc sau khi nộp bài
       - alert: HanniHpaAtMax
         expr: kube_horizontalpodautoscaler_status_current_replicas{horizontalpodautoscaler="hanni-api"} >= kube_horizontalpodautoscaler_spec_max_replicas{horizontalpodautoscaler="hanni-api"}
         for: 5m
