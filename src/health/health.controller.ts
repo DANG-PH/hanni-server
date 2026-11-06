@@ -1,5 +1,6 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { Public } from '../common/decorators/public.decorator';
@@ -14,14 +15,37 @@ import { RedisService } from '../infra/redis/redis.service';
  * GET       /health  [khách]      Không phải giao diện: GitHub Actions (uptime.yml) + bước deploy gọi để biết DB +
  *                                 Redis còn sống
  *                                 → check()
+ * GET       /health/live  [khách] Không phải giao diện: Kubernetes liveness probe. Chỉ báo tiến trình còn sống,
+ *                                 KHÔNG hỏi DB/Redis — DB chết mà khởi động lại API cũng không giúp gì, còn làm tệ hơn
+ *                                 → live()
+ * GET       /health/ready  [khách] Không phải giao diện: Kubernetes readiness probe. 503 khi không tới được CSDL để
+ *                                 ngừng nhận request; Redis lỗi vẫn sẵn sàng vì Redis chỉ giữ dữ liệu dựng lại được
+ *                                 → ready()
  */
+// Probe không đi qua giới hạn request: giới hạn phụ thuộc Redis, mà Redis lỗi không được kéo theo pod "chưa sẵn sàng".
 @ApiTags('health')
+@SkipThrottle()
 @Controller('health')
 export class HealthController {
   constructor(
     @InjectDataSource() private readonly db: DataSource,
     private readonly redis: RedisService,
   ) {}
+
+  @Public()
+  @Get('live')
+  live() {
+    return { status: 'ok' };
+  }
+
+  @Public()
+  @Get('ready')
+  async ready() {
+    await this.db.query('SELECT 1').catch(() => {
+      throw new ServiceUnavailableException('Chưa sẵn sàng');
+    });
+    return { status: 'ok' };
+  }
 
   @Public()
   @Get()

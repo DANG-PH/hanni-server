@@ -52,6 +52,27 @@ export const envSchema = z.object({
 
   THROTTLE_TTL: z.coerce.number().int().positive().default(60),
   THROTTLE_LIMIT: z.coerce.number().int().positive().default(100),
+  // `ip`: như cũ, đếm theo IP trong bộ nhớ tiến trình. `user`: đã đăng nhập thì đếm theo tài khoản, bộ đếm ở
+  // Redis — cả phòng máy chung 1 IP không bị chặn oan, chạy nhiều tiến trình vẫn đếm chung 1 chỗ.
+  THROTTLE_SCOPE: z.enum(['ip', 'user']).default('ip'),
+
+  // `all`: 1 tiến trình làm cả API lẫn cron (VPS hiện tại). Chạy nhiều bản sao thì tách: nhiều `api` + đúng 1
+  // `worker`, nếu không cron chạy trùng theo số bản sao.
+  APP_ROLE: z.enum(['all', 'api', 'worker']).default('all'),
+  // Bật GET /metrics (Prometheus) và nhật ký JSON từng request. Route này không mở ra ngoài ingress.
+  METRICS_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  DB_POOL_MAX: z.coerce.number().int().positive().default(10),
+
+  // Học liệu: danh sách ở tệp JSON, tệp do Nginx phục vụ qua liên kết có chữ ký. Để trống thì GET /resources trả rỗng.
+  /** Đằng trước API là ai: VPS là Nginx cùng máy (loopback), k8s là ingress trong dải IP của pod. */
+  TRUST_PROXY: z.string().default('loopback'),
+  RESOURCES_MANIFEST: z.string().default(''),
+  RESOURCE_BASE_URL: z.string().default(''),
+  RESOURCE_LINK_SECRET: z.string().default(''),
+  RESOURCE_LINK_TTL_SEC: z.coerce.number().int().positive().default(600),
 
   AUDIO_BASE_URL: z.string().default(''),
 

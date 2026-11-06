@@ -55,6 +55,10 @@ export function databaseOptions(url: string): DataSourceOptions {
     logging: ['error'],
     // `where: { x: null }` = "x IS NULL" như Prisma. Mặc định TypeORM BỎ QUA null → khớp mọi dòng.
     invalidWhereValuesBehavior: { null: 'sql-null', undefined: 'ignore' },
-    extra: { options: '-c TimeZone=UTC' },
+    extra: {
+      options: '-c TimeZone=UTC',
+      // Mặc định của pg-pool cũng là 10; đặt rõ để lab đổi được và đo được hàng chờ pool.
+      max: Number(process.env.DB_POOL_MAX ?? 10),
+    },
   };
 }

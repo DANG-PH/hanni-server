@@ -2,6 +2,25 @@
 
 API học tiếng Trung theo chuẩn **HSK 3.0** (9 cấp). Xem `README.md` cho tổng quan.
 
+## Chạy nhiều bản + lab k3s (2026-11-06, nhánh `feat/scaling`, CHƯA gộp `main`)
+User: "cần k3s hay k8s auto scaling thì làm luôn", "tích hợp grafana, loki, jaeger", "dùng hết dựa vào docker". Môn học cần số đo tải; VPS 2 vCPU,
+3,8 GB, swap gần đầy nên **KHÔNG cài k3s lên VPS** (riêng server k3s ~650 MB), production vẫn pm2. Lab: `infra/` chỉ cần Docker (k3s theo compose
+chính thức, `kubectl` qua `infra/scripts/kubectl`, k6/ffmpeg/python đều chạy container). Cách dựng ở `infra/README.md`, đã thử trọn `make` từ đầu.
+- **Biến mới, mặc định giữ nguyên hành vi 1 tiến trình**: `APP_ROLE` (`api` thì không nạp `ScheduleModule`; cron không có khoá nên đúng 1 worker),
+  `THROTTLE_SCOPE=user` (`UserThrottlerGuard` đếm theo `sub` trong cookie, `RedisThrottlerStorage` đếm trong Redis), `TRUST_PROXY`, `METRICS_ENABLED`
+  (`/api/metrics` + log JSON có `traceId` khi được lấy mẫu; nhãn `route` là mẫu đường dẫn), `DB_POOL_MAX`, `RESOURCE*`.
+- **Health**: `/health` luôn 200 (giữ cho uptime.yml), `/health/live` chỉ tiến trình, `/health/ready` 503 khi mất CSDL. Controller có `@SkipThrottle`.
+- **Redis lỗi không thành sự cố**: `RedisThrottlerStorage` chờ tối đa 150 ms rồi cho qua. Diễn tập trước khi sửa: mất Redis làm API gián đoạn 6 giây
+  vì request và probe cùng chờ Redis; sau khi sửa 0 lỗi.
+- **Học liệu** `src/modules/resources/`: API chỉ ký liên kết, Nginx `secure_link` kiểm chữ ký. Chữ ký nằm trong ĐƯỜNG DẪN và ký theo THƯ MỤC để HLS tải đoạn
+  bằng đường dẫn tương đối: `base64url(md5(expires + "/" + dir + " " + secret))`.
+- **Bẫy đã gặp**: PgBouncer bỏ `options` nên `timezone=UTC` đặt bằng `ALTER ROLE`; Socket.IO long-polling cần cookie dính pod (Service `hanni-api-ws`);
+  `@opentelemetry/api` của app và SDK phải cùng bản, app mới hơn thì nhận bản rỗng, log mất `traceId` mà không báo lỗi; không khai `replicas` ở Deployment có HPA;
+  NetworkPolicy của pod mới cần vài giây mới có hiệu lực nên Job phải chờ CSDL; `.ts` đoạn HLS trong `infra/media/out` làm tsc hỏng nên tsconfig loại `infra`;
+  k3s khởi động lỗi giữa chừng thì `make down` dựng lại, không sửa tại chỗ.
+- **Chưa xử lý**: giới hạn đăng nhập 10/phút vẫn theo IP (cả phòng máy đăng nhập cùng lúc sẽ 429); ảnh đại diện trên đĩa riêng; SLI đo ở API nên mất hết pod thì không đếm được;
+  Postgres gắn 1 node. Số chạy thử 06/11 ở `tai-lieu-RIPT1304/ket-qua-chay-thu-lab/`, chỉ để kiểm tra cấu hình.
+
 ## Dọn cơ sở dữ liệu (2026-10-28 — user: "cắt hoặc gộp các bảng thừa, logic không dùng", "check các field trong entity")
 Còn **42 bảng**, bảng/cột nào cũng có code đọc hoặc ghi thật. Migration `1792700000000-DropUnusedTables` (KHÔNG hoàn tác —
 bản sao lưu trước khi chạy: `/root/backups/hanni-truoc-don-bang-20261028-0120.dump` trên VPS):

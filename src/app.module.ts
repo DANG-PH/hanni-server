@@ -4,12 +4,16 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ServeStaticModule } from '@nestjs/serve-static';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { join } from 'node:path';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { UserThrottlerGuard } from './common/guards/user-throttler.guard';
 import { validateEnv } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
+import { MetricsModule } from './infra/metrics/metrics.module';
+import { RedisThrottlerStorage } from './infra/redis/redis-throttler.storage';
+import { RedisService } from './infra/redis/redis.service';
 import { RedisModule } from './infra/redis/redis.module';
 import { AssistantModule } from './modules/assistant/assistant.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -38,6 +42,7 @@ import { PushModule } from './modules/push/push.module';
 import { QuestsModule } from './modules/quests/quests.module';
 import { ReferralsModule } from './modules/referrals/referrals.module';
 import { RoleplayModule } from './modules/roleplay/roleplay.module';
+import { ResourcesModule } from './modules/resources/resources.module';
 import { ScanModule } from './modules/scan/scan.module';
 import { SrsModule } from './modules/srs/srs.module';
 import { UsersModule } from './modules/users/users.module';
@@ -70,6 +75,8 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
  *   /partners                     → partners/        form liên hệ "Dành cho giáo viên"
  *   /assistant                    → assistant/       trợ lý AI (RAG + Gemini, trả lời dạng stream)
  *   /roleplay                     → roleplay/        luyện nói với AI theo tình huống
+ *   /resources                    → resources/       học liệu tải về: cấp liên kết có hạn, tệp do Nginx/CDN phục vụ
+ *   /metrics                      → infra/metrics/   số đo cho Prometheus (chỉ bật khi METRICS_ENABLED=true)
  *   /ai                         ★ → ai-tools/        mẹo nhớ, chấm câu, phân tích câu, bài đọc AI
  *   /scan                         → scan/            quét ảnh học từ (Gemini vision)
  *   /payments /premium            → payments/ premium/  thanh toán payOS + MoMo (đơn hàng ở payments.service.ts,
@@ -103,6 +110,8 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
  *                                (7 ngày đối soát) · mã kết quả MoMo:
  *                                payments/momo.util.ts MOMO_PENDING_CODES / MOMO_FAILED_CODES
  *   Biến môi trường (.env)       config/env.validation.ts — THROTTLE_LIMIT, STREAK_DAY_CUTOFF_HOUR, khoá payOS/MoMo/Gemini…
+ *   Chạy nhiều bản (k8s)         APP_ROLE=api tắt việc định kỳ · THROTTLE_SCOPE=user đếm theo người dùng trong Redis ·
+ *                                DB_POOL_MAX · METRICS_ENABLED — mặc định giữ nguyên hành vi 1 tiến trình như trên VPS
  */
 @Module({
   imports: [
@@ -112,7 +121,8 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
       validate: validateEnv,
     }),
     EventEmitterModule.forRoot(),
-    ScheduleModule.forRoot(),
+    // API chạy nhiều bản: chỉ 1 worker chạy việc định kỳ, các bản API tắt để không làm trùng (6 @Cron không có khoá phân tán).
+    ...(process.env.APP_ROLE === 'api' ? [] : [ScheduleModule.forRoot()]),
     // Phục vụ file audio phát âm: /media/audio/cmn-<hán tự>.mp3
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'assets', 'audio'),
@@ -125,7 +135,13 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
       serveStaticOptions: { maxAge: '7d', fallthrough: true },
     }),
     ThrottlerModule.forRootAsync({
-      useFactory: () => ({
+      inject: [RedisService],
+      useFactory: (redis: RedisService) => ({
+        // Đếm trong Redis thì mọi bản API thấy chung 1 bộ đếm; để mặc định (RAM) mỗi bản đếm riêng.
+        storage:
+          process.env.THROTTLE_SCOPE === 'user'
+            ? new RedisThrottlerStorage(redis.client)
+            : undefined,
         throttlers: [
           {
             ttl: Number(process.env.THROTTLE_TTL ?? 60) * 1000,
@@ -168,9 +184,11 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
     ClassroomsModule,
     PartnersModule,
     HealthModule,
+    MetricsModule,
+    ResourcesModule,
   ],
   providers: [
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: UserThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

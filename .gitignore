@@ -69,3 +69,8 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Cache runtime tự sinh lại được (vd index RAG của trợ lý AI) — không commit.
 /.cache/
+
+# Kiểm thử tải trên lab
+tokens.json
+infra/media/out/
+infra/k6/ket-qua/
