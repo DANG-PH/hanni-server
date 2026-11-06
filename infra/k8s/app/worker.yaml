@@ -1,0 +1,70 @@
+# Worker chạy 6 việc định kỳ (nhắc học, giải đấu tuần, đối soát đơn...). Cron trong app không có khoá phân tán nên
+# phải đúng 1 bản: Recreate để bản cũ dừng hẳn rồi bản mới mới chạy, không bao giờ có 2 bản cùng lúc.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hanni-worker
+  labels:
+    app: hanni-worker
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: hanni-worker
+  template:
+    metadata:
+      labels:
+        app: hanni-worker
+        tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: /api/metrics
+    spec:
+      containers:
+        - name: worker
+          image: hanni-api:lab
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: hanni-env
+            - secretRef:
+                name: hanni-secrets
+          env:
+            - name: APP_ROLE
+              value: worker
+            - name: OTEL_SERVICE_NAME
+              value: hanni-worker
+            - name: NODE_OPTIONS
+              value: --require /otel/tracing.js --max-old-space-size=256
+          volumeMounts:
+            - name: resources
+              mountPath: /etc/hanni/resources
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 180Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+          startupProbe:
+            httpGet:
+              path: /api/health/live
+              port: http
+            periodSeconds: 3
+            failureThreshold: 40
+          livenessProbe:
+            httpGet:
+              path: /api/health/live
+              port: http
+            periodSeconds: 15
+      volumes:
+        - name: resources
+          configMap:
+            name: hanni-resources

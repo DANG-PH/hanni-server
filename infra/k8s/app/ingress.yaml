@@ -1,0 +1,42 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hanni
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: api.hanni.localhost
+      http:
+        paths:
+          # /api/metrics chỉ dành cho Prometheus trong cụm. Đẩy sang media để nhận 404 thay vì lộ số đo ra ngoài.
+          - path: /api/metrics
+            pathType: Exact
+            backend:
+              service:
+                name: hanni-media
+                port:
+                  name: http
+          - path: /socket.io
+            pathType: Prefix
+            backend:
+              service:
+                name: hanni-api-ws
+                port:
+                  name: http
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hanni-api
+                port:
+                  name: http
+    - host: media.hanni.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hanni-media
+                port:
+                  name: http

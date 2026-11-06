@@ -1,0 +1,15 @@
+{
+  "name": "hanni-otel-preload",
+  "private": true,
+  "description": "Nạp bằng NODE_OPTIONS=--require /otel/tracing.js, chỉ có trong image.",
+  "dependencies": {
+    "@opentelemetry/api": "1.9.0",
+    "@opentelemetry/exporter-trace-otlp-http": "0.57.2",
+    "@opentelemetry/instrumentation-express": "0.47.1",
+    "@opentelemetry/instrumentation-http": "0.57.2",
+    "@opentelemetry/instrumentation-ioredis": "0.47.1",
+    "@opentelemetry/instrumentation-nestjs-core": "0.44.1",
+    "@opentelemetry/instrumentation-pg": "0.51.1",
+    "@opentelemetry/sdk-node": "0.57.2"
+  }
+}

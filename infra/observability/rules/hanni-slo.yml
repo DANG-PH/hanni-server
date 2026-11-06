@@ -1,0 +1,101 @@
+# SLO của Hanni: lỗi 5xx dưới 0,5% (độ sẵn sàng 99,5%), đọc p95 < 300 ms, ghi p95 < 500 ms.
+# Cảnh báo theo TỐC ĐỘ TIÊU NGÂN SÁCH LỖI, nhiều cửa sổ (Google SRE Workbook, chương 5): cửa sổ dài chứng minh sự cố
+# đáng kể, cửa sổ ngắn chứng minh nó vẫn đang diễn ra, nên báo sớm mà hết lỗi là tắt ngay.
+groups:
+  - name: hanni-ghi-san
+    rules:
+      # Chưa từng có lỗi 5xx thì chuỗi đó không tồn tại: `or vector(0)` để tỉ lệ ra 0 thay vì không có dữ liệu.
+      - record: hanni:http_requests:rate5m
+        expr: sum(rate(http_server_duration_seconds_count[5m]))
+      - record: hanni:http_error_ratio:rate5m
+        expr: (sum(rate(http_server_duration_seconds_count{status=~"5.."}[5m])) or vector(0)) / sum(rate(http_server_duration_seconds_count[5m]))
+      - record: hanni:http_error_ratio:rate30m
+        expr: (sum(rate(http_server_duration_seconds_count{status=~"5.."}[30m])) or vector(0)) / sum(rate(http_server_duration_seconds_count[30m]))
+      - record: hanni:http_error_ratio:rate1h
+        expr: (sum(rate(http_server_duration_seconds_count{status=~"5.."}[1h])) or vector(0)) / sum(rate(http_server_duration_seconds_count[1h]))
+      - record: hanni:http_error_ratio:rate6h
+        expr: (sum(rate(http_server_duration_seconds_count{status=~"5.."}[6h])) or vector(0)) / sum(rate(http_server_duration_seconds_count[6h]))
+      - record: hanni:http_read_p95:5m
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_server_duration_seconds_bucket{method="GET"}[5m])))
+      - record: hanni:http_write_p95:5m
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_server_duration_seconds_bucket{method!="GET"}[5m])))
+
+  - name: hanni-slo
+    rules:
+      - alert: HanniErrorBudgetBurnFast
+        expr: hanni:http_error_ratio:rate1h > (14.4 * 0.005) and hanni:http_error_ratio:rate5m > (14.4 * 0.005)
+        for: 2m
+        labels:
+          severity: page
+          slo: availability
+        annotations:
+          summary: Tiêu ngân sách lỗi nhanh gấp 14,4 lần, giữ nhịp này thì hết ngân sách tháng trong 2 ngày
+      - alert: HanniErrorBudgetBurnSlow
+        expr: hanni:http_error_ratio:rate6h > (6 * 0.005) and hanni:http_error_ratio:rate30m > (6 * 0.005)
+        for: 15m
+        labels:
+          severity: ticket
+          slo: availability
+        annotations:
+          summary: Tiêu ngân sách lỗi nhanh gấp 6 lần, giữ nhịp này thì hết ngân sách tháng trong 5 ngày
+      - alert: HanniReadLatencyHigh
+        expr: hanni:http_read_p95:5m > 0.3
+        for: 5m
+        labels:
+          severity: ticket
+          slo: latency
+        annotations:
+          summary: "Đọc p95 vượt 300 ms: {{ $value | humanizeDuration }}"
+      - alert: HanniWriteLatencyHigh
+        expr: hanni:http_write_p95:5m > 0.5
+        for: 5m
+        labels:
+          severity: ticket
+          slo: latency
+        annotations:
+          summary: "Ghi p95 vượt 500 ms: {{ $value | humanizeDuration }}"
+
+  - name: hanni-nguyen-nhan
+    rules:
+      - alert: HanniApiDown
+        expr: sum(up{app="hanni-api"}) == 0 or absent(up{app="hanni-api"})
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: Không còn bản API nào trả lời
+      - alert: HanniHpaAtMax
+        expr: kube_horizontalpodautoscaler_status_current_replicas{horizontalpodautoscaler="hanni-api"} >= kube_horizontalpodautoscaler_spec_max_replicas{horizontalpodautoscaler="hanni-api"}
+        for: 5m
+        labels:
+          severity: ticket
+        annotations:
+          summary: API đã chạm trần số bản, HPA không còn gánh thêm được
+      - alert: HanniDbPoolWaiting
+        expr: sum(db_pool_connections{state="waiting"}) > 0
+        for: 2m
+        labels:
+          severity: ticket
+        annotations:
+          summary: Request đang xếp hàng chờ kết nối CSDL
+      - alert: HanniEventLoopLag
+        expr: max(nodejs_eventloop_lag_p99_seconds{app="hanni-api"}) > 0.2
+        for: 5m
+        labels:
+          severity: ticket
+        annotations:
+          summary: Event loop trễ quá 200 ms, tiến trình Node đang nghẽn CPU
+      - alert: HanniPostgresDown
+        expr: pg_up == 0 or absent(pg_up)
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: Không kết nối được PostgreSQL
+      - alert: HanniBackupStale
+        expr: time() - kube_cronjob_status_last_successful_time{cronjob="hanni-backup"} > 26 * 3600
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: Hơn 26 giờ chưa có bản sao lưu thành công

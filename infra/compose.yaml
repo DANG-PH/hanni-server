@@ -1,0 +1,47 @@
+# Cụm k3s 2 node chạy trong Docker, theo file compose chính thức của k3s. Chỉ cần Docker: kubectl đã có trong
+# container, gọi qua infra/scripts/kubectl. RAM mỗi node bị chặn cứng để số đo lặp lại được và cụm không ăn hết máy.
+name: hanni-lab
+
+x-node: &node
+  image: rancher/k3s:v1.31.6-k3s1
+  privileged: true
+  restart: unless-stopped
+  tmpfs:
+    - /run
+    - /var/run
+  ulimits:
+    nproc: 65535
+    nofile:
+      soft: 65535
+      hard: 65535
+
+services:
+  server:
+    <<: *node
+    hostname: k3s-server
+    command: server
+    mem_limit: 2800m
+    environment:
+      K3S_TOKEN: hanni-lab
+    ports:
+      - 127.0.0.1:18080:80
+    volumes:
+      - k3s-server:/var/lib/rancher/k3s
+      - ./media/out:/srv/hoc-lieu:ro
+      - .:/infra:ro
+
+  agent:
+    <<: *node
+    hostname: k3s-agent
+    command: agent
+    mem_limit: 1800m
+    environment:
+      K3S_TOKEN: hanni-lab
+      K3S_URL: https://server:6443
+    volumes:
+      - k3s-agent:/var/lib/rancher/k3s
+      - ./media/out:/srv/hoc-lieu:ro
+
+volumes:
+  k3s-server:
+  k3s-agent:

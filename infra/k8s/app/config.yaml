@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hanni-env
+data:
+  NODE_ENV: production
+  PORT: "8000"
+  API_PREFIX: /api
+  APP_URL: http://api.hanni.localhost:18080
+  FRONTEND_URL: http://localhost:3000
+  COOKIE_DOMAIN: localhost
+  COOKIE_SECURE: "false"
+  # Bắt buộc lúc khởi động. Lab không dùng đăng nhập Google nên đặt giá trị bất kỳ.
+  GOOGLE_CLIENT_ID: lab-khong-dung
+  # Đếm theo tài khoản trong Redis: cả phòng máy chung 1 IP không bị chặn lây nhau.
+  THROTTLE_SCOPE: user
+  THROTTLE_LIMIT: "300"
+  THROTTLE_TTL: "60"
+  # Ingress nằm trong dải IP pod của k3s: không tin dải này thì mọi khách đều mang IP của Traefik.
+  TRUST_PROXY: 10.42.0.0/16
+  METRICS_ENABLED: "true"
+  # 10 kết nối/bản API × tối đa 6 bản + 10 của worker = 70 khách tới PgBouncer, PgBouncer gom về 20 kết nối thật.
+  DB_POOL_MAX: "10"
+  RESOURCES_MANIFEST: /etc/hanni/resources/manifest.json
+  RESOURCE_BASE_URL: http://media.hanni.localhost:18080
+  RESOURCE_LINK_TTL_SEC: "600"
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger.observability.svc:4318
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  # Lấy mẫu 10% theo trace: đủ thấy nút thắt, không làm chậm chính hệ thống đang đo.
+  OTEL_TRACES_SAMPLER: parentbased_traceidratio
+  OTEL_TRACES_SAMPLER_ARG: "0.1"

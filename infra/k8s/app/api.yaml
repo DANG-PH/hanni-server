@@ -1,0 +1,169 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hanni-api
+  labels:
+    app: hanni-api
+spec:
+  # Không khai replicas: HPA giữ số bản, khai ở đây thì mỗi lần apply sẽ kéo số bản về lại giá trị này.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: hanni-api
+  template:
+    metadata:
+      labels:
+        app: hanni-api
+        tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: /api/metrics
+    spec:
+      terminationGracePeriodSeconds: 40
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: hanni-api
+      containers:
+        - name: api
+          image: hanni-api:lab
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: hanni-env
+            - secretRef:
+                name: hanni-secrets
+          env:
+            # Bản API không chạy việc định kỳ, việc đó dành cho 1 worker duy nhất.
+            - name: APP_ROLE
+              value: api
+            - name: OTEL_SERVICE_NAME
+              value: hanni-api
+            - name: NODE_OPTIONS
+              value: --require /otel/tracing.js --max-old-space-size=320
+          volumeMounts:
+            - name: resources
+              mountPath: /etc/hanni/resources
+              readOnly: true
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          startupProbe:
+            httpGet:
+              path: /api/health/live
+              port: http
+            periodSeconds: 3
+            failureThreshold: 40
+          readinessProbe:
+            httpGet:
+              path: /api/health/ready
+              port: http
+            periodSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            httpGet:
+              path: /api/health/live
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              # Chờ ingress gỡ pod khỏi danh sách trước khi Node nhận SIGTERM, tránh lỗi 502 lúc cập nhật.
+              sleep:
+                seconds: 5
+      volumes:
+        - name: resources
+          configMap:
+            name: hanni-resources
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hanni-api
+  labels:
+    app: hanni-api
+spec:
+  selector:
+    app: hanni-api
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+---
+# Socket.IO bắt đầu bằng long-polling: mọi request của 1 kết nối phải về đúng 1 pod, nên riêng đường này gắn cookie
+# dính pod. API thường vẫn chia đều. Redis adapter lo phần phát thông báo giữa các pod.
+apiVersion: v1
+kind: Service
+metadata:
+  name: hanni-api-ws
+  labels:
+    app: hanni-api
+  annotations:
+    traefik.ingress.kubernetes.io/service.sticky.cookie: "true"
+    traefik.ingress.kubernetes.io/service.sticky.cookie.name: hanni_ws
+    traefik.ingress.kubernetes.io/service.sticky.cookie.httponly: "true"
+spec:
+  selector:
+    app: hanni-api
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hanni-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hanni-api
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+    # Giảm chậm: tải theo đợt (nộp bài xong tới lớp khác), giảm nhanh là vừa tắt đã phải bật lại.
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: hanni-api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: hanni-api

@@ -1,0 +1,109 @@
+# Nginx phục vụ học liệu, đóng vai CDN trong lab. API chỉ ký liên kết, tệp không đi qua Node.
+# Chữ ký ký theo THƯ MỤC để tệp .m3u8 tải được các đoạn .ts cùng thư mục bằng đường dẫn tương đối.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hanni-media-nginx
+data:
+  default.conf.template: |
+    server {
+      listen 8080;
+      sendfile on;
+      tcp_nopush on;
+
+      location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+      }
+
+      location ~ ^/files/(?<tok>[^/]+)/(?<exp>[0-9]+)/(?<dir>[^/]+)/(?<file>.+)$ {
+        secure_link $tok,$exp;
+        secure_link_md5 "$secure_link_expires/$dir ${RESOURCE_LINK_SECRET}";
+        if ($secure_link = "") { return 403; }
+        if ($secure_link = "0") { return 410; }
+
+        alias /srv/hoc-lieu/$dir/$file;
+        types {
+          application/vnd.apple.mpegurl m3u8;
+          video/mp2t ts;
+          application/pdf pdf;
+          audio/mpeg mp3;
+        }
+        add_header Cache-Control "private, max-age=600";
+        add_header Access-Control-Allow-Origin "*";
+      }
+
+      location / {
+        return 404;
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hanni-media
+  labels:
+    app: hanni-media
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hanni-media
+  template:
+    metadata:
+      labels:
+        app: hanni-media
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: RESOURCE_LINK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: hanni-secrets
+                  key: RESOURCE_LINK_SECRET
+          volumeMounts:
+            - name: template
+              mountPath: /etc/nginx/templates
+              readOnly: true
+            - name: hoc-lieu
+              mountPath: /srv/hoc-lieu
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: "1"
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+      volumes:
+        - name: template
+          configMap:
+            name: hanni-media-nginx
+        - name: hoc-lieu
+          hostPath:
+            path: /srv/hoc-lieu
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hanni-media
+  labels:
+    app: hanni-media
+spec:
+  selector:
+    app: hanni-media
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

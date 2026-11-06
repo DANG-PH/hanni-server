@@ -1,0 +1,124 @@
+# Chạy lần lượt theo nhãn step lúc dựng lab: `make seed`. Không nằm trong kustomization vì Job không sửa được sau khi đã tạo.
+# Migrate đi thẳng Postgres, không qua PgBouncer: migration cần giữ 1 kết nối suốt transaction.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hanni-migrate
+  namespace: hanni
+  labels:
+    step: migrate
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: hanni-tools
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: hanni-tools:lab
+          imagePullPolicy: Never
+          command: [npx, tsx, src/database/migrate.ts]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: hanni-secrets
+                  key: DATABASE_URL_DIRECT
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 768Mi
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hanni-seed
+  namespace: hanni
+  labels:
+    step: seed
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: hanni-tools
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: seed
+          image: hanni-tools:lab
+          imagePullPolicy: Never
+          command: [npx, tsx, src/database/seed/index.ts]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: hanni-secrets
+                  key: DATABASE_URL_DIRECT
+            # Bỏ video: tải phụ đề từ YouTube vừa chậm vừa không liên quan tới kiểm thử tải.
+            - name: SEED_SKIP_VIDEOS
+              value: "true"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+# Tạo tài khoản giả, in phiên đăng nhập ra log để `make seed` chép về infra/k6/tokens.json cho k6.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hanni-users
+  namespace: hanni
+  labels:
+    step: users
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: hanni-tools
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: users
+          image: hanni-tools:lab
+          imagePullPolicy: Never
+          command: [npx, tsx, scripts/loadtest/seed-users.ts]
+          env:
+            - name: LAB
+              value: "1"
+            - name: LOADTEST_USERS
+              value: "1000"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: hanni-secrets
+                  key: DATABASE_URL_DIRECT
+            - name: JWT_ACCESS_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: hanni-secrets
+                  key: JWT_ACCESS_SECRET
+            - name: LOADTEST_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hanni-secrets
+                  key: LOADTEST_PASSWORD
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 768Mi

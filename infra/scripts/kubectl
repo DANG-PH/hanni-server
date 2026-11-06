@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# kubectl của cụm lab, chạy trong container k3s nên không cần cài gì và không thể trỏ nhầm sang cụm khác.
+# Tệp manifest nằm ở /infra bên trong container, ví dụ: kubectl apply -k /infra/k8s
+cd "$(dirname "$0")/.." || exit 1
+if [ -t 0 ]; then
+  exec docker compose exec server kubectl "$@"
+fi
+exec docker compose exec -T server kubectl "$@"

@@ -1,0 +1,76 @@
+# Nhiều bản API × pool 10 kết nối sẽ vượt max_connections khi HPA tăng số bản. PgBouncer giữ số kết nối thật tới
+# Postgres cố định, bản API có tăng bao nhiêu cũng chỉ xếp hàng ở đây.
+# Chế độ transaction: an toàn với app vì TypeORM + pg không dùng prepared statement có tên, không dùng LISTEN.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hanni-pgbouncer
+  labels:
+    app: hanni-pgbouncer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hanni-pgbouncer
+  template:
+    metadata:
+      labels:
+        app: hanni-pgbouncer
+        tier: data
+    spec:
+      containers:
+        - name: pgbouncer
+          image: edoburu/pgbouncer:v1.24.1-p1
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: DB_HOST
+              value: hanni-postgres
+            - name: DB_NAME
+              value: hanni
+            - name: DB_USER
+              value: hanni
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hanni-secrets
+                  key: POSTGRES_PASSWORD
+            - name: AUTH_TYPE
+              value: scram-sha-256
+            - name: POOL_MODE
+              value: transaction
+            - name: MAX_CLIENT_CONN
+              value: "500"
+            - name: DEFAULT_POOL_SIZE
+              value: "20"
+            # Không chờ vô hạn: quá 10 giây thì trả lỗi để client thử lại, tốt hơn để cả hàng đợi treo.
+            - name: QUERY_WAIT_TIMEOUT
+              value: "10"
+            - name: IGNORE_STARTUP_PARAMETERS
+              value: extra_float_digits,options
+          resources:
+            requests:
+              cpu: 50m
+              memory: 16Mi
+            limits:
+              cpu: 500m
+              memory: 64Mi
+          readinessProbe:
+            tcpSocket:
+              port: postgres
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hanni-pgbouncer
+  labels:
+    app: hanni-pgbouncer
+spec:
+  selector:
+    app: hanni-pgbouncer
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres

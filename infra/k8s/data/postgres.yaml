@@ -1,0 +1,130 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hanni-postgres-init
+data:
+  10-role.sql: |
+    -- PgBouncer bỏ qua tham số options lúc kết nối nên múi giờ phải đặt ở vai trò, không đặt ở phía app.
+    ALTER ROLE hanni SET timezone = 'UTC';
+    CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: hanni-postgres
+  labels:
+    app: hanni-postgres
+spec:
+  serviceName: hanni-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hanni-postgres
+  template:
+    metadata:
+      labels:
+        app: hanni-postgres
+        tier: data
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9187"
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          args:
+            - -c
+            - max_connections=60
+            - -c
+            - shared_buffers=128MB
+            - -c
+            - shared_preload_libraries=pg_stat_statements
+            - -c
+            - log_min_duration_statement=500
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: hanni
+            - name: POSTGRES_DB
+              value: hanni
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hanni-secrets
+                  key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          readinessProbe:
+            exec:
+              command: [pg_isready, -U, hanni, -d, hanni]
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: [pg_isready, -U, hanni, -d, hanni]
+            periodSeconds: 15
+            initialDelaySeconds: 30
+        - name: exporter
+          image: quay.io/prometheuscommunity/postgres-exporter:v0.17.1
+          ports:
+            - name: metrics
+              containerPort: 9187
+          env:
+            - name: DATA_SOURCE_URI
+              value: 127.0.0.1:5432/hanni?sslmode=disable
+            - name: DATA_SOURCE_USER
+              value: hanni
+            - name: DATA_SOURCE_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: hanni-secrets
+                  key: POSTGRES_PASSWORD
+          resources:
+            requests:
+              cpu: 10m
+              memory: 24Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+      volumes:
+        - name: init
+          configMap:
+            name: hanni-postgres-init
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hanni-postgres
+  labels:
+    app: hanni-postgres
+spec:
+  clusterIP: None
+  selector:
+    app: hanni-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres

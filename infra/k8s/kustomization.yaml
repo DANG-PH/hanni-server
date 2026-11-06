@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: hanni
+
+resources:
+  - namespace.yaml
+  - data/postgres.yaml
+  - data/pgbouncer.yaml
+  - data/redis.yaml
+  - app/config.yaml
+  - app/api.yaml
+  - app/worker.yaml
+  - app/media.yaml
+  - app/ingress.yaml
+  - policy/network-policy.yaml
+  - backup/cronjob.yaml
+
+configMapGenerator:
+  - name: hanni-backup-script
+    files:
+      - backup/backup.sh
+  - name: hanni-resources
+    files:
+      - manifest.json=media-manifest.json
+
+generatorOptions:
+  disableNameSuffixHash: true

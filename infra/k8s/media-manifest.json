@@ -1,0 +1,35 @@
+[
+  {
+    "id": "video-mau",
+    "title": "Video mẫu",
+    "description": "Video thử 60 giây, hai mức chất lượng",
+    "kind": "video",
+    "dir": "video-mau",
+    "file": "master.m3u8",
+    "bytes": 39736090,
+    "sha256": null,
+    "requiresLogin": true
+  },
+  {
+    "id": "bang-phien-am",
+    "title": "Bảng phiên âm",
+    "description": "Tệp PDF để in và học",
+    "kind": "pdf",
+    "dir": "bang-phien-am",
+    "file": "bang-phien-am.pdf",
+    "bytes": 606,
+    "sha256": "23ef36aef70ac3f6caffed9bcf5d8fb3c79834d69feb39ada090c016ecefe4f4",
+    "requiresLogin": false
+  },
+  {
+    "id": "nghe-mau",
+    "title": "Đoạn nghe mẫu",
+    "description": "Tệp MP3 30 giây",
+    "kind": "audio",
+    "dir": "nghe-mau",
+    "file": "doan-nghe.mp3",
+    "bytes": 481114,
+    "sha256": "498bf81f1613f0118fa7582a41099625a2d914a915fcdbb2f3ec52aa524be9b4",
+    "requiresLogin": true
+  }
+]
