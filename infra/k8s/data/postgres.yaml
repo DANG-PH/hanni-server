@@ -54,7 +54,9 @@ spec:
             - -c
             - archive_mode=on
             - -c
-            - archive_command=test ! -f /wal-archive/%f && cp %p /wal-archive/%f
+            # Phải chạy lại được: đoạn đã lưu mà trùng nội dung thì coi là xong, không thì Postgres kẹt vĩnh viễn ở đoạn đó.
+            # Ghi tệp tạm rồi đổi tên để chết giữa chừng không để lại đoạn dở dang.
+            - archive_command=if test -f /wal-archive/%f; then cmp -s %p /wal-archive/%f; else cp %p /wal-archive/%f.tmp && mv /wal-archive/%f.tmp /wal-archive/%f; fi
             - -c
             - archive_timeout=60
             - -c

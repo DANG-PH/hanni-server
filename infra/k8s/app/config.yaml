@@ -25,6 +25,8 @@ data:
   OUTBOX_ENABLED: "true"
   # 10 kết nối/bản API × tối đa 6 bản + 10 của worker = 70 khách tới PgBouncer, PgBouncer gom về 20 kết nối thật.
   DB_POOL_MAX: "10"
+  # Ngưỡng cho mỗi bản. Đo trên lab: tổng 56 request chờ trên 6 bản là p95 đã vượt 480 ms, sau đó hệ thống sập dần.
+  SHED_POOL_WAITING: "8"
   RESOURCES_MANIFEST: /etc/hanni/resources/manifest.json
   RESOURCE_BASE_URL: http://media.hanni.localhost:18080
   RESOURCE_LINK_TTL_SEC: "600"

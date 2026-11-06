@@ -65,6 +65,8 @@ export const envSchema = z.object({
     .default('false')
     .transform((v) => v === 'true'),
   DB_POOL_MAX: z.coerce.number().int().positive().default(10),
+  // Bao nhiêu request chờ kết nối CSDL thì bắt đầu từ chối lượt đọc. 0 là tắt.
+  SHED_POOL_WAITING: z.coerce.number().int().min(0).default(0),
   // Bản sao đọc: để trống thì mọi truy vấn về CSDL chính. Chỉ các truy vấn chấp nhận dữ liệu cũ vài giây mới đọc ở đây.
   DATABASE_REPLICA_URL: z.string().default(''),
   // Chạy nhiều worker: mỗi chu kỳ cron chỉ 1 bản làm. Tắt thì mỗi tiến trình tự chạy như trên VPS.

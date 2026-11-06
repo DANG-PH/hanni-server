@@ -18,12 +18,14 @@ up: sample
 images:
 	docker build --target api -t hanni-api:lab $(SERVER)
 	docker build --target tools -t hanni-tools:lab $(SERVER)
-	docker save hanni-api:lab hanni-tools:lab | docker compose exec -T server ctr images import -
-	docker save hanni-api:lab hanni-tools:lab | docker compose exec -T agent ctr images import -
+	docker pull -q postgres:16-alpine
+	docker save hanni-api:lab hanni-tools:lab postgres:16-alpine | docker compose exec -T server ctr images import -
+	docker save hanni-api:lab hanni-tools:lab postgres:16-alpine | docker compose exec -T agent ctr images import -
 
 deploy:
 	kubectl apply -k /infra/k8s
-	kubectl -n hanni rollout status statefulset/hanni-postgres --timeout=240s
+	kubectl -n hanni rollout status statefulset/hanni-postgres --timeout=900s
+	kubectl -n hanni rollout status statefulset/hanni-postgres-replica --timeout=600s
 	kubectl -n hanni rollout status deployment/hanni-pgbouncer --timeout=120s
 
 seed:

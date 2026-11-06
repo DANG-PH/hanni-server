@@ -27,6 +27,9 @@ async function bootstrap(): Promise<void> {
   if (config.get('METRICS_ENABLED', { infer: true })) {
     app.use(app.get(MetricsService).observe);
   }
+  if (config.get('SHED_POOL_WAITING', { infer: true }) > 0) {
+    app.use(app.get(MetricsService).shed);
+  }
 
   const apiPrefix = config.get('API_PREFIX', { infer: true });
   app.setGlobalPrefix(apiPrefix.replace(/^\//, ''));

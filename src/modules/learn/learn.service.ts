@@ -13,6 +13,9 @@ import {
 import { SrsState } from '../../database/enums';
 import { relatedGrammarForWords } from '../grammar/grammar-match.util';
 import { LEARNED_INTERVAL_DAYS } from '../srs/srs.constants';
+import { TtlMemo } from '../../common/ttl-memo';
+
+const PATH_CONTENT_TTL_MS = 60_000;
 
 export type LessonStatus = 'COMPLETED' | 'IN_PROGRESS' | 'AVAILABLE' | 'LOCKED';
 
@@ -30,6 +33,10 @@ export interface LessonNode {
 
 @Injectable()
 export class LearnService {
+  private readonly pathContent = new TtlMemo<
+    Awaited<ReturnType<LearnService['loadPathContent']>>
+  >(PATH_CONTENT_TTL_MS);
+
   constructor(
     @InjectRepository(UserSettings)
     private readonly settings: Repository<UserSettings>,
@@ -90,15 +97,39 @@ export class LearnService {
   }
 
   /** `userId` null = khách: xem lộ trình của cấp (mặc định HSK 1), chưa có tiến độ. */
-  async path(userId: string | null, level?: number) {
-    const lvl = level ?? (userId ? await this.currentLevel(userId) : 1);
-
-    const [levelInfo, lessons, progressRows, levelSummary] = await Promise.all([
+  /** Phần giống nhau với mọi người của lộ trình 1 cấp. Đo trên lab: đây là 4 trong 5 truy vấn của route nặng nhất. */
+  private async loadPathContent(lvl: number) {
+    const [levelInfo, lessons, levelSummary] = await Promise.all([
       this.levels.findOneBy({ level: lvl }),
       this.lessons.find({
         where: { hskLevel: lvl },
         order: { orderIndex: 'ASC' },
       }),
+      // Số bài mỗi cấp (để biết cấp nào có bài).
+      this.lessons
+        .createQueryBuilder('lesson')
+        .select('lesson.hskLevel', 'hskLevel')
+        .addSelect('COUNT(*)::int', 'count')
+        .groupBy('lesson.hskLevel')
+        .getRawMany<{ hskLevel: number; count: number }>(),
+    ]);
+    // preview: 3 từ đầu mỗi bài
+    const firstWords = await this.words.find({
+      where: {
+        lessonId: In(lessons.map((l) => l.id)),
+        lessonOrder: LessThanOrEqual(3),
+      },
+      select: { id: true, lessonId: true, simplified: true, lessonOrder: true },
+      order: { lessonOrder: 'ASC' },
+    });
+    return { levelInfo, lessons, levelSummary, firstWords };
+  }
+
+  async path(userId: string | null, level?: number) {
+    const lvl = level ?? (userId ? await this.currentLevel(userId) : 1);
+
+    const [content, progressRows] = await Promise.all([
+      this.pathContent.get(lvl, () => this.loadPathContent(lvl)),
       userId
         ? this.wordProgress.find({
             where: { userId, hskLevel: lvl },
@@ -115,14 +146,8 @@ export class LearnService {
             },
           })
         : [],
-      // Số bài mỗi cấp (để biết cấp nào có bài).
-      this.lessons
-        .createQueryBuilder('lesson')
-        .select('lesson.hskLevel', 'hskLevel')
-        .addSelect('COUNT(*)::int', 'count')
-        .groupBy('lesson.hskLevel')
-        .getRawMany<{ hskLevel: number; count: number }>(),
     ]);
+    const { levelInfo, lessons, levelSummary, firstWords } = content;
     if (!levelInfo) throw new NotFoundException('Cấp HSK không hợp lệ');
 
     const now = Date.now();
@@ -150,15 +175,6 @@ export class LearnService {
       perLesson.set(lid, agg);
     }
 
-    // preview: 3 từ đầu mỗi bài
-    const firstWords = await this.words.find({
-      where: {
-        lessonId: In(lessons.map((l) => l.id)),
-        lessonOrder: LessThanOrEqual(3),
-      },
-      select: { id: true, lessonId: true, simplified: true, lessonOrder: true },
-      order: { lessonOrder: 'ASC' },
-    });
     const previewBy = new Map<string, string[]>();
     for (const w of firstWords) {
       if (!w.lessonId) continue;
