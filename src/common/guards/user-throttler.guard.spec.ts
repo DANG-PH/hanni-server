@@ -34,6 +34,21 @@ describe('UserThrottlerGuard', () => {
     );
   });
 
+  it('đăng nhập đếm theo IP + email: cả phòng máy không chung 1 hạn mức', async () => {
+    const login = (email: string) => ({
+      ip: '1.2.3.4',
+      cookies: {},
+      originalUrl: '/api/auth/login',
+      body: { email },
+    });
+    await expect(guard('user').getTracker(login('A@x.vn'))).resolves.toBe(
+      'login:1.2.3.4:a@x.vn',
+    );
+    await expect(guard('ip').getTracker(login('a@x.vn'))).resolves.toBe(
+      '1.2.3.4',
+    );
+  });
+
   it('khách không có token đếm theo IP', async () => {
     await expect(guard('user').getTracker(req())).resolves.toBe('1.2.3.4');
   });

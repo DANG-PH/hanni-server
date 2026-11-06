@@ -17,6 +17,11 @@ import { User } from './user.entity';
 @Entity('MockExamAttempt')
 @Index('MockExamAttempt_userId_createdAt_idx', ['userId', 'createdAt']) // DB: ("userId", "createdAt" DESC)
 @Index('MockExamAttempt_userId_examSlug_idx', ['userId', 'examSlug'])
+@Index(
+  'MockExamAttempt_userId_idempotencyKey_key',
+  ['userId', 'idempotencyKey'],
+  { unique: true, where: '"idempotencyKey" IS NOT NULL' },
+)
 export class MockExamAttempt {
   @PrimaryGeneratedColumn('uuid', {
     primaryKeyConstraintName: 'MockExamAttempt_pkey',
@@ -35,6 +40,10 @@ export class MockExamAttempt {
     foreignKeyConstraintName: 'MockExamAttempt_userId_fkey',
   })
   user!: User;
+
+  /** Trình duyệt sinh 1 khoá cho 1 lượt làm: mạng lỗi gửi lại không tạo thêm lượt. Bản cũ không gửi thì null. */
+  @Column({ type: 'text', nullable: true })
+  idempotencyKey!: string | null;
 
   @Column({ type: 'text' })
   examSlug!: string;

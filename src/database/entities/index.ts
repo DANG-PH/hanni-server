@@ -28,6 +28,7 @@ import { VideoLine } from './video-line.entity';
 import { UserVideoProgress } from './user-video-progress.entity';
 import { GrammarPoint } from './grammar-point.entity';
 import { MockExamAttempt } from './mock-exam-attempt.entity';
+import { OutboxEvent } from './outbox-event.entity';
 import { PushSubscription } from './push-subscription.entity';
 import { Notification } from './notification.entity';
 import { PracticeAttempt } from './practice-attempt.entity';
@@ -72,6 +73,7 @@ export {
   UserVideoProgress,
   GrammarPoint,
   MockExamAttempt,
+  OutboxEvent,
   PushSubscription,
   Notification,
   PracticeAttempt,
@@ -117,6 +119,7 @@ export const ENTITIES = [
   UserVideoProgress,
   GrammarPoint,
   MockExamAttempt,
+  OutboxEvent,
   PushSubscription,
   Notification,
   PracticeAttempt,

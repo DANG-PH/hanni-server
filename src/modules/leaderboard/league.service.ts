@@ -21,6 +21,7 @@ import {
   weekKeyStart,
   zoneOf,
 } from './league.util';
+import { CronLeaseService, HOUR_MS } from '../../infra/redis/cron-lease.service';
 
 export interface LeagueRow {
   rank: number;
@@ -46,6 +47,7 @@ export class LeagueService {
     @InjectRepository(User) private readonly users: Repository<User>,
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly events: EventEmitter2,
+    private readonly lease: CronLeaseService,
   ) {}
 
   getOrCreateCurrentWeek() {
@@ -157,6 +159,7 @@ export class LeagueService {
    * N+1, nếu N+1 cũng đã qua thì vòng sau chốt tiếp (bù được cả khi server tắt nhiều tuần). Gọi lại vô hại. */
   @Cron(CronExpression.EVERY_HOUR)
   async checkRollover(): Promise<void> {
+    if (!(await this.lease.take('league-rollover', HOUR_MS))) return;
     for (;;) {
       const now = Date.now();
       const open = await this.weeks.findBy({ endedAt: IsNull() });

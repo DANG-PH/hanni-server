@@ -19,6 +19,7 @@ import {
   UserStreak,
 } from '../../database/entities';
 import { ReviewType } from '../../database/enums';
+import { CronLeaseService, HOUR_MS } from '../../infra/redis/cron-lease.service';
 
 const DIGEST_HOUR = 9; // 9h sáng local — giờ mở email hợp lý, không làm phiền
 const DIGEST_WEEKDAY = 1; // luxon: 1 = Thứ Hai
@@ -47,10 +48,12 @@ export class WeeklyDigestService {
     private readonly reviewLogs: Repository<ReviewLog>,
     private readonly mail: MailService,
     private readonly config: ConfigService<Env, true>,
+    private readonly lease: CronLeaseService,
   ) {}
 
   @Cron(CronExpression.EVERY_HOUR)
   async sendWeeklyDigests(): Promise<void> {
+    if (!(await this.lease.take('weekly-digest', HOUR_MS))) return;
     const now = new Date();
     const cutoffHour = this.config.get('STREAK_DAY_CUTOFF_HOUR', {
       infer: true,

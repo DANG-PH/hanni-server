@@ -17,6 +17,7 @@ import {
 } from '../../common/time.util';
 import type { Env } from '../../config/env.validation';
 import { PushService } from './push.service';
+import { CronLeaseService, HOUR_MS } from '../../infra/redis/cron-lease.service';
 
 /** Điều kiện SQL: người dùng (bí danh `u`) có ít nhất 1 thiết bị đăng ký nhận push. */
 const HAS_PUSH_DEVICE =
@@ -68,10 +69,12 @@ export class ReminderService {
     private readonly progress: Repository<UserWordProgress>,
     private readonly push: PushService,
     private readonly config: ConfigService<Env, true>,
+    private readonly lease: CronLeaseService,
   ) {}
 
   @Cron(CronExpression.EVERY_HOUR)
   async sendDueReminders(): Promise<void> {
+    if (!(await this.lease.take('reminder', HOUR_MS))) return;
     const now = new Date();
     const cutoffHour = this.config.get('STREAK_DAY_CUTOFF_HOUR', {
       infer: true,
@@ -141,6 +144,7 @@ export class ReminderService {
 
   @Cron(CronExpression.EVERY_HOUR)
   async sendStreakRiskReminders(): Promise<void> {
+    if (!(await this.lease.take('streak-risk', HOUR_MS))) return;
     const now = new Date();
     const cutoffHour = this.config.get('STREAK_DAY_CUTOFF_HOUR', {
       infer: true,
@@ -178,6 +182,7 @@ export class ReminderService {
 
   @Cron(CronExpression.EVERY_HOUR)
   async sendWeekendEarlyRiskReminders(): Promise<void> {
+    if (!(await this.lease.take('weekend-risk', HOUR_MS))) return;
     const now = new Date();
     const cutoffHour = this.config.get('STREAK_DAY_CUTOFF_HOUR', {
       infer: true,

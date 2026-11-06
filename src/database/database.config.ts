@@ -35,9 +35,20 @@ function cleanUrl(url: string) {
 }
 
 export function databaseOptions(url: string): DataSourceOptions {
+  const replica = process.env.DATABASE_REPLICA_URL;
   return {
     type: 'postgres',
-    url: cleanUrl(url),
+    // Có bản sao thì mặc định vẫn về leader, chỉ chỗ gọi onReplica() mới đọc từ bản sao: đọc nhầm dữ liệu cũ ở
+    // luồng ghi-rồi-đọc còn tệ hơn là tải leader cao hơn một chút.
+    ...(replica
+      ? {
+          replication: {
+            defaultMode: 'master' as const,
+            master: { url: cleanUrl(url) },
+            slaves: [{ url: cleanUrl(replica) }],
+          },
+        }
+      : { url: cleanUrl(url) }),
     entities: ENTITIES,
     // Chạy từ mã nguồn (tsx) thì nạp .ts, từ bản build thì .js (bản build còn sinh kèm .d.ts — bỏ qua).
     migrations: [

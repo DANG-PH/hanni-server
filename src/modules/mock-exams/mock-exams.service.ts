@@ -1,7 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { LessThanOrEqual, Repository } from 'typeorm';
-import { MockExamAttempt, Word } from '../../database/entities';
+import { ConfigService } from '@nestjs/config';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, LessThanOrEqual, Repository } from 'typeorm';
+import type { Env } from '../../config/env.validation';
+import { MockExamAttempt, OutboxEvent, Word } from '../../database/entities';
 import { StreakService } from '../gamification/streak/streak.service';
 import {
   isCorrect,
@@ -40,12 +42,18 @@ export class MockExamsService {
     papers: Map<string, ReturnType<typeof publicPaper>>;
   }>;
 
+  private readonly outbox: boolean;
+
   constructor(
     @InjectRepository(Word) private readonly words: Repository<Word>,
     @InjectRepository(MockExamAttempt)
     private readonly attempts: Repository<MockExamAttempt>,
     private readonly streak: StreakService,
-  ) {}
+    @InjectDataSource() private readonly db: DataSource,
+    config: ConfigService<Env, true>,
+  ) {
+    this.outbox = config.get('OUTBOX_ENABLED', { infer: true });
+  }
 
   private build() {
     this.built ??= (async () => {
@@ -150,27 +158,58 @@ export class MockExamsService {
     answers: (AnswerValue | null)[],
     durationSec: number | undefined,
     userId?: string,
+    idempotencyKey?: string,
   ) {
     const paper = this.find(slug);
     const { overrides, vocab } = await this.build();
     const result = scorePaper(paper, answers);
     let attemptId: string | null = null;
     if (userId) {
-      const { identifiers } = await this.attempts.insert({
-        userId,
-        examSlug: slug,
-        hskLevel: paper.level,
-        score: result.score,
-        maxScore: result.maxScore,
-        passed: result.passed,
-        sectionScores: result.sections,
-        answers,
-        durationSec: durationSec ?? null,
+      const minutes = (durationSec ?? 0) / 60;
+      const key = idempotencyKey?.slice(0, 64) || null;
+      const saved = await this.db.transaction(async (tx) => {
+        const inserted = await tx
+          .createQueryBuilder()
+          .insert()
+          .into(MockExamAttempt)
+          .values({
+            userId,
+            idempotencyKey: key,
+            examSlug: slug,
+            hskLevel: paper.level,
+            score: result.score,
+            maxScore: result.maxScore,
+            passed: result.passed,
+            sectionScores: result.sections,
+            answers: answers as never,
+            durationSec: durationSec ?? null,
+          })
+          .orIgnore()
+          .returning('id')
+          .execute();
+        const id = (inserted.raw as { id: string }[])[0]?.id;
+        // Không có dòng mới nghĩa là trùng khoá: đây là lần gửi lại, trả đúng lượt đã lưu, không tính thêm.
+        if (!id) {
+          const first = await tx.findOneByOrFail(MockExamAttempt, {
+            userId,
+            idempotencyKey: key as string,
+          });
+          return { id: first.id, fresh: false };
+        }
+        if (this.outbox) {
+          await tx.insert(OutboxEvent, {
+            type: 'exam.submitted',
+            payload: { userId, minutes, at: new Date().toISOString() },
+          });
+        }
+        return { id, fresh: true };
       });
-      attemptId = identifiers[0].id as string;
-      await this.streak.recordActivity(userId, new Date(), {
-        minutesStudied: (durationSec ?? 0) / 60,
-      });
+      attemptId = saved.id;
+      if (saved.fresh && !this.outbox) {
+        await this.streak.recordActivity(userId, new Date(), {
+          minutesStudied: minutes,
+        });
+      }
     }
     const correctByNo = new Map(result.results.map((r) => [r.no, r]));
     return {

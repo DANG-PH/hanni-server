@@ -23,6 +23,7 @@ interface PgPool {
 export class MetricsService implements OnModuleInit {
   readonly registry = new Registry();
   readonly enabled: boolean;
+  private readonly outboxEnabled: boolean;
   private readonly duration = new Histogram({
     name: 'http_server_duration_seconds',
     help: 'Thời gian xử lý request',
@@ -37,6 +38,9 @@ export class MetricsService implements OnModuleInit {
     @InjectDataSource() private readonly db: DataSource,
   ) {
     this.enabled = config.get('METRICS_ENABLED', { infer: true });
+    this.outboxEnabled =
+      config.get('OUTBOX_ENABLED', { infer: true }) &&
+      config.get('APP_ROLE', { infer: true }) !== 'api';
   }
 
   onModuleInit(): void {
@@ -55,6 +59,20 @@ export class MetricsService implements OnModuleInit {
         this.set({ state: 'waiting' }, p?.waitingCount ?? 0);
       },
     });
+    if (this.outboxEnabled) {
+      const db = this.db;
+      new Gauge({
+        name: 'outbox_pending',
+        help: 'Việc phụ sau khi nộp bài chưa làm; tăng mãi nghĩa là worker không theo kịp',
+        registers: [this.registry],
+        async collect() {
+          const [row] = await db.query<{ n: number }[]>(
+            `SELECT count(*)::int AS n FROM "OutboxEvent" WHERE "processedAt" IS NULL`,
+          );
+          this.set(row.n);
+        },
+      });
+    }
   }
 
   /** Middleware Express: đo mọi request; nhật ký kèm traceId để từ Loki nhảy sang đúng vết ở Jaeger. */

@@ -65,6 +65,18 @@ export const envSchema = z.object({
     .default('false')
     .transform((v) => v === 'true'),
   DB_POOL_MAX: z.coerce.number().int().positive().default(10),
+  // Bản sao đọc: để trống thì mọi truy vấn về CSDL chính. Chỉ các truy vấn chấp nhận dữ liệu cũ vài giây mới đọc ở đây.
+  DATABASE_REPLICA_URL: z.string().default(''),
+  // Chạy nhiều worker: mỗi chu kỳ cron chỉ 1 bản làm. Tắt thì mỗi tiến trình tự chạy như trên VPS.
+  CRON_LEASE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  // Việc phụ sau khi nộp bài đi qua outbox, do worker làm. Tắt thì làm ngay trong request.
+  OUTBOX_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
 
   // Học liệu: danh sách ở tệp JSON, tệp do Nginx phục vụ qua liên kết có chữ ký. Để trống thì GET /resources trả rỗng.
   /** Đằng trước API là ai: VPS là Nginx cùng máy (loopback), k8s là ingress trong dải IP của pod. */

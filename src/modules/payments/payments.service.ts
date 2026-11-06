@@ -27,6 +27,9 @@ import {
   orderCodeFromMomoOrderId,
 } from './momo.util';
 import { PayosService } from './payos.service';
+import { CronLeaseService } from '../../infra/redis/cron-lease.service';
+
+const RECONCILE_EVERY_MS = 5 * 60_000;
 
 export type PaymentProvider = 'payos' | 'momo';
 
@@ -86,6 +89,7 @@ export class PaymentsService {
     private readonly config: ConfigService<Env, true>,
     private readonly payos: PayosService,
     private readonly momo: MomoService,
+    private readonly lease: CronLeaseService,
   ) {}
 
   /**
@@ -289,6 +293,7 @@ export class PaymentsService {
   /** Mỗi 5 phút: hỏi lại cổng thanh toán mọi đơn còn PENDING tạo trong 7 ngày qua (xem đường c ở đầu file). */
   @Cron(CronExpression.EVERY_5_MINUTES)
   async reconcilePending(): Promise<void> {
+    if (!(await this.lease.take('payment-reconcile', RECONCILE_EVERY_MS))) return;
     const pending = await this.orders.find({
       where: {
         status: PaymentOrderStatus.PENDING,

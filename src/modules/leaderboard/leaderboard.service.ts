@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { notTestAccount } from '../../common/test-accounts';
 import { User, UserLessonProgress, UserStreak } from '../../database/entities';
+import { onReplica } from '../../database/replica.util';
 
 /** 2 tiêu chí xếp hạng (bỏ "Từ đã thuộc" — cần ~21 ngày ôn mới có, trống với mọi người — và "Chuỗi dài nhất" — trùng
  * ý "Chuỗi hiện tại"). Mô tả + nút của từng tab nằm ở client (`components/leaderboard.tsx`). */
@@ -31,6 +32,7 @@ export class LeaderboardService {
     private readonly streaks: Repository<UserStreak>,
     @InjectRepository(UserLessonProgress)
     private readonly lessonProgress: Repository<UserLessonProgress>,
+    @InjectDataSource() private readonly db: DataSource,
   ) {}
 
   /** Bảng xếp hạng theo `metric`, kèm hạng của user hiện tại.
@@ -78,27 +80,30 @@ export class LeaderboardService {
   private async rankedPairs(
     metric: LeaderboardMetric,
   ): Promise<{ userId: string; value: number }[]> {
-    if (metric === 'lessons') {
-      return this.lessonProgress
-        .createQueryBuilder('p')
-        .innerJoin('p.user', 'u')
-        .select('p.userId', 'userId')
-        .addSelect('COUNT(*)::int', 'value')
-        .where('p.completedAt IS NOT NULL')
-        .andWhere(notTestAccount('u'))
-        .groupBy('p.userId')
-        .orderBy('COUNT(*)', 'DESC')
-        .getRawMany<{ userId: string; value: number }>();
-    }
+    // Xếp hạng trễ vài giây không ai nhận ra, mà đây là truy vấn gộp nặng nhất: để bản sao đọc gánh.
+    return onReplica(this.db, (runner) => {
+      if (metric === 'lessons') {
+        return this.lessonProgress
+          .createQueryBuilder('p', runner)
+          .innerJoin('p.user', 'u')
+          .select('p.userId', 'userId')
+          .addSelect('COUNT(*)::int', 'value')
+          .where('p.completedAt IS NOT NULL')
+          .andWhere(notTestAccount('u'))
+          .groupBy('p.userId')
+          .orderBy('COUNT(*)', 'DESC')
+          .getRawMany<{ userId: string; value: number }>();
+      }
 
-    return this.streaks
-      .createQueryBuilder('s')
-      .innerJoin('s.user', 'u')
-      .select('s.userId', 'userId')
-      .addSelect('s.currentStreak', 'value')
-      .where('s.currentStreak > 0')
-      .andWhere(notTestAccount('u'))
-      .orderBy('s.currentStreak', 'DESC')
-      .getRawMany<{ userId: string; value: number }>();
+      return this.streaks
+        .createQueryBuilder('s', runner)
+        .innerJoin('s.user', 'u')
+        .select('s.userId', 'userId')
+        .addSelect('s.currentStreak', 'value')
+        .where('s.currentStreak > 0')
+        .andWhere(notTestAccount('u'))
+        .orderBy('s.currentStreak', 'DESC')
+        .getRawMany<{ userId: string; value: number }>();
+    });
   }
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { OptionalAuth, Public } from '../../common/decorators/public.decorator';
@@ -104,7 +104,14 @@ export class MockExamsController {
     @Param('slug') slug: string,
     @Body() dto: SubmitMockExamDto,
     @CurrentUser() user?: AuthUser,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
-    return this.exams.submit(slug, dto.answers, dto.durationSec, user?.id);
+    return this.exams.submit(
+      slug,
+      dto.answers,
+      dto.durationSec,
+      user?.id,
+      idempotencyKey,
+    );
   }
 }

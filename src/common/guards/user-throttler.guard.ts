@@ -17,6 +17,15 @@ export class UserThrottlerGuard extends ThrottlerGuard {
 
   protected async getTracker(req: Record<string, unknown>): Promise<string> {
     if (this.config.get('THROTTLE_SCOPE', { infer: true }) === 'user') {
+      // Lúc đăng nhập chưa có tài khoản để đếm: theo IP thì cả phòng máy chung 1 hạn mức 10 lượt/phút. Đếm theo IP + email
+      // vẫn chặn được dò mật khẩu 1 tài khoản, đổi lại không chặn được dò nhiều tài khoản từ 1 IP.
+      const email = (req.body as { email?: unknown } | undefined)?.email;
+      if (
+        typeof email === 'string' &&
+        String(req.originalUrl).endsWith('/auth/login')
+      ) {
+        return `login:${await super.getTracker(req)}:${email.toLowerCase()}`;
+      }
       const cookies = req.cookies as Record<string, string> | undefined;
       const token = cookies?.[ACCESS_COOKIE];
       if (token) {

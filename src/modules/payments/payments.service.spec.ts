@@ -113,6 +113,7 @@ function setup(
     config as never,
     payos as never,
     momo as never,
+    { take: () => Promise.resolve(true) } as never,
   );
   return { svc, order, orders, users, userUpdates, payos, momo };
 }
