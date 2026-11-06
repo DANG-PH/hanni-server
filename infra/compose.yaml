@@ -23,6 +23,9 @@ services:
     mem_limit: 2800m
     environment:
       K3S_TOKEN: hanni-lab
+    networks:
+      default:
+        ipv4_address: 172.25.0.2
     ports:
       - 127.0.0.1:18080:80
     volumes:
@@ -38,10 +41,23 @@ services:
     environment:
       K3S_TOKEN: hanni-lab
       K3S_URL: https://server:6443
+    networks:
+      default:
+        ipv4_address: 172.25.0.3
     volumes:
       - k3s-agent:/var/lib/rancher/k3s
+      # Mật khẩu node phải sống qua lần tạo lại container, nếu không server từ chối agent ("Node password rejected").
+      - k3s-agent-node:/etc/rancher/node
       - ./media/out:/srv/hoc-lieu:ro
+
+# IP cố định: Docker đổi IP sau khi máy khởi động lại thì chứng chỉ kubelet không còn khớp, kubectl exec và logs sẽ lỗi.
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.25.0.0/24
 
 volumes:
   k3s-server:
   k3s-agent:
+  k3s-agent-node:
