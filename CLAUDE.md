@@ -18,8 +18,16 @@ chính thức, `kubectl` qua `infra/scripts/kubectl`, k6/ffmpeg/python đều ch
   `@opentelemetry/api` của app và SDK phải cùng bản, app mới hơn thì nhận bản rỗng, log mất `traceId` mà không báo lỗi; không khai `replicas` ở Deployment có HPA;
   NetworkPolicy của pod mới cần vài giây mới có hiệu lực nên Job phải chờ CSDL; `.ts` đoạn HLS trong `infra/media/out` làm tsc hỏng nên tsconfig loại `infra`;
   k3s khởi động lỗi giữa chừng thì `make down` dựng lại, không sửa tại chỗ.
-- **Chưa xử lý**: giới hạn đăng nhập 10/phút vẫn theo IP (cả phòng máy đăng nhập cùng lúc sẽ 429); ảnh đại diện trên đĩa riêng; SLI đo ở API nên mất hết pod thì không đếm được;
-  Postgres gắn 1 node. Số chạy thử 06/11 ở `tai-lieu-RIPT1304/ket-qua-chay-thu-lab/`, chỉ để kiểm tra cấu hình.
+- **Giải pháp DDIA (user: "mở rộng được thay vì chỉ 1000, đặc biệt là DDIA")**, đều bật bằng biến, mặc định tắt: `DATABASE_REPLICA_URL` + `onReplica()` (mặc định đọc leader, chỉ
+  bảng xếp hạng đọc bản sao); `Idempotency-Key` ở nộp bài (`MockExamAttempt.idempotencyKey`, chỉ mục duy nhất, client lấy `${slug}-${startedAt}`); `OUTBOX_ENABLED` + `ExamOutboxRelay`
+  (`OutboxEvent`, `FOR UPDATE SKIP LOCKED`, giao ít nhất 1 lần); `CRON_LEASE` + `CronLeaseService.take()` (Redis `SET NX` theo chu kỳ, khoá để tiết kiệm, job vẫn phải tự an toàn khi trùng);
+  `SHED_POOL_WAITING` + `MetricsService.shed` (503 + `Retry-After` cho lượt đọc); `TtlMemo` cho khung lộ trình (giữ Promise để gộp lượt tải). Đăng nhập khi `THROTTLE_SCOPE=user` đếm theo IP + email.
+  Migration `ScalingFoundations` chỉ thêm. Lab có thêm bản sao Postgres, `hanni-pgbouncer-ro`, 2 worker, lưu WAL, blackbox exporter, `infra/sql/`, `scripts/{failover,pitr,do-phan-manh}.sh`.
+- **Đo được 06/11 tối** (1 lần, laptop có swap): 205 req/s p95 130 ms, 232 req/s p95 486 ms, quá đó thông lượng tụt còn 134 req/s, p95 3,8 giây, 360 request chờ kết nối CSDL; route nặng nhất
+  `/learn/path`. KB3 660 lượt nộp ra đúng 600 dòng, outbox 600/600, ghi p95 26 ms. **Chưa đo**: sau khi có cache + shed, failover, PITR, chia `ReviewLog`, 2 worker thật, đăng nhập đồng loạt.
+- **Bẫy thêm**: `@nestjs/schedule` là ES module, spec phải `jest.mock`; lệnh lưu WAL phải chạy lại được (trùng nội dung là xong, ghi tệp tạm rồi đổi tên); `tang-dan` ngay sau rollout đo bản lạnh, phải làm nóng trước;
+  đang swap thì số đo vô nghĩa, xem `vmstat`.
+- **Chưa xử lý**: ảnh đại diện trên đĩa riêng; Postgres gắn 1 node cho tới khi diễn tập failover xong. Số chạy thử ở `tai-lieu-RIPT1304/ket-qua-chay-thu-lab/`, chỉ để kiểm tra cấu hình.
 
 ## Dọn cơ sở dữ liệu (2026-10-28 — user: "cắt hoặc gộp các bảng thừa, logic không dùng", "check các field trong entity")
 Còn **42 bảng**, bảng/cột nào cũng có code đọc hoặc ghi thật. Migration `1792700000000-DropUnusedTables` (KHÔNG hoàn tác —
