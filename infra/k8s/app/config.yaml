@@ -27,6 +27,8 @@ data:
   DB_POOL_MAX: "10"
   # Ngưỡng cho mỗi bản. Đo trên lab: tổng 56 request chờ trên 6 bản là p95 đã vượt 480 ms, sau đó hệ thống sập dần.
   SHED_POOL_WAITING: "8"
+  # Quá tải do CPU không làm dài hàng đợi CSDL nên cần thêm tín hiệu này. Đo trên lab: 195 ms còn trong SLO, 341 ms đã vượt.
+  SHED_LOOP_LAG_MS: "250"
   RESOURCES_MANIFEST: /etc/hanni/resources/manifest.json
   RESOURCE_BASE_URL: http://media.hanni.localhost:18080
   RESOURCE_LINK_TTL_SEC: "600"

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { TraceFlags, context, trace } from '@opentelemetry/api';
 import type { NextFunction, Request, Response } from 'express';
+import { monitorEventLoopDelay } from 'node:perf_hooks';
 import { collectDefaultMetrics, Gauge, Histogram, Registry } from 'prom-client';
 import { DataSource } from 'typeorm';
 import type { Env } from '../../config/env.validation';
@@ -24,6 +25,9 @@ export class MetricsService implements OnModuleInit {
   readonly registry = new Registry();
   readonly enabled: boolean;
   readonly shedAt: number;
+  readonly shedLagMs: number;
+  /** p99 độ trễ event loop của giây vừa rồi, mili giây. */
+  private loopLagMs = 0;
   private readonly outboxEnabled: boolean;
   private readonly duration = new Histogram({
     name: 'http_server_duration_seconds',
@@ -40,6 +44,7 @@ export class MetricsService implements OnModuleInit {
   ) {
     this.enabled = config.get('METRICS_ENABLED', { infer: true });
     this.shedAt = config.get('SHED_POOL_WAITING', { infer: true });
+    this.shedLagMs = config.get('SHED_LOOP_LAG_MS', { infer: true });
     this.outboxEnabled =
       config.get('OUTBOX_ENABLED', { infer: true }) &&
       config.get('APP_ROLE', { infer: true }) !== 'api';
@@ -50,6 +55,14 @@ export class MetricsService implements OnModuleInit {
   }
 
   onModuleInit(): void {
+    if (this.shedLagMs > 0) {
+      const delay = monitorEventLoopDelay({ resolution: 10 });
+      delay.enable();
+      setInterval(() => {
+        this.loopLagMs = delay.percentile(99) / 1e6;
+        delay.reset();
+      }, 1000).unref();
+    }
     if (!this.enabled) return;
     collectDefaultMetrics({ register: this.registry });
     const pool = () => this.pool();
@@ -81,15 +94,23 @@ export class MetricsService implements OnModuleInit {
     }
   }
 
+  /** 2 kiểu quá tải khác nhau: thiếu kết nối CSDL thì hàng đợi pool dài ra, thiếu CPU thì event loop trễ. */
+  private overloaded(): boolean {
+    const waiting = this.pool()?.waitingCount ?? 0;
+    return (
+      (this.shedAt > 0 && waiting >= this.shedAt) ||
+      (this.shedLagMs > 0 && this.loopLagMs >= this.shedLagMs)
+    );
+  }
+
   /**
-   * Từ chối có kiểm soát: hàng đợi kết nối CSDL dài quá thì trả 503 kèm Retry-After cho lượt ĐỌC, giữ chỗ cho lượt ghi như
-   * nộp bài. Đo trên lab: không có bước này, quá điểm gãy thì mọi request xếp hàng, p95 lên 3,8 giây và thông lượng tụt 40%.
+   * Từ chối có kiểm soát: quá tải thì trả 503 kèm Retry-After cho lượt ĐỌC, giữ chỗ cho lượt ghi như nộp bài. Đo trên lab:
+   * không có bước này, quá điểm gãy thì mọi request xếp hàng, p95 lên 3,8 giây và thông lượng tụt 40%.
    */
   shed = (req: Request, res: Response, next: NextFunction): void => {
-    const waiting = this.pool()?.waitingCount ?? 0;
     if (
       req.method === 'GET' &&
-      waiting >= this.shedAt &&
+      this.overloaded() &&
       !req.originalUrl.includes('/health') &&
       !req.originalUrl.includes('/metrics')
     ) {

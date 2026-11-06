@@ -27,7 +27,10 @@ async function bootstrap(): Promise<void> {
   if (config.get('METRICS_ENABLED', { infer: true })) {
     app.use(app.get(MetricsService).observe);
   }
-  if (config.get('SHED_POOL_WAITING', { infer: true }) > 0) {
+  if (
+    config.get('SHED_POOL_WAITING', { infer: true }) > 0 ||
+    config.get('SHED_LOOP_LAG_MS', { infer: true }) > 0
+  ) {
     app.use(app.get(MetricsService).shed);
   }
 

@@ -69,18 +69,23 @@ spec:
               port: http
             periodSeconds: 3
             failureThreshold: 40
+          # Probe phải phân biệt CHẬM với CHẾT (DDIA ch. 8). Mặc định hết giờ sau 1 giây: đo trên lab, lúc bão hoà CPU event
+          # loop trễ 800 ms, Kubernetes giết chính các bản đang làm việc, tải đổ sang bản còn lại, thông lượng thành công tụt 43%.
           readinessProbe:
             httpGet:
               path: /api/health/ready
               port: http
             periodSeconds: 5
-            failureThreshold: 2
+            timeoutSeconds: 3
+            failureThreshold: 3
+          # Cần 60 giây không phản hồi mới restart: restart chỉ cứu được tiến trình treo, không cứu được tiến trình quá tải.
           livenessProbe:
             httpGet:
               path: /api/health/live
               port: http
             periodSeconds: 10
-            failureThreshold: 3
+            timeoutSeconds: 5
+            failureThreshold: 6
           lifecycle:
             preStop:
               # Chờ ingress gỡ pod khỏi danh sách trước khi Node nhận SIGTERM, tránh lỗi 502 lúc cập nhật.

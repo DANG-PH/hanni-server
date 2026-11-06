@@ -62,6 +62,7 @@ spec:
               path: /api/health/live
               port: http
             periodSeconds: 15
+            timeoutSeconds: 5
       volumes:
         - name: resources
           configMap:

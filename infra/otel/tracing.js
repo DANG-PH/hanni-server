@@ -24,5 +24,8 @@ const sdk = new NodeSDK({
 
 sdk.start();
 for (const signal of ['SIGTERM', 'SIGINT']) {
-  process.once(signal, () => void sdk.shutdown());
+  // Bắt lỗi: Jaeger tắt thì đẩy vết nốt sẽ thất bại, để lọt ra ngoài là tiến trình chết mã 1 thay vì đóng êm.
+  process.once(signal, () => {
+    sdk.shutdown().catch(() => undefined);
+  });
 }
