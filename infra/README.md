@@ -48,6 +48,7 @@ scripts/k6.sh kb1-tu-hoc.js -e RATE=4 -e DURATION=5m     # tự học, RATE là 
 scripts/k6.sh kb2-video.js -e VIEWERS=60                 # cả lớp xem video
 scripts/k6.sh kb3-thi-thu.js -e USERS=600                # mở đề 60 giây, nộp bài 30 giây
 scripts/k6.sh tang-dan.js -e MAX_RATE=30                 # tăng dần để tìm điểm gãy và xem HPA thêm bản
+scripts/k6.sh tang-dan.js -e MAX_RATE=200 -e STEP=12s -e HOLD=60s -e MAX_VUS=300 --no-thresholds   # giữ tải trên điểm gãy, xem có sập không
 k6/thu-tai-nguyen.sh k6/ket-qua/lan1.csv                 # chạy song song, ghi CPU, RAM, số bản mỗi 5 giây
 ```
 
@@ -61,11 +62,15 @@ scripts/chaos.sh api                           # cửa sổ 2: api, redis, db, n
 ## Chạy thử các giải pháp cho quy mô lớn hơn
 
 ```bash
-scripts/failover.sh            # mất leader: đưa bản sao lên, in thời gian và số dòng mất. Xong phải make down để dựng lại
+scripts/k6.sh ghi-lien-tuc.js -e RATE=30 > k6/ket-qua/ghi.log 2>&1 &   # ghi đều, in mã mỗi lượt server đã xác nhận
+scripts/failover.sh crash      # giết leader bằng SIGKILL như mất điện, đưa bản sao lên. Không có `crash` là tắt êm, không nói lên gì về RPO
+scripts/doi-chieu-ghi.sh k6/ket-qua/ghi.log   # đếm lượt đã xác nhận mà bị mất trên leader mới
 scripts/pitr.sh                # khôi phục theo thời điểm từ bản sao vật lý + WAL
 scripts/do-phan-manh.sh        # sinh 1 triệu dòng ReviewLog giả, đo truy vấn trước và sau khi chia theo tháng
 scripts/k6.sh dang-nhap.js -e PASS=... -e RATE=5   # đăng nhập đồng loạt
 ```
+
+`failover.sh` và `do-phan-manh.sh` đổi hẳn trạng thái lab (leader mới, bảng đã chia). Muốn đo lại từ đầu thì `make down` rồi dựng lại.
 
 `kb3-thi-thu.js` cứ 10 lượt gửi lại 1 lần với cùng `Idempotency-Key`. Sau khi chạy, số dòng `MockExamAttempt` phải bằng số người, không bằng số request.
 
@@ -86,6 +91,7 @@ Mặc định giữ nguyên hành vi 1 tiến trình như trên VPS, đặt ở 
 | `THROTTLE_SCOPE` | `user` | Đếm giới hạn theo tài khoản trong Redis thay vì theo IP trong RAM |
 | `TRUST_PROXY` | `10.42.0.0/16` | Tin ingress để lấy đúng IP khách |
 | `METRICS_ENABLED` | `true` | Bật `/api/metrics` và log JSON. Ingress chặn đường này từ ngoài |
+| `SHED_POOL_WAITING`, `SHED_LOOP_LAG_MS` | `8`, `250` | Từ chối lượt đọc khi hàng đợi CSDL dài, hoặc event loop trễ. 0 là tắt |
 | `DB_POOL_MAX` | `10` | Số kết nối tối đa mỗi bản |
 | `DATABASE_REPLICA_URL` | qua PgBouncer đọc | Truy vấn gọi `onReplica()` đọc từ bản sao, còn lại về leader |
 | `CRON_LEASE` | `true` | Nhiều worker, mỗi chu kỳ cron chỉ 1 bản làm |

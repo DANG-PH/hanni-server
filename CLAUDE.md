@@ -21,13 +21,15 @@ chính thức, `kubectl` qua `infra/scripts/kubectl`, k6/ffmpeg/python đều ch
 - **Giải pháp DDIA (user: "mở rộng được thay vì chỉ 1000, đặc biệt là DDIA")**, đều bật bằng biến, mặc định tắt: `DATABASE_REPLICA_URL` + `onReplica()` (mặc định đọc leader, chỉ
   bảng xếp hạng đọc bản sao); `Idempotency-Key` ở nộp bài (`MockExamAttempt.idempotencyKey`, chỉ mục duy nhất, client lấy `${slug}-${startedAt}`); `OUTBOX_ENABLED` + `ExamOutboxRelay`
   (`OutboxEvent`, `FOR UPDATE SKIP LOCKED`, giao ít nhất 1 lần); `CRON_LEASE` + `CronLeaseService.take()` (Redis `SET NX` theo chu kỳ, khoá để tiết kiệm, job vẫn phải tự an toàn khi trùng);
-  `SHED_POOL_WAITING` + `MetricsService.shed` (503 + `Retry-After` cho lượt đọc); `TtlMemo` cho khung lộ trình (giữ Promise để gộp lượt tải). Đăng nhập khi `THROTTLE_SCOPE=user` đếm theo IP + email.
-  Migration `ScalingFoundations` chỉ thêm. Lab có thêm bản sao Postgres, `hanni-pgbouncer-ro`, 2 worker, lưu WAL, blackbox exporter, `infra/sql/`, `scripts/{failover,pitr,do-phan-manh}.sh`.
+  `SHED_POOL_WAITING`, `SHED_LOOP_LAG_MS` + `MetricsService.shed` (503 + `Retry-After` cho lượt đọc, theo hàng đợi CSDL hoặc độ trễ event loop); `TtlMemo` cho khung lộ trình (giữ Promise để gộp lượt tải). Đăng nhập khi `THROTTLE_SCOPE=user` đếm theo IP + email.
+  Migration `ScalingFoundations` chỉ thêm. Lab có thêm bản sao Postgres, `hanni-pgbouncer-ro`, 2 worker, lưu WAL, blackbox exporter, `infra/sql/`, `scripts/{failover,doi-chieu-ghi,pitr,do-phan-manh}.sh`.
 - **Đo được 06/11 tối** (1 lần, laptop có swap): 205 req/s p95 130 ms, 232 req/s p95 486 ms, quá đó thông lượng tụt còn 134 req/s, p95 3,8 giây, 360 request chờ kết nối CSDL; route nặng nhất
-  `/learn/path`. KB3 660 lượt nộp ra đúng 600 dòng, outbox 600/600, ghi p95 26 ms. **Chưa đo**: sau khi có cache + shed, failover, PITR, chia `ReviewLog`, 2 worker thật, đăng nhập đồng loạt.
+  `/learn/path`. KB3 660 lượt nộp ra đúng 600 dòng, outbox 600/600, ghi p95 26 ms. **Sau cache + shed** (1 lần, không swap): 235 req/s p95 232 ms còn trong SLO, nút thắt chuyển sang CPU API (6 bản × 1 CPU), pool còn dư. Giữ 400 req/s: trước khi sửa probe thành công tụt 283 → 161 req/s, sau khi sửa ổn định 225 req/s, 6/6 bản, 0 restart, chỉ `200` và `503`.
+  Mất leader (SIGKILL lúc ghi 30 lượt/giây): 4.423 lượt đã xác nhận, mất 0, 3 giây, nhưng chạy tay và chưa tính thời gian phát hiện. PITR lấy đủ 1.000 dòng trong 5 giây. Chia `ReviewLog` 500.000 dòng: 91 → 19 ms. Đăng nhập 40 lượt/giây p95 63 ms, scrypt không phải nút thắt. `HanniEdgeDown` báo sau 91 giây.
 - **Bẫy thêm**: `@nestjs/schedule` là ES module, spec phải `jest.mock`; lệnh lưu WAL phải chạy lại được (trùng nội dung là xong, ghi tệp tạm rồi đổi tên); `tang-dan` ngay sau rollout đo bản lạnh, phải làm nóng trước;
-  đang swap thì số đo vô nghĩa, xem `vmstat`.
-- **Chưa xử lý**: ảnh đại diện trên đĩa riêng; Postgres gắn 1 node cho tới khi diễn tập failover xong. Số chạy thử ở `tai-lieu-RIPT1304/ket-qua-chay-thu-lab/`, chỉ để kiểm tra cấu hình.
+  đang swap thì số đo vô nghĩa, xem `vmstat`, và đặt `MAX_VUS` để k6 không ăn hết RAM.
+  Probe phải chờ lâu hơn độ trễ lúc bão hoà: mặc định 1 giây làm Kubernetes giết chính bản đang bận (DDIA ch. 8). `sdk.shutdown()` phải có `.catch`, nếu không Jaeger tắt thì SIGTERM thành sập mã 1. Lab: IP node cố định và `/etc/rancher/node` nằm trong volume, thiếu 1 trong 2 thì tạo lại container là `kubectl exec` lỗi hoặc agent bị từ chối.
+- **Chưa xử lý**: ảnh đại diện trên đĩa riêng; failover vẫn chạy tay. Số chạy thử ở `tai-lieu-RIPT1304/ket-qua-chay-thu-lab/`, chỉ để kiểm tra cấu hình.
 
 ## Dọn cơ sở dữ liệu (2026-10-28 — user: "cắt hoặc gộp các bảng thừa, logic không dùng", "check các field trong entity")
 Còn **42 bảng**, bảng/cột nào cũng có code đọc hoặc ghi thật. Migration `1792700000000-DropUnusedTables` (KHÔNG hoàn tác —
