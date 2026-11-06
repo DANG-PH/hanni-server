@@ -6,6 +6,8 @@ import { get, ok, session } from './lib.js';
 const MAX = Number(__ENV.MAX_RATE || 40);
 const STEP = __ENV.STEP || '90s';
 const steps = [0.2, 0.4, 0.6, 0.8, 1].map((f) => ({ target: Math.ceil(MAX * f), duration: STEP }));
+// Giữ ở đỉnh để xem quá điểm gãy hệ thống đứng vững hay sập: -e HOLD=90s
+if (__ENV.HOLD) steps.push({ target: MAX, duration: __ENV.HOLD });
 
 export const options = {
   scenarios: {
@@ -15,7 +17,7 @@ export const options = {
       timeUnit: '1s',
       stages: steps,
       preAllocatedVUs: 30,
-      maxVUs: MAX * 15,
+      maxVUs: Number(__ENV.MAX_VUS || MAX * 15),
     },
   },
   thresholds: {
