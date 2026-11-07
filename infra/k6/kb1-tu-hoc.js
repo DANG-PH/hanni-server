@@ -14,7 +14,8 @@ export const options = {
       timeUnit: '1s',
       duration: __ENV.DURATION || '5m',
       preAllocatedVUs: RATE * 5,
-      maxVUs: RATE * 40,
+      // Có trần để server chậm thì k6 không ăn hết RAM máy đo; chạm trần sẽ thấy ở dropped_iterations.
+      maxVUs: Number(__ENV.MAX_VUS || RATE * 40),
       gracefulStop: '30s',
     },
   },
