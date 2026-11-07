@@ -7,8 +7,9 @@ data:
   PORT: "8000"
   API_PREFIX: /api
   APP_URL: http://api.hanni.localhost:18080
-  FRONTEND_URL: http://localhost:3000
-  COOKIE_DOMAIN: localhost
+  # Client chạy ở hanni.localhost cho cùng site với API, nếu không trình duyệt không nhận cookie đăng nhập.
+  FRONTEND_URL: http://hanni.localhost:3000
+  COOKIE_DOMAIN: hanni.localhost
   COOKIE_SECURE: "false"
   # Bắt buộc lúc khởi động. Lab không dùng đăng nhập Google nên đặt giá trị bất kỳ.
   GOOGLE_CLIENT_ID: lab-khong-dung

@@ -33,6 +33,13 @@ Tạm dừng cho nhẹ máy: `make stop`, `make start`. Xoá sạch: `make down`
 | Alertmanager | http://alertmanager.hanni.localhost:18080 |
 | Jaeger | http://jaeger.hanni.localhost:18080 |
 
+Web chạy riêng, nối vào API lab, mở ở `http://hanni.localhost:3000` (không dùng `localhost`, trình duyệt sẽ không nhận cookie đăng nhập vì khác site với API):
+
+```bash
+cd hanni-client
+NEXT_PUBLIC_API_URL=http://api.hanni.localhost:18080/api npx next dev -H hanni.localhost -p 3000
+```
+
 Mật khẩu Grafana:
 
 ```bash

@@ -1,35 +1,35 @@
 [
   {
     "id": "video-mau",
-    "title": "Video mẫu",
-    "description": "Video thử 60 giây, hai mức chất lượng",
+    "title": "Bốn thanh điệu tiếng Trung",
+    "description": "Bài giảng 66 giây, hai mức chất lượng",
     "kind": "video",
     "dir": "video-mau",
     "file": "master.m3u8",
-    "bytes": 39736090,
+    "bytes": 68315049,
     "sha256": null,
     "requiresLogin": true
   },
   {
     "id": "bang-phien-am",
-    "title": "Bảng phiên âm",
-    "description": "Tệp PDF để in và học",
+    "title": "Bảng phiên âm và từ vựng HSK 1",
+    "description": "Tệp PDF 6 trang để in và học",
     "kind": "pdf",
     "dir": "bang-phien-am",
     "file": "bang-phien-am.pdf",
-    "bytes": 606,
-    "sha256": "23ef36aef70ac3f6caffed9bcf5d8fb3c79834d69feb39ada090c016ecefe4f4",
+    "bytes": 419706,
+    "sha256": "3fff33657a056ec9baca7498de9187026c8a5e0222b0510844ee693b334e5caa",
     "requiresLogin": false
   },
   {
     "id": "nghe-mau",
-    "title": "Đoạn nghe mẫu",
-    "description": "Tệp MP3 30 giây",
+    "title": "Gói nghe bài 1: Chào hỏi",
+    "description": "10 từ, nghỉ giữa các từ để đọc theo",
     "kind": "audio",
     "dir": "nghe-mau",
     "file": "doan-nghe.mp3",
-    "bytes": 481114,
-    "sha256": "498bf81f1613f0118fa7582a41099625a2d914a915fcdbb2f3ec52aa524be9b4",
-    "requiresLogin": true
+    "bytes": 436392,
+    "sha256": "67510d00e861a933902a18472850834da2edc6033489d9375eb75761640bfc77",
+    "requiresLogin": false
   }
 ]
