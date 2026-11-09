@@ -1,0 +1,62 @@
+# Dựng nguyên lab k3s trên máy GitHub rồi chạy KT1, KT2, KT3 và các phép đo phụ. Chỉ chạy khi đẩy vào nhánh do-lab,
+# không đụng production. Commit có chữ [nhanh] thì chạy rút gọn để kiểm tra script, kết quả không dùng làm số đo.
+#   git push origin HEAD:do-lab
+name: Đo lab
+
+on:
+  push:
+    branches: [do-lab]
+
+concurrency:
+  group: do-lab
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  do:
+    name: Đo ${{ matrix.phan }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        phan: [kt2, kt3, phu]
+    env:
+      NHANH: ${{ contains(github.event.head_commit.message, '[nhanh]') && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Dựng lab theo README
+        working-directory: infra
+        run: |
+          start=$(date +%s)
+          make up images deploy seed observability
+          kubectl() { scripts/kubectl "$@"; }
+          kubectl -n observability rollout status deployment/prometheus --timeout=300s
+          kubectl -n observability rollout status deployment/alertmanager --timeout=300s
+          echo "Dựng lab mất $(( $(date +%s) - start )) giây" | tee dung-lab.txt
+
+      - name: Đo
+        working-directory: infra
+        run: ci/${{ matrix.phan }}.sh
+
+      - name: Gom kết quả
+        if: always()
+        working-directory: infra
+        run: |
+          mkdir -p k6/ket-qua
+          cp dung-lab.txt k6/ket-qua/ 2>/dev/null || true
+          scripts/kubectl -n hanni get pods -o wide > k6/ket-qua/pods-cuoi.txt 2>&1 || true
+          scripts/kubectl -n hanni get events --sort-by=.lastTimestamp > k6/ket-qua/su-kien-cuoi.txt 2>&1 || true
+          free -m > k6/ket-qua/ram-cuoi.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ket-qua-${{ matrix.phan }}
+          path: infra/k6/ket-qua
+          retention-days: 30
