@@ -7,7 +7,7 @@ runs=3; dur=1m; login_rates="10 20 40"; viewers="60 150 300"; hpa="-e MAX_RATE=1
 if [ "$NHANH" = 1 ]; then
   runs=1; dur=15s; login_rates="10"; viewers="60"; hpa="-e MAX_RATE=30 -e STEP=10s -e HOLD=10s"; model_rates="10"; model_dur=20s
 fi
-mkdir -p "$R/dang-nhap" "$R/nop-bai" "$R/hpa" "$R/ban-sao" "$R/video" "$R/mo-hinh-tai"
+mkdir -p "$R/dang-nhap" "$R/nop-bai" "$R/hpa" "$R/ban-sao" "$R/video" "$R/mo-hinh-tai" "$R/so-sanh-video"
 clean() { sed -i '/^running (/d; /  *\[ *[0-9]*%/d' "$1"; }
 sql() { kubectl -n hanni exec -c postgres "$1" -- psql -U hanni -d hanni -Atc "$2"; }
 
@@ -92,3 +92,35 @@ mo_hinh() {
   co_dinh_api 2 6
 }
 ca "mo-hinh-tai" mo_hinh
+
+so_sanh_video() {
+  local dir=/tmp/so-sanh-video watch=60000 n=$runs
+  [ "$NHANH" = 1 ] && watch=15000
+  mkdir -p "$dir"
+  cp scripts/so-sanh-video.cjs "$dir/"
+  (cd "$dir" && npm i --no-save --no-audit --no-fund --silent playwright-core@1.63.0 hls.js@1.6.15)
+  WATCH_MS=$watch node "$dir/so-sanh-video.cjs" "$R/so-sanh-video/ket-qua.csv" "$n" "$(python3 -c "import json; print(json.load(open('k6/tokens.json'))[9])")"
+}
+ca "so-sanh-video" so_sanh_video
+
+web() {
+  local dir=/tmp/hanni-client api=http://api.hanni.localhost:18080/api runs_lh=3
+  [ "$NHANH" = 1 ] && runs_lh=1
+  mkdir -p "$R/web"
+  git clone -q --depth 1 -b feat/hoc-lieu https://github.com/DANG-PH/hanni-client.git "$dir"
+  git -C "$dir" rev-parse --short HEAD > "$R/web/commit-client.txt"
+  (cd "$dir" && npm ci --no-audit --no-fund --silent && NEXT_TELEMETRY_DISABLED=1 NEXT_PUBLIC_API_URL=$api npx next build > "$OLDPWD/$R/web/build.txt" 2>&1)
+  (cd "$dir" && NEXT_PUBLIC_API_URL=$api nohup npx next start -H 0.0.0.0 -p 3000 > /tmp/next.log 2>&1 &)
+  for _ in $(seq 1 60); do [ "$(curl -s -o /dev/null -w '%{http_code}' http://hanni.localhost:3000/hoc-lieu)" = 200 ] && break; sleep 2; done
+  (cd "$dir" && CHROME_PATH=/usr/bin/google-chrome BASE_URL=http://hanni.localhost:3000 npm run -s test:hoc-lieu) > "$R/web/test-hoc-lieu.txt" 2>&1
+  for preset in mobile desktop; do
+    local flag=""
+    [ "$preset" = desktop ] && flag="--preset=desktop"
+    for i in $(seq 1 "$runs_lh"); do
+      CHROME_PATH=/usr/bin/google-chrome npx -y lighthouse@12.8.2 http://hanni.localhost:3000/hoc-lieu $flag --quiet \
+        --output=json --output-path="$R/web/lighthouse-$preset-$i.json" --chrome-flags="--headless=new --no-sandbox" \
+        --only-categories=performance,accessibility,best-practices,seo
+    done
+  done
+}
+ca "web" web

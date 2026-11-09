@@ -32,6 +32,14 @@ chaos_ca() {  # $1 = loại sự cố, $2 = giây chờ trước khi đọc kế
 for c in api redis db; do ca "chaos-$c" chaos_ca "$c" 90; done
 ca "chaos-node" chaos_ca node 120
 
+# Sinh dữ liệu học trước khi sao lưu, để khôi phục có cái mà đối chiếu: 1 triệu dòng ReviewLog (chia theo tháng)
+# và 1 đợt 600 người nộp bài thi thử.
+rows=1000000
+[ "$NHANH" = 1 ] && rows=50000
+ca "phan-manh" bash -c "scripts/do-phan-manh.sh $rows > $R/phan-manh.txt 2>&1"
+ca "du-lieu-thi" bash -c "scripts/k6.sh kb3-thi-thu.js -e USERS=600 > $R/du-lieu-thi.txt 2>&1"
+sed -i '/^running (/d' "$R/du-lieu-thi.txt"
+
 buoc "Sao lưu theo lịch, chạy tay ngay"
 kubectl -n hanni create job --from=cronjob/hanni-backup sao-luu-tay >/dev/null
 kubectl -n hanni wait --for=condition=complete job/sao-luu-tay --timeout=300s
@@ -45,10 +53,6 @@ ca "kt3-b" bash -c "scripts/kt3-mat-du-lieu.sh > $R/kt3-b.txt 2>&1"
 cp k6/ket-qua/kt3-b-hoc-lieu.txt "$R/kt3-b-hoc-lieu.txt" 2>/dev/null
 ca "so-sanh-sao-luu" scripts/so-sanh-sao-luu.sh "$R/sao-luu/so-sanh-sao-luu.csv" "$runs"
 ca "pitr" bash -c "scripts/pitr.sh > $R/pitr.txt 2>&1"
-rows=1000000
-[ "$NHANH" = 1 ] && rows=50000
-ca "phan-manh" bash -c "scripts/do-phan-manh.sh $rows > $R/phan-manh.txt 2>&1"
-
 failover_ca() {
   local dur=150s wait=45
   [ "$NHANH" = 1 ] && { dur=40s; wait=15; }
