@@ -40,3 +40,13 @@ co_dinh_api() {
   [ "$1" = "$2" ] && scripts/cho-du-ban.sh "$1"
   return 0
 }
+
+# Build và chạy web (nhánh feat/hoc-lieu) nối vào API lab, mở ở http://hanni.localhost:3000.
+dung_web() {
+  local dir=/tmp/hanni-client api=http://api.hanni.localhost:18080/api
+  [ -d "$dir" ] || git clone -q --depth 1 -b feat/hoc-lieu https://github.com/DANG-PH/hanni-client.git "$dir"
+  (cd "$dir" && npm ci --no-audit --no-fund --silent && NEXT_TELEMETRY_DISABLED=1 NEXT_PUBLIC_API_URL=$api npx next build > /tmp/next-build.txt 2>&1)
+  (cd "$dir" && NEXT_PUBLIC_API_URL=$api nohup npx next start -H 0.0.0.0 -p 3000 > /tmp/next.log 2>&1 &)
+  for _ in $(seq 1 60); do [ "$(curl -s -o /dev/null -w '%{http_code}' http://hanni.localhost:3000/hoc-lieu)" = 200 ] && return 0; sleep 2; done
+  return 1
+}

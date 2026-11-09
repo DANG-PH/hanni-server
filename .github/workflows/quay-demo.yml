@@ -1,0 +1,35 @@
+# Quay video demo từ thao tác thật trên lab, chạy khi đẩy vào nhánh quay-demo. Thẻ tiêu đề lấy từ infra/demo/the/*.html.
+name: Quay video demo
+
+on:
+  push:
+    branches: [quay-demo]
+
+concurrency:
+  group: quay-demo
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dựng lab theo README
+        working-directory: infra
+        run: |
+          make up images deploy seed observability
+          scripts/kubectl -n observability rollout status deployment/grafana --timeout=300s
+          scripts/kubectl -n observability rollout status deployment/prometheus --timeout=300s
+      - name: Quay và ghép
+        working-directory: infra
+        run: ci/quay-demo.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: video-demo
+          path: infra/k6/ket-qua/video
+          retention-days: 30
