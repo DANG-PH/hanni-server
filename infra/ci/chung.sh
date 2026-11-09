@@ -37,5 +37,6 @@ chi_so() { scripts/xuat-chi-so.py "$1" "$2" "$3" || true; }
 
 co_dinh_api() {
   kubectl -n hanni patch hpa hanni-api --type merge -p "{\"spec\":{\"minReplicas\":$1,\"maxReplicas\":$2}}" >/dev/null
-  kubectl -n hanni rollout status deployment/hanni-api --timeout=300s >/dev/null
+  [ "$1" = "$2" ] && scripts/cho-du-ban.sh "$1"
+  return 0
 }

@@ -17,7 +17,7 @@ mkdir -p "$out"
 name=$(basename "$out")
 
 kubectl -n hanni patch hpa hanni-api --type merge -p "{\"spec\":{\"minReplicas\":$pods,\"maxReplicas\":$pods}}" >/dev/null
-kubectl -n hanni rollout status deployment/hanni-api --timeout=300s >/dev/null
+scripts/cho-du-ban.sh "$pods"
 
 {
   echo "Thời điểm: $(date '+%F %T %z')"
