@@ -12,5 +12,5 @@ table{border-collapse:collapse;font-size:20px;width:100%}th,td{padding:7px 12px;
 <tr><td>Biên</td><td>Web Next.js, ingress, Nginx học liệu (vai CDN)</td><td>Thêm bản, thay bằng CDN</td></tr>
 <tr><td>Ứng dụng</td><td>API NestJS 2–6 bản theo HPA, worker có hợp đồng thuê</td><td>Thêm bản, không cần sửa code</td></tr>
 <tr><td>Dữ liệu</td><td>PostgreSQL + bản sao qua PgBouncer, Redis, sao lưu dump + WAL</td><td>Khó nhất, làm sau cùng</td></tr>
-<tr><td>Quan sát</td><td>Prometheus, Alertmanager, Grafana, Loki, Jaeger, dò từ ngoài</td><td>Cảnh báo theo SLO</td></tr></table>
-<p>Áp DDIA: bản sao đọc, khoá chống trùng, outbox, hợp đồng thuê cho cron, từ chối có kiểm soát khi quá tải.</p><div class="f"><span>Hanni · Đề 06 · Nhập môn Công nghệ nền tảng</span></div></div>
+<tr><td>Quan sát</td><td>Prometheus, Alertmanager, Grafana, Loki, Jaeger, dò từ ngoài</td><td>Báo động khi chậm hoặc lỗi vượt ngưỡng</td></tr></table>
+<p>Quá tải thì API báo &quot;thử lại sau&quot; ngay thay vì để mọi người cùng chờ; CSDL có bản sao và sao lưu hằng ngày.</p><div class="f"><span>Hanni · Đề 06 · Nhập môn Công nghệ nền tảng</span></div></div>
