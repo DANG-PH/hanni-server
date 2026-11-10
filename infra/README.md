@@ -66,6 +66,21 @@ scripts/do-gian-doan.sh k6/ket-qua/su-co.csv   # cửa sổ 1: dò mỗi giây, 
 scripts/chaos.sh api                           # cửa sổ 2: api, redis, db, node, node-back
 ```
 
+## Chạy toàn bộ phép đo trên GitHub Actions
+
+Máy không đủ RAM thì đẩy nhánh lên `do-lab`: workflow `.github/workflows/do-lab.yml` dựng nguyên lab trên máy GitHub
+(4 luồng, 16 GB) rồi chạy 3 job song song, kết quả tải về ở mục Artifacts của lượt chạy. Không đụng production.
+
+| Job | Script | Gồm |
+| --- | --- | --- |
+| `kt2` | `ci/kt2.sh` | Thăm dò, tự chọn 3 mức, KT2 sau cải tiến, KT2 trước cải tiến (image từ commit `2693172`), tăng dần |
+| `kt3` | `ci/kt3.sh` | KT1, quyền Q1–Q9, KT3-A, diễn tập sự cố, sao lưu và chép ra ngoài, thử lỗi sao lưu, KT3-B, so sánh sao lưu, PITR, failover |
+| `phu` | `ci/phu.sh` | Đăng nhập đồng loạt, nộp bài, HPA, bản sao, video, mô hình tải mở và đóng, HLS với MP4, kiểm tra web |
+
+```bash
+git push origin HEAD:do-lab        # commit có chữ [nhanh] thì chạy rút gọn để thử script, không dùng làm số đo
+```
+
 ## Chạy thử các giải pháp cho quy mô lớn hơn
 
 ```bash
