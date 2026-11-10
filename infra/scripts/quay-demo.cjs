@@ -13,14 +13,25 @@ const SIZE = { width: 1280, height: 720 };
 const [mode, ...args] = process.argv.slice(2);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function open(dir) {
+// Ghi hình bắt đầu từ lúc mở trang; ghi lại giây phụ đề đầu tiên hiện lên để lúc ghép cắt bỏ đoạn chờ tải trang.
+let started = 0;
+let outDir = null;
+let marked = false;
+
+async function open(dir, storageState) {
   const browser = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--autoplay-policy=no-user-gesture-required'] });
-  const ctx = await browser.newContext({ viewport: SIZE, recordVideo: dir ? { dir, size: SIZE } : undefined, deviceScaleFactor: 1 });
+  const ctx = await browser.newContext({ viewport: SIZE, recordVideo: dir ? { dir, size: SIZE } : undefined, deviceScaleFactor: 1, storageState });
   const page = await ctx.newPage();
+  started = Date.now();
+  outDir = dir;
   return { browser, ctx, page };
 }
 
 async function caption(page, text) {
+  if (outDir && !marked) {
+    marked = true;
+    fs.writeFileSync(path.join(outDir, 'cat-dau.txt'), String(Math.max(0, (Date.now() - started) / 1000 - 0.3).toFixed(2)));
+  }
   await page.evaluate((t) => {
     let el = document.getElementById('__phu_de');
     if (!el) {
@@ -71,14 +82,21 @@ async function web(dir) {
 }
 
 async function grafana(uid, seconds, dir, text) {
-  const s = await open(dir);
+  // Đăng nhập ở 1 trình duyệt không ghi hình, mang phiên sang trình duyệt ghi hình: video không có cảnh đăng nhập.
+  const pre = await open(null);
+  await pre.page.goto('http://grafana.hanni.localhost:18080/login', { waitUntil: 'domcontentloaded' });
+  await pre.page.locator('input[name=user]').fill('admin');
+  await pre.page.locator('input[name=password]').fill(process.env.GRAFANA_PASS || '');
+  await pre.page.locator('button[type=submit]').click();
+  await pre.page.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 30000 }).catch(() => {});
+  const state = await pre.ctx.storageState();
+  await close(pre);
+  const s = await open(dir, state);
   const { page } = s;
-  await page.goto('http://grafana.hanni.localhost:18080/login', { waitUntil: 'networkidle' });
-  await page.locator('input[name=user]').fill('admin');
-  await page.locator('input[name=password]').fill(process.env.GRAFANA_PASS || '');
-  await page.locator('button[type=submit]').click();
-  await page.waitForLoadState('networkidle').catch(() => {});
-  await page.goto(`http://grafana.hanni.localhost:18080/d/${uid}?orgId=1&refresh=5s&from=now-10m&to=now&kiosk`, { waitUntil: 'networkidle' }).catch(() => {});
+  // Bảng tự làm mới mỗi 5 giây nên mạng không bao giờ ngừng hẳn: chờ trang tải xong và các ô biểu đồ hiện ra.
+  await page.goto(`http://grafana.hanni.localhost:18080/d/${uid}?orgId=1&refresh=5s&from=now-10m&to=now&kiosk`, { waitUntil: 'load', timeout: 45000 }).catch(() => {});
+  await page.waitForSelector('[data-viz-panel-key], .react-grid-item', { timeout: 20000 }).catch(() => {});
+  await sleep(3000);
   await caption(page, text);
   await sleep(Number(seconds) * 1000);
   await close(s);

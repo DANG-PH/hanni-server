@@ -31,17 +31,17 @@ xong
 
 buoc "Cảnh 30 KT1, 31 quyền"
 scripts/kt1.sh "$V/kt1.txt" >/dev/null
-q terminal "$V/kt1.txt" "KT1: tải đủ học liệu như máy khách, đối chiếu SHA-256 · chạy lúc $(gio)" "$V/canh/30-kt1"
+q terminal "$V/kt1.txt" "Kiểm thử 1: tải đủ học liệu như máy khách, so mã băm SHA-256 · chạy lúc $(gio)" "$V/canh/30-kt1"
 scripts/kiem-quyen.sh "$V/quyen.txt" >/dev/null
-q terminal "$V/quyen.txt" "Kiểm thử quyền Q1–Q9 bằng tài khoản giả · chạy lúc $(gio)" "$V/canh/31-quyen"
+q terminal "$V/quyen.txt" "Kiểm thử phân quyền bằng tài khoản giả · chạy lúc $(gio)" "$V/canh/31-quyen"
 xong
 
 buoc "Cảnh 40 tăng tải và HPA"
 kubectl -n hanni patch hpa hanni-api --type merge -p '{"spec":{"minReplicas":2,"maxReplicas":6}}' >/dev/null
 SUMMARY=demo-tang-dan scripts/k6.sh tang-dan.js -e MAX_RATE=100 -e STEP=25s -e HOLD=60s -e MAX_VUS=300 --no-thresholds > "$V/tang-dan.txt" 2>&1 &
 k6pid=$!
-sleep 50
-q grafana hanni-scaling 95 "$V/canh/40-hpa" "Tăng dần tải bằng k6 (mô hình mở): CPU vượt 65% thì HPA thêm bản API, tối đa 6"
+sleep 40
+q grafana hanni-scaling 85 "$V/canh/40-hpa" "Tăng dần tải bằng k6: CPU vượt 65% thì Kubernetes tự thêm bản API, tối đa 6 bản"
 wait "$k6pid"
 grep -E "http_req_duration|http_req_failed|http_reqs|iterations\.|vus_max" "$V/tang-dan.txt" | sed 's/^ *//' > "$V/k6-tom-tat.txt"
 kubectl -n hanni get hpa hanni-api >> "$V/k6-tom-tat.txt" 2>&1
@@ -52,7 +52,7 @@ buoc "Cảnh 50 mất 1 bản API"
 scripts/do-gian-doan.sh "$V/chaos.csv" > "$V/chaos.txt" 2>&1 &
 probe=$!
 ( sleep 20; scripts/chaos.sh api > /dev/null 2>&1 ) &
-q grafana hanni-slo 70 "$V/canh/50-chaos" "Giết đột ngột 1 bản API: bản còn lại gánh, Kubernetes tự tạo lại, người dùng không thấy lỗi"
+q grafana hanni-slo 55 "$V/canh/50-chaos" "Tắt đột ngột 1 bản API: bản còn lại gánh, Kubernetes tự tạo lại, người dùng không thấy lỗi"
 kill -TERM "$probe" 2>/dev/null; wait "$probe" 2>/dev/null
 { echo "scripts/chaos.sh api lúc $(gio)"; tail -1 "$V/chaos.txt"; } > "$V/chaos-tom-tat.txt"
 q terminal "$V/chaos-tom-tat.txt" "Dò /api/health/ready mỗi giây trong lúc mất 1 bản API" "$V/canh/51-chaos"
@@ -63,20 +63,20 @@ start=$(date +%s)
 kubectl -n hanni scale deployment hanni-api --replicas=0 >/dev/null
 until active | grep -q HanniEdgeDown; do sleep 5; [ $(( $(date +%s) - start )) -gt 300 ] && break; done
 fired=$(( $(date +%s) - start ))
-q alert 20 "$V/canh/60-alert"
+q alert 15 "$V/canh/60-alert"
 t1=$(date +%s)
 kubectl -n hanni scale deployment hanni-api --replicas=2 >/dev/null
 until [ "$(curl -s -m 1 -o /dev/null -w '%{http_code}' http://api.hanni.localhost:18080/api/health/ready)" = 200 ]; do sleep 0.5; done
 back=$(( $(date +%s) - t1 ))
 scripts/kt1.sh "$V/kt1-sau.txt" >/dev/null
 { echo "Dừng hẳn API lúc $(date -u -d @"$start" '+%H:%M:%S UTC')"; echo "HanniEdgeDown báo sau $fired giây (không quay đoạn chờ)"; echo "Bật lại 2 bản: có trả lời sau $back giây"; tail -1 "$V/kt1-sau.txt"; } > "$V/kt3a.txt"
-q terminal "$V/kt3a.txt" "KT3-A: dừng dịch vụ rồi khôi phục, kiểm tra lại học liệu" "$V/canh/61-kt3a"
+q terminal "$V/kt3a.txt" "Kiểm thử 3: dừng dịch vụ rồi khôi phục, kiểm tra lại học liệu" "$V/canh/61-kt3a"
 xong
 
 buoc "Cảnh 70 mất dữ liệu và khôi phục"
 scripts/kt3-mat-du-lieu.sh > "$V/kt3b-day-du.txt" 2>&1
 grep -vE "^hanni-|NOTICE" "$V/kt3b-day-du.txt" > "$V/kt3b.txt"
-q terminal "$V/kt3b.txt" "KT3-B: xoá hẳn CSDL và 1 tệp học liệu, khôi phục từ bản sao lưu · chạy lúc $(gio)" "$V/canh/70-kt3b"
+q terminal "$V/kt3b.txt" "Kiểm thử 3: xoá hẳn CSDL và 1 tệp học liệu, khôi phục từ bản sao lưu · chạy lúc $(gio)" "$V/canh/70-kt3b"
 xong
 
 buoc "Ghép video"
@@ -92,7 +92,8 @@ for d in "$V"/canh/*; do
   n=$(basename "$d")
   w=$(ls "$d"/*.webm 2>/dev/null | head -1)
   [ -n "$w" ] || continue
-  ff -i "/v/canh/$n/$(basename "$w")" -f lavfi -i anullsrc=r=44100:cl=mono -vf "scale=1280:720,fps=30,format=yuv420p" \
+  ss=$(cat "$d/cat-dau.txt" 2>/dev/null || echo 0)   # bỏ đoạn chờ tải trang trước phụ đề đầu tiên
+  ff -ss "$ss" -i "/v/canh/$n/$(basename "$w")" -f lavfi -i anullsrc=r=44100:cl=mono -vf "scale=1280:720,fps=30,format=yuv420p" \
     -c:v libx264 -preset veryfast -c:a aac -shortest "/v/mp4/$n.mp4"
 done
 ls "$V"/mp4/*.mp4 | sort | sed 's#.*/#file /v/mp4/#' > "$V/ds.txt"
