@@ -10,6 +10,8 @@ GRAFANA_PASS=$(kubectl -n observability get secret grafana-admin -o jsonpath='{.
 export PASS GRAFANA_PASS
 Q=/tmp/quay
 mkdir -p "$Q" && cp scripts/quay-demo.cjs "$Q/" && (cd "$Q" && npm i --no-save --no-audit --no-fund --silent playwright-core@1.63.0)
+# Ghi hình của Playwright cần bản ffmpeg riêng của nó, máy GitHub chưa có sẵn.
+(cd "$Q" && npx playwright-core install ffmpeg)
 q() { node "$Q/quay-demo.cjs" "$@"; }
 gio() { date -u '+%H:%M:%S UTC %d/%m/%Y'; }
 active() {
