@@ -38,7 +38,7 @@ xong
 
 buoc "Cảnh 40 tăng tải và HPA"
 kubectl -n hanni patch hpa hanni-api --type merge -p '{"spec":{"minReplicas":2,"maxReplicas":6}}' >/dev/null
-SUMMARY=demo-tang-dan scripts/k6.sh tang-dan.js -e MAX_RATE=100 -e STEP=25s -e HOLD=60s -e MAX_VUS=300 --no-thresholds > "$V/tang-dan.txt" 2>&1 &
+SUMMARY=demo-tang-dan scripts/k6.sh tang-dan.js -e MAX_RATE=40 -e STEP=25s -e HOLD=60s -e MAX_VUS=200 --no-thresholds   # 40 lượt/giây ≈ 200 request/giây: đủ để HPA lên 6 bản mà chưa phải từ chối request > "$V/tang-dan.txt" 2>&1 &
 k6pid=$!
 sleep 40
 q grafana hanni-scaling 85 "$V/canh/40-hpa" "Tăng dần tải bằng k6: CPU vượt 65% thì Kubernetes tự thêm bản API, tối đa 6 bản"
