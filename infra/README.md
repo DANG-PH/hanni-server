@@ -46,6 +46,31 @@ Mật khẩu Grafana:
 scripts/kubectl -n observability get secret grafana-admin -o jsonpath='{.data.password}' | base64 -d
 ```
 
+## Sửa nhanh khi bảo vệ
+
+Lúc bảo vệ, mỗi người có thể được yêu cầu đổi 1 thông số rồi chạy lại. Mọi lệnh chạy trong `hanni-server/infra`.
+Quy tắc chung: sửa tệp, chạy `make deploy` để nạp lại cấu hình; nếu sửa `k8s/app/config.yaml` hoặc `k8s/media-manifest.json`
+thì chạy thêm `scripts/kubectl -n hanni rollout restart deployment/hanni-api` vì API chỉ đọc 2 tệp này lúc khởi động.
+
+| Người | Muốn đổi | Sửa ở đâu | Kiểm tra lại |
+| --- | --- | --- | --- |
+| Đăng | Số bản API tối thiểu, tối đa; ngưỡng CPU để thêm bản | `k8s/app/api.yaml`: `minReplicas`, `maxReplicas`, `averageUtilization` | `scripts/kubectl -n hanni get hpa` |
+| Đăng | CPU, RAM cho mỗi bản API | `k8s/app/api.yaml`: `resources.requests`, `resources.limits` | `scripts/kubectl -n hanni get pods` (pod tự tạo lại) |
+| Đăng | Ngưỡng báo "thử lại sau" khi quá tải (0 là tắt) | `k8s/app/config.yaml`: `SHED_POOL_WAITING`, `SHED_LOOP_LAG_MS` | Tăng tải bằng `scripts/k6.sh tang-dan.js`, xem tỉ lệ mã 503 |
+| Đăng | Số request tối đa mỗi tài khoản trong 1 phút | `k8s/app/config.yaml`: `THROTTLE_LIMIT`, `THROTTLE_TTL` | Gọi liên tục 1 route, vượt ngưỡng thì nhận mã 429 |
+| Thành | Thêm 1 học liệu | Chép tệp vào `media/out/<thư mục>/`, thêm 1 mục vào `k8s/media-manifest.json` (id, title, kind, dir, file, bytes, requiresLogin) | Mở `http://hanni.localhost:3000/hoc-lieu`, có thẻ mới |
+| Thành | Học liệu cần hay không cần đăng nhập | `k8s/media-manifest.json`: `requiresLogin` | Mở trang khi chưa đăng nhập: được mời đăng nhập hoặc mở được ngay |
+| Thành | Thời hạn liên kết tải học liệu | `k8s/app/config.yaml`: `RESOURCE_LINK_TTL_SEC` (giây) | Xin liên kết, chờ quá hạn rồi mở lại: nhận mã 410 |
+| Thành | Bitrate video 540p, 720p | `media/make-sample.sh`: dòng `540p:960x540:2000k 720p:1280x720:3000k` | Xoá `media/out/video-mau`, chạy `make sample`, xem dung lượng tệp |
+| Vân Anh | Mức tải, thời gian đo | Tham số lệnh, ví dụ `scripts/k6.sh kb1-tu-hoc.js -e RATE=4 -e DURATION=5m` | Đọc p95, tỉ lệ lỗi ở cuối kết quả k6 |
+| Vân Anh | 3 mức của Kiểm thử 2, số lần mỗi mức | Tham số lệnh `scripts/chay-kt2.sh k6/ket-qua/kt2 "10 24 36" 3` | Thư mục kết quả mỗi lần có `dieu-kien.txt` |
+| Vân Anh | Tiêu chí đạt (p95 đọc, p95 ghi, lỗi) | `k6/lib.js`: `SLO_THRESHOLDS` | k6 thoát mã khác 0 khi không đạt |
+| Đức | Giờ sao lưu hằng ngày | `k8s/backup/cronjob.yaml`: `schedule` (giờ UTC, `0 19 * * *` là 02:00 giờ Việt Nam) | `scripts/kubectl -n hanni get cronjob` |
+| Đức | Số bản sao lưu giữ lại | `k8s/backup/cronjob.yaml`: `BACKUP_KEEP` | Chạy sao lưu tay vài lần, đếm tệp trong thư mục sao lưu |
+| Đức | Sao lưu ngay, khôi phục ngay | `scripts/kubectl -n hanni create job --from=cronjob/hanni-backup sao-luu-tay`, rồi `scripts/restore.sh` | `restore.sh` in số dòng trước và sau, phải khớp |
+| Đức | Ngưỡng và thời gian chờ của cảnh báo | `observability/rules/hanni-slo.yml`: dòng `expr`, `for` | Chạy `make observability`, rồi `scripts/kubectl -n observability rollout restart deployment/prometheus`; xem trang Alertmanager |
+| Đức | Ai được kết nối tới CSDL, Redis | `k8s/policy/network-policy.yaml` | Chạy `scripts/kiem-quyen.sh`: ca kết nối thẳng CSDL phải bị chặn |
+
 ## Đo tải
 
 k6 chạy trong Docker, chỉ nhận địa chỉ lab. Kết quả tóm tắt ghi vào `k6/ket-qua/`.
