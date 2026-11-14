@@ -16,6 +16,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AiToolsModule } from './modules/ai-tools/ai-tools.module';
 import { ClassroomsModule } from './modules/classrooms/classrooms.module';
 import { PartnersModule } from './modules/partners/partners.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { GamificationModule } from './modules/gamification/gamification.module';
@@ -68,6 +69,7 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
  *   /onboarding                   → onboarding/      khảo sát đầu vào
  *   /classrooms                   → classrooms/      lớp học của giáo viên
  *   /partners                     → partners/        form liên hệ "Dành cho giáo viên"
+ *   /reports                      → reports/         báo cáo nội dung AI, báo cáo người dùng, yêu cầu xoá tài khoản (CH Play)
  *   /assistant                    → assistant/       trợ lý AI (RAG + Gemini, trả lời dạng stream)
  *   /roleplay                     → roleplay/        luyện nói với AI theo tình huống
  *   /ai                         ★ → ai-tools/        mẹo nhớ, chấm câu, phân tích câu, bài đọc AI
@@ -167,6 +169,7 @@ import { VocabularyModule } from './modules/vocabulary/vocabulary.module';
     AiToolsModule,
     ClassroomsModule,
     PartnersModule,
+    ReportsModule,
     HealthModule,
   ],
   providers: [

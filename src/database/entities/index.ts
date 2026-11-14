@@ -45,6 +45,7 @@ import { Classroom } from './classroom.entity';
 import { ClassroomMember } from './classroom-member.entity';
 import { ClassAssignment } from './class-assignment.entity';
 import { PartnerLead } from './partner-lead.entity';
+import { ContentReport } from './content-report.entity';
 
 export {
   User,
@@ -89,6 +90,7 @@ export {
   ClassroomMember,
   ClassAssignment,
   PartnerLead,
+  ContentReport,
 };
 
 export const ENTITIES = [
@@ -134,4 +136,5 @@ export const ENTITIES = [
   ClassroomMember,
   ClassAssignment,
   PartnerLead,
+  ContentReport,
 ];
