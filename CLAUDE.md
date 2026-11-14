@@ -2,6 +2,18 @@
 
 API học tiếng Trung theo chuẩn **HSK 3.0** (9 cấp). Xem `README.md` cho tổng quan.
 
+## Báo cáo nội dung + yêu cầu xoá tài khoản (2026-11-14 — điều kiện lên CH Play, nhánh `bao-cao-noi-dung`)
+Module `src/modules/reports/`, bảng `ContentReport` (migration `1792740000000-ContentReport`, chỉ tạo bảng mới). Chưa có máy chủ email
+nên báo cáo lưu DB.
+- `POST /reports` [khách+], 10 lần/10 phút: `kind` = `ai` (nút "Báo cáo" dưới nội dung AI trên app mobile — chính sách "AI-Generated
+  Content" của Google Play), `user` (báo cáo tên/ảnh ở hồ sơ người khác — chính sách UGC), `account-deletion` (form ở web
+  `/chinh-sach-bao-mat#xoa-tai-khoan` — Google Play bắt có trang web nhận yêu cầu xoá mà không cần mở app; khách phải nhập email hợp lệ).
+  Ô `website` là bẫy bot: có giá trị thì trả `ok` mà không lưu. Nội dung cắt còn 4.000 ký tự; `contact` chỉ giữ ở yêu cầu xoá.
+- `GET /reports` [admin]: 200 báo cáo mới nhất. Chưa có màn admin, chưa có route đổi `status` — đọc bằng API hoặc pgAdmin.
+- **Yêu cầu xoá phải làm tay trong 7 ngày** (trang chính sách đã hứa): tìm `User` theo email, xoá dòng đó (dữ liệu đi kèm xoá theo khoá
+  ngoại CASCADE như `UsersService.deleteAccount`) + xoá ảnh `assets/avatars/<id>.*`. `ContentReport.userId` là ON DELETE SET NULL: báo
+  cáo của người đã xoá còn lại nhưng ẩn danh.
+
 ## Dọn cơ sở dữ liệu (2026-10-28 — user: "cắt hoặc gộp các bảng thừa, logic không dùng", "check các field trong entity")
 Còn **42 bảng**, bảng/cột nào cũng có code đọc hoặc ghi thật. Migration `1792700000000-DropUnusedTables` (KHÔNG hoàn tác —
 bản sao lưu trước khi chạy: `/root/backups/hanni-truoc-don-bang-20261028-0120.dump` trên VPS):
